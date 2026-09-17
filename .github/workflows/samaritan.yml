@@ -1,0 +1,108 @@
+name: Samaritan Auto-Poster
+
+on:
+  schedule:
+    # Orari di picco del pubblico gaming italiano (14:00 e 20:00 ora italiana)
+    - cron: '0 12 * * *'
+    - cron: '0 18 * * *'
+  workflow_dispatch:
+    inputs:
+      tema:
+        description: 'Tema specifico (lascia vuoto per tema libero)'
+        required: false
+        default: ''
+      privacy:
+        description: 'Visibilita del video'
+        required: false
+        default: 'public'
+        type: choice
+        options: [public, private, unlisted]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: samaritan-publish
+  cancel-in-progress: false
+
+jobs:
+  produci-e-pubblica:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Installa FFmpeg e font
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-dejavu-core
+
+      - name: Cache modello Whisper
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/whisper
+          key: whisper-${{ vars.WHISPER_MODEL || 'base' }}
+
+      - name: Installa dipendenze Python
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Le credenziali OAuth NON stanno nel repository (sono in .gitignore).
+      # Arrivano dai Secrets come base64 e vivono solo per la durata del job.
+      - name: Ripristina credenziali YouTube
+        env:
+          CLIENT_SECRET_B64: ${{ secrets.CLIENT_SECRET_B64 }}
+          YOUTUBE_TOKEN_B64: ${{ secrets.YOUTUBE_TOKEN_B64 }}
+        run: |
+          if [ -z "$CLIENT_SECRET_B64" ] || [ -z "$YOUTUBE_TOKEN_B64" ]; then
+            echo "::error::Mancano i secret CLIENT_SECRET_B64 e/o YOUTUBE_TOKEN_B64."
+            echo "Generali in locale con: python setup_secrets.py"
+            exit 1
+          fi
+          echo "$CLIENT_SECRET_B64" | base64 -d > client_secret.json
+          echo "$YOUTUBE_TOKEN_B64" | base64 -d > token.pickle
+
+      - name: Esegui pipeline Samaritan
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PRIVACY_STATUS: ${{ inputs.privacy || 'public' }}
+          NOME_CANALE: ${{ vars.NOME_CANALE || 'Poppone TV' }}
+          VOCE_TTS: ${{ vars.VOCE_TTS || 'it-IT-DiegoNeural' }}
+          WHISPER_MODEL: ${{ vars.WHISPER_MODEL || 'base' }}
+          # Passato via env e non interpolato nel comando: evita script injection
+          TEMA: ${{ inputs.tema }}
+        run: python main.py "$TEMA"
+
+      - name: Cancella le credenziali dal runner
+        if: always()
+        run: rm -f client_secret.json token.pickle
+
+      - name: Salva memoria e performance
+        if: always()
+        run: |
+          git config --global user.name "Samaritan Bot"
+          git config --global user.email "bot@samaritan.local"
+          git add cronologia_trend.json performance.json 2>/dev/null || true
+          git diff --staged --quiet || git commit -m "Aggiornamento memoria Samaritan [skip ci]"
+          git push || echo "Nessuna modifica da pubblicare"
+
+      - name: Conserva il video prodotto
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: samaritan-short
+          path: output_videos/*.mp4
+          retention-days: 7
+          if-no-files-found: ignore
