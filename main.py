@@ -36,6 +36,13 @@ def costruisci_descrizione(dati):
     if dati.get("fonte"):
         parti.append(f"\nFonte della notizia: {dati['fonte']}")
 
+    # Attribuzione del materiale: buona pratica e segnale di trasparenza
+    if dati.get("gioco"):
+        parti.append(
+            f"\nFilmati e immagini di {dati['gioco']} sono materiale promozionale "
+            "ufficiale dei rispettivi editori."
+        )
+
     parti.append(
         f"\nNuovi Shorts gaming ogni giorno su {config.NOME_CANALE}. "
         "Iscriviti per non perderli."
@@ -64,6 +71,7 @@ def esegui_pipeline_samaritan(tema=None):
     print("-" * 62)
     print(f"TITOLO  : {dati['titolo']}")
     print(f"FORMATO : {dati['stile']}")
+    print(f"GIOCO   : {dati.get('gioco') or '(non specifico)'}")
     print(f"QUERY   : {dati['query_video']}")
     print(f"FONTE   : {dati['fonte'] or '(evergreen)'}")
     print("-" * 62)
@@ -71,11 +79,12 @@ def esegui_pipeline_samaritan(tema=None):
     print("-" * 62)
 
     # -------------------------------------------------- FASE 2: Montaggio
-    print("\n[FASE 2/3] Voce, montaggio e sottotitoli...")
+    print("\n[FASE 2/3] Gameplay, voce, montaggio e sottotitoli...")
     video_path = assembla_video_finale(
         testo_per_audio=dati["script"],
         query_video=dati["query_video"],
         titolo=dati["titolo"],
+        gioco=dati.get("gioco", ""),
         tema=tema or "Gaming",
     )
 

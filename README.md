@@ -9,11 +9,34 @@ usa quei dati per decidere cosa produrre dopo.
 FASE 0  analyst.py   scarica la retention reale degli ultimi 90 giorni
 FASE 1  brain.py     sceglie il formato (pesato sui dati) e scrive lo script
                      ancorandolo a notizie gaming VERE
-FASE 2  voice.py     voce neurale Edge-TTS
-        maker.py     4 clip Pexels, stacco ogni 2-3s, zoom, sottotitoli
+FASE 2  gameplay.py  trailer e screenshot UFFICIALI del gioco da Steam
+        voice.py     voce neurale Edge-TTS
+        maker.py     stacco ogni 2-3s, zoom, sfondo sfocato, sottotitoli
 FASE 3  uploader.py  upload su YouTube
         notifier.py  notifica Telegram
 ```
+
+## Da dove viene il gameplay
+
+`brain.py` identifica il gioco esatto di cui parla lo Short. `gameplay.py` lo
+cerca su Steam e scarica **trailer e screenshot ufficiali di quel gioco**.
+
+Sono asset che l'editore pubblica apposta per essere diffusi, quindi non c'e'
+niente da rubare. L'audio originale viene sempre scartato e sostituito dalla
+voce sintetica: e' l'audio il canale su cui il Content ID rivendica quasi
+sempre, quindi il rischio residuo e' basso.
+
+**Scaricare gameplay da YouTube e' stato scartato di proposito**, anche con
+licenza Creative Commons: viola i Termini di Servizio di YouTube, cioe' della
+piattaforma stessa su cui il canale deve monetizzare.
+
+Se il gioco non e' su Steam (Minecraft, Fortnite, un titolo non ancora uscito),
+Samaritan **rifiuta il ripiego sul gioco sbagliato** e usa stock Pexels. Un
+controllo sul numero di capitolo impedisce che 'Grand Theft Auto V' finisca per
+scaricare gameplay di 'Grand Theft Auto IV', o 'Portal' quello di 'Portal 2'.
+
+I trailer Steam sono 16:9: vengono montati dentro il 9:16 con sfondo sfocato
+ricavato dal frame stesso, che e' il formato standard degli Shorts gaming.
 
 ---
 
@@ -68,6 +91,7 @@ python main.py "easter egg nascosti"    # tema specifico
 
 python brain.py                         # solo lo script, senza produrre nulla
 python voice.py                         # prova la voce
+python gameplay.py "Cyberpunk 2077"     # prova il download del gameplay
 python maker.py                         # produci il video senza caricarlo
 python analyst.py                       # report performance e pesi dei formati
 ```
@@ -106,6 +130,9 @@ Tutto si regola da `.env`, senza toccare il codice:
 | `NUM_CLIP_SFONDO` | quante clip diverse scaricare |
 | `WHISPER_MODEL` | `tiny` (veloce, impreciso) / `base` / `small` (lento, preciso) |
 | `PRIVACY_STATUS` | `public` = pubblica subito, `private` = aspetta la tua OK |
+| `USA_STEAM` | `0` per tornare allo stock generico invece del gameplay reale |
+| `ZOOM_GAMEPLAY` | quanto ingrandire il riquadro di gameplay (1.0 = larghezza piena) |
+| `STEAM_MAX_TRAILER` / `STEAM_MAX_SCREENSHOT` | quanto materiale scaricare per video |
 
 I formati video si modificano nel dizionario `FORMATI_VIDEO` in `brain.py`.
 

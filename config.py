@@ -56,6 +56,16 @@ STACCO_MAX = float(_get("STACCO_MAX", "3.2"))
 NUM_CLIP_SFONDO = int(_get("NUM_CLIP_SFONDO", "4"))
 WHISPER_MODEL = _get("WHISPER_MODEL", "base")   # 'tiny' sbaglia troppe parole in italiano
 
+# ------------------------------------------------- Gameplay reale (Steam)
+# Usa trailer e screenshot UFFICIALI del gioco di cui parla lo Short, invece
+# di stock generico. Se il gioco non e' su Steam, si ripiega su Pexels.
+USA_STEAM = _get("USA_STEAM", "1") not in ("0", "false", "False")
+STEAM_MAX_TRAILER = int(_get("STEAM_MAX_TRAILER", "3"))
+STEAM_MAX_SCREENSHOT = int(_get("STEAM_MAX_SCREENSHOT", "4"))
+# I trailer Steam sono 16:9: vengono inseriti in un 9:16 con sfondo sfocato.
+# Questo valore ingrandisce il riquadro di gameplay (1.0 = larghezza piena).
+ZOOM_GAMEPLAY = float(_get("ZOOM_GAMEPLAY", "1.18"))
+
 # ---------------------------------------------------------------- Pubblicazione
 # 'public' = pubblica subito | 'private' = attende la tua approvazione manuale
 PRIVACY_STATUS = _get("PRIVACY_STATUS", "public")
@@ -66,7 +76,15 @@ TELEGRAM_CHAT_ID = _get("TELEGRAM_CHAT_ID")
 TELEGRAM_ATTIVO = bool(TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID)
 
 # ---------------------------------------------------------------------- File
-FILE_CRONOLOGIA = "cronologia_trend.json"
-FILE_PERFORMANCE = "performance.json"
-DIR_TEMP = "temp_assets"
-DIR_OUTPUT = "output_videos"
+# Percorsi ASSOLUTI ancorati alla cartella del progetto: il codice funziona
+# anche se lanciato da una directory di lavoro diversa (Task Scheduler, cron,
+# doppio click sul .bat da un'altra cartella).
+DIR_PROGETTO = os.path.dirname(os.path.abspath(__file__))
+
+FILE_CRONOLOGIA = os.path.join(DIR_PROGETTO, "cronologia_trend.json")
+FILE_PERFORMANCE = os.path.join(DIR_PROGETTO, "performance.json")
+DIR_TEMP = os.path.join(DIR_PROGETTO, "temp_assets")
+DIR_OUTPUT = os.path.join(DIR_PROGETTO, "output_videos")
+
+os.makedirs(DIR_TEMP, exist_ok=True)
+os.makedirs(DIR_OUTPUT, exist_ok=True)

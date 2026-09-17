@@ -104,6 +104,7 @@ def salva_in_cronologia(dati):
         "titolo": dati["titolo"],
         "estratto_script": dati["script"][:90],
         "stile": dati["stile"],
+        "gioco": dati.get("gioco", ""),
         "query_video": dati["query_video"],
         "fonte": dati.get("fonte", ""),
         "video_id": None,          # riempito dopo l'upload
@@ -242,6 +243,23 @@ def _pulisci_titolo(titolo):
     return t[:100]                        # limite duro YouTube
 
 
+def _pulisci_nome_gioco(gioco):
+    """Normalizza il nome del gioco per la ricerca su Steam.
+
+    Scarta i valori generici che il modello a volte restituisce al posto di un
+    titolo vero ('videogiochi', 'gaming'): cercarli su Steam darebbe risultati
+    casuali, meglio ripiegare direttamente sullo stock.
+    """
+    g = re.sub(r"[\"'`]", "", gioco).strip()
+    g = re.sub(r"\s+", " ", g)
+    if len(g) < 3 or len(g) > 60:
+        return ""
+    if g.lower() in {"videogiochi", "gaming", "gioco", "videogioco",
+                     "games", "game", "nessuno", "n/a", "none", "vari"}:
+        return ""
+    return g
+
+
 def valida_script(titolo, script):
     """Ritorna (True, "") se lo script e' pubblicabile, altrimenti (False, motivo)."""
     if not titolo or not script:
@@ -311,13 +329,19 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti):
         "mai in apertura.\n"
         "5. TITOLO: massimo 70 caratteri, keyword del gioco all'inizio, UNA sola "
         "emoji, NIENTE '#Shorts'.\n"
-        "6. QUERY VIDEO: in INGLESE, 2-4 parole, per cercare gameplay su Pexels "
-        "(es: 'cyberpunk gameplay', 'fps shooter action').\n"
-        "7. DESCRIZIONE: 2 righe + UNA domanda finale che spinga a commentare.\n"
-        "8. NON riusare questi titoli gia' pubblicati:\n"
+        "6. GIOCO: il titolo ESATTO e UFFICIALE del videogioco di cui parla lo "
+        "Short, come appare sullo store (es: 'Cyberpunk 2077', 'ELDEN RING', "
+        "'Counter-Strike 2'). Serve a scaricare gameplay reale di quel gioco: "
+        "niente abbreviazioni, niente nomi di saghe generiche. Se lo Short non "
+        "parla di un gioco specifico, metti stringa vuota.\n"
+        "7. QUERY VIDEO: in INGLESE, 2-4 parole, usata solo come ripiego se il "
+        "gioco non e' reperibile (es: 'cyberpunk gameplay', 'fps shooter action').\n"
+        "8. DESCRIZIONE: 2 righe + UNA domanda finale che spinga a commentare.\n"
+        "9. NON riusare questi titoli gia' pubblicati:\n"
         f"   {json.dumps(ultimi_titoli, ensure_ascii=False)}\n\n"
         "Rispondi ESCLUSIVAMENTE con un JSON valido con le chiavi: "
-        "'titolo', 'script', 'query_video', 'descrizione', 'indice_notizia'."
+        "'titolo', 'script', 'gioco', 'query_video', 'descrizione', "
+        "'indice_notizia'."
     )
 
 
@@ -371,6 +395,7 @@ def genera_script_samaritan(tema=None):
                 script = str(data.get("script", "")).strip()
                 query_video = str(data.get("query_video", "gameplay")).strip()
                 descrizione = str(data.get("descrizione", "")).strip()
+                gioco = _pulisci_nome_gioco(str(data.get("gioco", "")))
 
                 ok, motivo = valida_script(titolo, script)
                 if not ok:
@@ -392,6 +417,7 @@ def genera_script_samaritan(tema=None):
                 risultato = {
                     "titolo": titolo,
                     "script": script,
+                    "gioco": gioco,
                     "query_video": query_video,
                     "descrizione": descrizione,
                     "fonte": fonte,
@@ -400,6 +426,8 @@ def genera_script_samaritan(tema=None):
                 salva_in_cronologia(risultato)
                 print(f"[Samaritan Brain] OK - '{titolo}' "
                       f"({len(script.split())} parole)")
+                if gioco:
+                    print(f"[Samaritan Brain] Gioco identificato: {gioco}")
                 if fonte:
                     print(f"[Samaritan Brain] Ancorato a: {fonte}")
                 return risultato
@@ -409,7 +437,12 @@ def genera_script_samaritan(tema=None):
 
     # ----------------------------------------------------------- Fallback
     print("[Samaritan Brain] Tutti i modelli hanno fallito: uso il fallback.")
-    gioco = random.choice(["GTA 6", "Minecraft", "Fortnite", "Elden Ring", "Call of Duty"])
+    # Solo giochi presenti su Steam: cosi' anche il fallback ottiene
+    # gameplay reale invece di stock generico.
+    gioco = random.choice([
+        "Cyberpunk 2077", "ELDEN RING", "Counter-Strike 2",
+        "Baldur's Gate 3", "Red Dead Redemption 2",
+    ])
     risultato = {
         "titolo": f"{gioco}: il dettaglio che il 99% dei giocatori non ha mai notato",
         "script": (
@@ -419,6 +452,7 @@ def genera_script_samaritan(tema=None):
             f"piu' a ignorarlo. Iscriviti a {config.NOME_CANALE} per gli altri. "
             f"E stai giocando a {gioco} da anni senza accorgertene."
         ),
+        "gioco": gioco,
         "query_video": f"{gioco.lower()} gameplay",
         "descrizione": (
             f"Un dettaglio di {gioco} che passa inosservato praticamente a tutti.\n"
@@ -437,6 +471,7 @@ if __name__ == "__main__":
     print("\n" + "=" * 60)
     print(f"TITOLO      : {dati['titolo']}")
     print(f"FORMATO     : {dati['stile']}")
+    print(f"GIOCO       : {dati.get('gioco') or '(non specifico)'}")
     print(f"QUERY VIDEO : {dati['query_video']}")
     print(f"FONTE       : {dati['fonte'] or '(evergreen)'}")
     print("-" * 60)

@@ -77,6 +77,7 @@ def notifica_pubblicazione(dati, video_id, percorso_video):
         f"<b>Samaritan - {stato}</b>\n\n"
         f"<b>{dati['titolo']}</b>\n"
         f"Formato: <code>{dati['stile']}</code>\n"
+        f"Gioco: {dati.get('gioco') or 'non specifico'}\n"
         f"Fonte: {dati.get('fonte') or 'evergreen'}\n\n"
         f"{url}"
     )
