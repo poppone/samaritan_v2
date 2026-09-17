@@ -1,0 +1,12 @@
+groq
+requests
+python-dotenv
+edge-tts
+gTTS
+openai-whisper
+moviepy>=2.0.0
+Pillow
+numpy
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib

@@ -1,0 +1,23 @@
+# === SEGRETI - non committare MAI ===
+.env
+client_secret.json
+token.pickle
+*.pickle
+
+# === Artefatti generati ===
+temp_assets/
+output_videos/
+*.mp4
+*.mp3
+*.wav
+
+# === Python ===
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+
+# === Modelli Whisper scaricati ===
+.cache/
