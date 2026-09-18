@@ -63,8 +63,18 @@ Poi compila `.env`:
 | `GROQ_API_KEY` | console.groq.com (gratuita) |
 | `GROQ_MODELLI` | opzionale: modelli da provare, separati da virgola |
 | `PEXELS_API_KEY` | pexels.com/api (gratuita) |
+| `ELEVENLABS_API_KEY` | elevenlabs.io/app/settings/api-keys (a consumo, opzionale) |
 | `TELEGRAM_BOT_TOKEN` | @BotFather su Telegram (opzionale) |
 | `TELEGRAM_CHAT_ID` | @userinfobot su Telegram (opzionale) |
+
+> La voce prova tre motori in ordine: ElevenLabs, Edge-TTS, gTTS. ElevenLabs e'
+> il piu' realistico ma si paga a caratteri; senza `ELEVENLABS_API_KEY` viene
+> saltato e la voce resta quella Microsoft di prima, senza che nulla si rompa.
+> La voce si sceglie con `ELEVENLABS_VOCE`, che accetta il nome come si legge
+> sul sito (es. `Marco`) oppure l'id; vuoto significa la prima voce
+> dell'account. Uno Short da 400 caratteri costa circa 400 crediti, quindi due
+> video al giorno stanno dentro il piano da 30.000 al mese e non dentro quello
+> gratuito da 10.000.
 
 > Groq sposta i modelli fra i piani senza preavviso: quando quelli in uso
 > diventano irraggiungibili la chiamata risponde `404 model_not_found`. In quel
