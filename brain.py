@@ -472,8 +472,11 @@ def costruisci_descrizione(dati):
 
     Prima solo le prime due righe cambiavano da un video all'altro e tutto il
     resto era identico su ogni upload: e' il pattern che fa riconoscere un
-    canale automatizzato. Ora cambiano anche la fonte (con il link vero, non
-    solo il nome della testata) e gli hashtag finali.
+    canale automatizzato. Ora cambiano anche la fonte e gli hashtag finali.
+
+    Nota sul link: viene dal campo <link> del feed Google News, quindi e' un
+    indirizzo news.google.com/rss/articles/... che rimanda all'articolo, non
+    l'indirizzo della testata. Funziona, ma nella descrizione si legge male.
     """
     parti = [dati.get("descrizione") or dati.get("titolo", "")]
 
