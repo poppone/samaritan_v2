@@ -216,3 +216,46 @@ class TestRipiego:
             titolo = f"{gioco}: il dettaglio che quasi nessuno nota"
             ok, motivo = brain.valida_titolo(brain._pulisci_titolo(titolo), gioco)
             assert ok, f"{gioco}: {motivo}"
+
+
+class TestDidascaliaTikTok:
+    """La didascalia da incollare a mano su TikTok.
+
+    Il video finito e' gia' buono per TikTok (verticale, MP4, mezzo minuto):
+    quello che cambia e' il testo che lo accompagna, perche' su TikTok il link
+    al canale non e' cliccabile e le righe di credito non le legge nessuno.
+    """
+
+    def test_apre_con_il_titolo(self):
+        didascalia = brain.costruisci_didascalia_tiktok(DATI_GTA)
+        assert didascalia.startswith(DATI_GTA["titolo"])
+
+    def test_non_porta_dentro_la_roba_di_youtube(self):
+        didascalia = brain.costruisci_didascalia_tiktok(DATI_GTA)
+        assert "youtube.com" not in didascalia
+        assert "@PopponeTV" not in didascalia
+        assert DATI_GTA["fonte_url"] not in didascalia
+
+    def test_finisce_con_gli_hashtag(self):
+        didascalia = brain.costruisci_didascalia_tiktok(DATI_GTA)
+        ultima = didascalia.splitlines()[-1]
+        assert ultima.startswith("#grandtheftautovi")
+        assert "#perte" in ultima
+
+    def test_sta_sotto_il_limite_di_tiktok(self):
+        # TikTok taglia la didascalia a 2200 caratteri.
+        assert len(brain.costruisci_didascalia_tiktok(DATI_GTA)) <= 2200
+
+    def test_regge_il_video_senza_gioco_e_senza_descrizione(self):
+        didascalia = brain.costruisci_didascalia_tiktok(
+            {"titolo": "Un titolo", "descrizione": "", "gioco": "", "stile": ""})
+        assert didascalia.startswith("Un titolo")
+        assert "#gamingita" in didascalia
+
+    def test_la_descrizione_youtube_non_e_cambiata(self):
+        # Il senso di questa modifica e' aggiungere TikTok senza toccare
+        # niente di quello che finisce su YouTube.
+        descrizione = brain.costruisci_descrizione(DATI_GTA)
+        assert "@PopponeTV" in descrizione
+        assert DATI_GTA["fonte_url"] in descrizione
+        assert "#perte" not in descrizione

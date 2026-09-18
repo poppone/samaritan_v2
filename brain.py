@@ -503,6 +503,32 @@ def costruisci_descrizione(dati):
     return "\n".join(parti)
 
 
+def costruisci_didascalia_tiktok(dati, massimo_hashtag=4):
+    """La didascalia pronta da incollare su TikTok.
+
+    Non e' la descrizione di YouTube e non deve diventarlo: li' servono la
+    fonte, il credito al materiale e il link al canale, qui no. Su TikTok i
+    link non sono cliccabili e le prime due righe sono le uniche che si
+    leggono prima di 'altro', quindi resta il titolo, un rigo di contenuto e
+    gli hashtag.
+    """
+    titolo = (dati.get("titolo") or "").strip()
+
+    # Della descrizione tengo solo la prima riga: la seconda e' la domanda
+    # finale, che nel video la voce la dice gia'.
+    descrizione = (dati.get("descrizione") or "").strip()
+    prima_riga = descrizione.splitlines()[0].strip() if descrizione else ""
+
+    hashtag = costruisci_hashtag(dati, massimo=massimo_hashtag)
+    # '#perte' e' il 'for you' italiano: su TikTok e' una convenzione, su
+    # YouTube sarebbe solo rumore, per questo sta qui e non in costruisci_hashtag.
+    if len(hashtag) < massimo_hashtag and "#perte" not in hashtag:
+        hashtag.append("#perte")
+
+    parti = [p for p in (titolo, prima_riga, " ".join(hashtag)) if p]
+    return "\n\n".join(parti)
+
+
 def testo_miniatura(titolo, massimo_parole=4):
     """Le poche parole da stampare grandi sulla miniatura.
 

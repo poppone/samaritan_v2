@@ -13,8 +13,25 @@ FASE 2  gameplay.py  trailer e screenshot UFFICIALI del gioco da Steam
         voice.py     voce neurale Edge-TTS
         maker.py     stacco ogni 2-3s, zoom, sfondo sfocato, sottotitoli
 FASE 3  uploader.py  upload su YouTube
-        notifier.py  notifica Telegram
+        notifier.py  notifica Telegram + didascalia pronta per TikTok
 ```
+
+## E su TikTok?
+
+Su TikTok Samaritan **non** pubblica da solo: servirebbe un'app registrata su
+TikTok for Developers e la loro revisione, e finche' non la si supera tutto
+cio' che l'API pubblica resta visibile solo a chi lo carica.
+
+Il video pero' va bene per TikTok cosi' com'e' (verticale 1080x1920, MP4,
+25-30 secondi), quindi a fine pipeline Telegram manda due messaggi: il file
+del video e, subito sotto, la didascalia gia' pronta in un blocco che si copia
+toccandolo. Caricarlo a mano sono trenta secondi.
+
+La didascalia non e' la descrizione di YouTube: niente link al canale (su
+TikTok non sono cliccabili) e niente righe di credito, solo titolo, un rigo di
+contenuto e gli hashtag. Quando si pubblica va attivata a mano l'etichetta
+"Contenuto generato dall'IA": su YouTube la dichiara `uploader.py`, su TikTok
+no.
 
 ## Da dove viene il gameplay
 
