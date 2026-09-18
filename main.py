@@ -15,41 +15,15 @@ import os
 import traceback
 
 import config
-from brain import genera_script_samaritan, aggiorna_ultimo_video_id
+from brain import (
+    genera_script_samaritan,
+    aggiorna_ultimo_video_id,
+    costruisci_descrizione,
+    costruisci_tag,
+)
 from maker import assembla_video_finale
 from uploader import carica_short
 import notifier
-
-# Tag: contano poco per il ranking, ma aiutano la categorizzazione del canale
-TAG_BASE = ["gaming", "videogiochi", "gameplay", "shorts", "curiosita gaming"]
-
-
-def costruisci_descrizione(dati):
-    """Descrizione unica per ogni video.
-
-    Prima era un blocco di testo identico su ogni upload: e' esattamente il
-    pattern che identifica i canali automatizzati. Ora la genera il modello,
-    con la fonte reale citata quando esiste.
-    """
-    parti = [dati.get("descrizione") or dati["titolo"]]
-
-    if dati.get("fonte"):
-        parti.append(f"\nFonte della notizia: {dati['fonte']}")
-
-    # Attribuzione del materiale: buona pratica e segnale di trasparenza
-    if dati.get("gioco"):
-        parti.append(
-            f"\nFilmati e immagini di {dati['gioco']} sono materiale promozionale "
-            "ufficiale dei rispettivi editori."
-        )
-
-    parti.append(
-        f"\nNuovi Shorts gaming ogni giorno su {config.NOME_CANALE}. "
-        "Iscriviti per non perderli."
-    )
-    parti.append("\n#Shorts #Gaming #Videogiochi #Gameplay")
-    return "\n".join(parti)
-
 
 def esegui_pipeline_samaritan(tema=None):
     print("=" * 62)
@@ -95,12 +69,19 @@ def esegui_pipeline_samaritan(tema=None):
 
     # ----------------------------------------------------- FASE 3: Upload
     print("\n[FASE 3/3] Caricamento su YouTube...")
+    # La miniatura la produce il maker insieme al video. Se manca (font
+    # assente, rendering parziale) si carica lo stesso: YouTube ripiega su un
+    # fotogramma automatico, che e' quello che faceva prima sempre.
+    miniatura = (config.FILE_MINIATURA
+                 if os.path.exists(config.FILE_MINIATURA) else None)
+
     video_id = carica_short(
         filepath=video_path,
         titolo=dati["titolo"],
         descrizione=costruisci_descrizione(dati),
-        tag=TAG_BASE,
+        tag=costruisci_tag(dati),
         privacy=config.PRIVACY_STATUS,
+        miniatura=miniatura,
     )
 
     if video_id:

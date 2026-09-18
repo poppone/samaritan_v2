@@ -340,6 +340,67 @@ def crea_banner_titolo(testo, larghezza_max, font_size=64):
     return np.array(img)
 
 
+def _manda_a_capo(draw, testo, font, larghezza_max):
+    """Spezza il testo in righe che stanno dentro larghezza_max."""
+    righe, corrente = [], ""
+    for parola in testo.split():
+        tentativo = f"{corrente} {parola}".strip()
+        if not corrente or draw.textlength(tentativo, font=font) <= larghezza_max:
+            corrente = tentativo
+        else:
+            righe.append(corrente)
+            corrente = parola
+    if corrente:
+        righe.append(corrente)
+    return righe
+
+
+def crea_miniatura(frame, testo, percorso=None):
+    """Miniatura verticale ricavata dallo sfondo, con l'amo scritto grande.
+
+    Senza miniatura personalizzata YouTube estrae un fotogramma a caso. Nel
+    feed Shorts non cambia niente, perche' il video parte da solo; cambia nella
+    griglia del canale e nella ricerca, dove nove fotogrammi casuali in fila
+    sono la differenza fra un canale e un archivio.
+    """
+    W, H = config.VIDEO_W, config.VIDEO_H
+    percorso = percorso or config.FILE_MINIATURA
+
+    img = Image.fromarray(np.uint8(frame)).convert("RGB")
+    if img.size != (W, H):
+        img = img.resize((W, H), Image.BILINEAR)
+    img = ImageEnhance.Brightness(img).enhance(0.55)   # il testo deve staccare
+
+    testo = (testo or "").strip()
+    if testo:
+        draw = ImageDraw.Draw(img)
+        margine = int(W * 0.08)
+        dimensione, font, righe = 150, None, [testo]
+        # Parte grande e rimpicciolisce finche' non sta in tre righe: i titoli
+        # corti restano enormi, quelli lunghi restano comunque leggibili.
+        for dimensione in range(150, 59, -10):
+            font = _carica_font(dimensione)
+            righe = _manda_a_capo(draw, testo, font, W - 2 * margine)
+            if len(righe) <= 3:
+                break
+        altezza_riga = int(dimensione * 1.18)
+        y = (H - altezza_riga * len(righe)) // 2
+        for riga in righe:
+            larghezza = draw.textlength(riga, font=font)
+            draw.text(((W - larghezza) / 2, y), riga, font=font, fill=GIALLO,
+                      stroke_width=max(4, dimensione // 18), stroke_fill="black")
+            y += altezza_riga
+
+    # YouTube rifiuta le miniature oltre i 2 MB. A questa risoluzione non ci si
+    # arriva quasi mai, ma su un fotogramma molto rumoroso puo' succedere.
+    for qualita in (88, 78, 68, 58):
+        img.save(percorso, "JPEG", quality=qualita, optimize=True)
+        if os.path.getsize(percorso) <= 2 * 1024 * 1024:
+            break
+    print(f"[Samaritan Maker] Miniatura pronta: {os.path.basename(percorso)}")
+    return percorso
+
+
 def crea_progress_bar(durata, passi=60):
     clips, altezza = [], 12
     clips.append(
@@ -473,6 +534,19 @@ def assembla_video_finale(testo_per_audio=None, query_video="gameplay",
           f"@{config.FPS}fps ({durata:.1f}s)...")
     finale.write_videofile(output_file, fps=config.FPS, codec="libx264",
                            audio_codec="aac", preset="medium", threads=4)
+
+    # La miniatura si ricava dallo sfondo, non dal composito: sul composito ci
+    # sono gia' banner e sottotitoli, e sovrapporci altro testo e' illeggibile.
+    # Il file vecchio va tolto PRIMA: se la generazione fallisce, main.py non
+    # deve caricare la miniatura del video di ieri.
+    if os.path.exists(config.FILE_MINIATURA):
+        os.remove(config.FILE_MINIATURA)
+    try:
+        from brain import testo_miniatura
+        istante = min(1.2, max(durata - 0.2, 0.1))
+        crea_miniatura(sfondo.get_frame(istante), testo_miniatura(titolo))
+    except Exception as e:
+        print(f"[Warning Maker] Miniatura saltata: {e}")
 
     for c in [audio_clip, sfondo, finale] + list(_CACHE_VIDEO.values()):
         try:

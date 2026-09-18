@@ -149,6 +149,44 @@ di stagione.
 
 ---
 
+## Come viene confezionato il video
+
+Lo script e' meta' del lavoro: l'altra meta' e' quello che rende il video
+raggiungibile. `brain.py` confeziona tutto e `valida_titolo()` blocca quello
+che non rispetta le regole, rigenerando invece di pubblicare.
+
+**Titolo** (`valida_titolo`, un titolo bocciato viene riscritto, non caricato):
+
+| Regola | Perche' |
+|---|---|
+| massimo 60 caratteri | oltre, il feed Shorts da telefono tronca proprio la fine |
+| il gioco dev'essere nominato | senza, il video non e' raggiungibile dalla ricerca |
+| niente maiuscolo integrale | YouTube lo tratta come titolo spam |
+| una sola emoji, in fondo | in apertura ruba il posto alla keyword |
+| niente `#Shorts` | YouTube riconosce il formato verticale da solo |
+
+Le sigle sono riconosciute: un titolo che dice "GTA 6" soddisfa la regola
+anche se il nome ufficiale del gioco e' "Grand Theft Auto VI".
+
+**Descrizione** (`costruisci_descrizione`): due righe generate, poi il LINK
+della notizia (non solo il nome della testata), l'attribuzione del materiale,
+la dichiarazione di contenuto sintetico, il link al canale e tre hashtag che
+cambiano col video. Il primo hashtag e' l'unico che YouTube mostra sopra al
+titolo, quindi ci va il gioco.
+
+**Tag** (`costruisci_tag`): quattro fissi piu' il nome del canale, piu' quelli
+che cambiano (gioco, saga senza il numero, gioco + tema). Tag identici su ogni
+upload sono una delle impronte che fanno riconoscere un canale automatizzato.
+
+**Miniatura** (`maker.crea_miniatura`): tre o quattro parole dell'amo, grandi,
+su un fotogramma scurito dello sfondo, caricate insieme al video. Senza,
+YouTube estrae un fotogramma a caso: nel feed non cambia niente, nella griglia
+del canale e nella ricerca si vede eccome. Serve il canale verificato via
+telefono: se non lo e', YouTube risponde 403 e il video sale lo stesso senza
+miniatura.
+
+---
+
 ## Personalizzazione rapida
 
 Tutto si regola da `.env`, senza toccare il codice:
@@ -161,6 +199,7 @@ Tutto si regola da `.env`, senza toccare il codice:
 | `NUM_CLIP_SFONDO` | quante clip diverse scaricare |
 | `WHISPER_MODEL` | `tiny` (veloce, impreciso) / `base` / `small` (lento, preciso) |
 | `PRIVACY_STATUS` | `public` = pubblica subito, `private` = aspetta la tua OK |
+| `HANDLE_CANALE` | handle YouTube, finisce nella descrizione di ogni video |
 | `USA_STEAM` | `0` per tornare allo stock generico invece del gameplay reale |
 | `ZOOM_GAMEPLAY` | quanto ingrandire il riquadro di gameplay (1.0 = larghezza piena) |
 | `STEAM_MAX_TRAILER` / `STEAM_MAX_SCREENSHOT` | quanto materiale scaricare per video |
