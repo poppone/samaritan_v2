@@ -207,12 +207,74 @@ class TestTestoMiniatura:
         assert brain.testo_miniatura("Gioco: e che ti fa") != ""
 
 
-class TestRipiego:
-    def test_il_titolo_di_ripiego_rispetta_le_stesse_regole(self):
-        # Quando Groq non risponde esce il ripiego: se il suo titolo non passa
-        # il filtro, il filtro serve a poco proprio nel momento peggiore.
-        for gioco in ("Cyberpunk 2077", "ELDEN RING", "Counter-Strike 2",
-                      "Baldur's Gate 3", "Red Dead Redemption 2"):
-            titolo = f"{gioco}: il dettaglio che quasi nessuno nota"
-            ok, motivo = brain.valida_titolo(brain._pulisci_titolo(titolo), gioco)
-            assert ok, f"{gioco}: {motivo}"
+class TestRigenerazioneInformata:
+    """Dopo uno scarto il modello deve sapere cosa ha sbagliato.
+
+    Senza questo ogni tentativo riparte dallo stesso identico input: quattro
+    tentativi sono quattro tiri di dado invece di quattro correzioni.
+    """
+
+    # Uno script che passa valida_script(): abbastanza lungo, apertura non
+    # vietata, e chiude riprendendo l'apertura come vuole il formato loop.
+    _SCRIPT = (
+        "Nessuno lo trova al primo giro in tutta la regione iniziale del gioco. "
+        "Dietro la cascata piu' grande c'e' una porta che sembra decorazione. "
+        "Si apre soltanto suonando la campana trovata nella cripta a nord, e "
+        "dentro ti aspetta un boss che nessuna guida italiana ha mai filmato "
+        "per davvero. Ti lascia un'arma che cambia completamente la build. "
+        "Provaci stasera prima di andare avanti con la storia principale. "
+        "Nessuno lo trova al primo giro."
+    )
+
+    def _finto_client(self, risposte, prompt_visti):
+        class FinteCompletions:
+            @staticmethod
+            def create(**kw):
+                prompt_visti.append(kw["messages"][1]["content"])
+
+                class Scelta:
+                    class message:
+                        content = risposte.pop(0)
+
+                class Risposta:
+                    choices = [Scelta()]
+
+                return Risposta()
+
+        class FintoClient:
+            class chat:
+                completions = FinteCompletions()
+
+        return FintoClient()
+
+    def test_il_motivo_dello_scarto_arriva_al_tentativo_dopo(self, monkeypatch):
+        import json as _json
+
+        # Primo titolo: 70 caratteri, viene scartato. Secondo: valido.
+        scartato = _json.dumps({
+            "titolo": "Elden Ring: il boss segreto che quasi nessun giocatore "
+                      "ha mai battuto davvero",
+            "script": self._SCRIPT,
+            "gioco": "Elden Ring", "query_video": "elden ring gameplay",
+            "descrizione": "Un segreto.", "indice_notizia": -1,
+        })
+        buono = _json.dumps({
+            "titolo": "Elden Ring: il boss dietro la cascata",
+            "script": self._SCRIPT,
+            "gioco": "Elden Ring", "query_video": "elden ring gameplay",
+            "descrizione": "Un segreto.", "indice_notizia": -1,
+        })
+
+        prompt_visti = []
+        monkeypatch.setattr(brain, "client",
+                            self._finto_client([scartato, buono], prompt_visti))
+        monkeypatch.setattr(brain, "recupera_trend_gaming_online", lambda: [])
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: [])
+        monkeypatch.setattr(brain, "salva_in_cronologia", lambda r: None)
+
+        risultato = brain.genera_script_samaritan()
+
+        assert len(prompt_visti) == 2
+        assert "scartato" not in prompt_visti[0].lower()
+        assert "troppo lungo" in prompt_visti[1], prompt_visti[1]
+        assert risultato["titolo"] == "Elden Ring: il boss dietro la cascata"

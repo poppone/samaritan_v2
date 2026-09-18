@@ -681,9 +681,14 @@ def genera_script_samaritan(tema=None):
     system_prompt = _costruisci_system_prompt(
         formato, notizie, ultimi_titoli, hook_vincenti
     )
-    prompt_utente = "Scrivi lo Short di oggi."
+    prompt_base = "Scrivi lo Short di oggi."
     if tema:
-        prompt_utente += f" Focus specifico richiesto: {tema}"
+        prompt_base += f" Focus specifico richiesto: {tema}"
+
+    # Motivo dell'ultimo scarto: senza questo ogni tentativo riparte dallo
+    # stesso identico input e rifa' un tiro di dado. Dicendo al modello cosa
+    # non e' andato, i tentativi diventano correzioni.
+    motivo_scarto = ""
 
     modelli = config.GROQ_MODELLI
 
@@ -694,6 +699,12 @@ def genera_script_samaritan(tema=None):
                 # libero ritagliando il JSON: cosi' anche un modello che non
                 # supporta lo schema riesce comunque a rispondere.
                 con_schema = tentativo == 1
+                prompt_utente = prompt_base
+                if motivo_scarto:
+                    prompt_utente += (
+                        f" Il tentativo precedente e' stato scartato perche' "
+                        f"{motivo_scarto}. Correggi quel punto."
+                    )
                 print(f"[Samaritan Brain] {modello} - tentativo {tentativo} "
                       f"(formato {formato}, "
                       f"{'schema' if con_schema else 'testo libero'})...")
@@ -755,7 +766,10 @@ def genera_script_samaritan(tema=None):
                     motivo = "afferma fatti di cronaca senza citare una notizia"
                 if not ok:
                     print(f"[Samaritan Brain] SCARTATO: {motivo}. Rigenero.")
+                    motivo_scarto = motivo
                     continue
+
+                motivo_scarto = ""
 
                 if "gameplay" not in query_video.lower():
                     query_video = f"{query_video} gameplay"
