@@ -588,6 +588,49 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti):
     )
 
 
+# Schema vincolato per la risposta del modello. Con "strict" la decodifica e'
+# guidata dallo schema: il JSON non puo' piu' uscire invalido. Supportato dai
+# modelli gpt-oss; se un modello non lo accetta, il secondo tentativo ripiega
+# sul testo libero. https://console.groq.com/docs/structured-outputs
+_SCHEMA_RISPOSTA = {
+    "name": "short_samaritan",
+    "strict": True,
+    "schema": {
+        "type": "object",
+        "properties": {
+            "titolo": {"type": "string"},
+            "script": {"type": "string"},
+            "gioco": {"type": "string"},
+            "query_video": {"type": "string"},
+            "descrizione": {"type": "string"},
+            "indice_notizia": {"type": "integer"},
+        },
+        "required": [
+            "titolo", "script", "gioco",
+            "query_video", "descrizione", "indice_notizia",
+        ],
+        "additionalProperties": False,
+    },
+}
+
+
+def _estrai_json(testo):
+    """Ritaglia il primo oggetto JSON da una risposta in testo libero.
+
+    Serve quando lo schema vincolato non e' utilizzabile: il modello a volte
+    incornicia il JSON con ```json ... ``` o lo fa precedere da una riga di
+    commento.
+    """
+    testo = (testo or "").strip()
+    if testo.startswith("```"):
+        testo = re.sub(r"^```[a-zA-Z]*\s*", "", testo)
+        testo = re.sub(r"```\s*$", "", testo).strip()
+    inizio, fine = testo.find("{"), testo.rfind("}")
+    if inizio == -1 or fine <= inizio:
+        raise ValueError("nessun oggetto JSON nella risposta")
+    return json.loads(testo[inizio:fine + 1])
+
+
 def genera_script_samaritan(tema=None):
     """Genera il pacchetto contenuto completo.
 
@@ -617,23 +660,43 @@ def genera_script_samaritan(tema=None):
     for modello in modelli:
         for tentativo in range(1, 3):       # 2 tentativi per modello
             try:
+                # Primo tentativo con lo schema vincolato, secondo in testo
+                # libero ritagliando il JSON: cosi' anche un modello che non
+                # supporta lo schema riesce comunque a rispondere.
+                con_schema = tentativo == 1
                 print(f"[Samaritan Brain] {modello} - tentativo {tentativo} "
-                      f"(formato {formato})...")
-                response = client.chat.completions.create(
-                    model=modello,
-                    messages=[
+                      f"(formato {formato}, "
+                      f"{'schema' if con_schema else 'testo libero'})...")
+                parametri = {
+                    "model": modello,
+                    "messages": [
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": prompt_utente},
                     ],
-                    temperature=0.9,
-                    max_tokens=700,
-                    response_format={"type": "json_object"},
-                )
+                    "temperature": 0.9,
+                    # Nei modelli di ragionamento questo tetto copre anche i
+                    # token di ragionamento: con 700 il ragionamento si mangiava
+                    # tutto il budget e Groq rispondeva 400 json_validate_failed
+                    # con generazione vuota.
+                    "max_tokens": 2000,
+                }
+                if con_schema:
+                    parametri["response_format"] = {
+                        "type": "json_schema",
+                        "json_schema": _SCHEMA_RISPOSTA,
+                    }
+                if "gpt-oss" in modello:
+                    # Meno ragionamento, piu' token per la risposta vera.
+                    parametri["reasoning_effort"] = "low"
+
+                response = client.chat.completions.create(**parametri)
                 contenuto = response.choices[0].message.content
                 if not contenuto:
+                    print("[Samaritan Brain] Risposta vuota, riprovo.")
                     continue
 
-                data = json.loads(contenuto)
+                data = json.loads(contenuto) if con_schema \
+                    else _estrai_json(contenuto)
                 titolo = _pulisci_titolo(str(data.get("titolo", "")))
                 script = str(data.get("script", "")).strip()
                 query_video = str(data.get("query_video", "gameplay")).strip()
