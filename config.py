@@ -45,8 +45,10 @@ PEXELS_API_KEY = _get("PEXELS_API_KEY", obbligatoria=True)
 # esce comunque, con la voce di prima.
 ELEVENLABS_API_KEY = _get("ELEVENLABS_API_KEY")
 # Nome della voce come appare su elevenlabs.io, oppure il suo id. Vuoto = si
-# usa la prima voce dell'account.
+# usa la prima voce dell'account. Si possono elencare piu' nomi separati da
+# virgola: in quel caso Samaritan li alterna, un video a testa a giro.
 ELEVENLABS_VOCE = _get("ELEVENLABS_VOCE", "")
+ELEVENLABS_VOCI = [v.strip() for v in ELEVENLABS_VOCE.split(",") if v.strip()]
 # multilingual_v2 e' il modello con la resa migliore in italiano; turbo costa
 # meno della meta' ma suona piu' piatto.
 ELEVENLABS_MODELLO = _get("ELEVENLABS_MODELLO", "eleven_multilingual_v2")

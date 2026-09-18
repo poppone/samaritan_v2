@@ -72,7 +72,11 @@ Poi compila `.env`:
 > saltato e la voce resta quella Microsoft di prima, senza che nulla si rompa.
 > La voce si sceglie con `ELEVENLABS_VOCE`, che accetta il nome come si legge
 > sul sito (es. `Marco`) oppure l'id; vuoto significa la prima voce
-> dell'account. Uno Short da 400 caratteri costa circa 400 crediti, quindi due
+> dell'account. Piu' nomi separati da virgola (es. `Marco, Giulia, Luca`)
+> vengono alternati, un video a testa: Samaritan annota in
+> `cronologia_trend.json` quale voce ha usato e il giro dopo passa alla
+> successiva. Un nome che nell'account non esiste salta il proprio turno
+> invece di far ripiegare tutto sulla voce Microsoft. Uno Short da 400 caratteri costa circa 400 crediti, quindi due
 > video al giorno stanno dentro il piano da 30.000 al mese e non dentro quello
 > gratuito da 10.000.
 
