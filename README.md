@@ -75,7 +75,9 @@ Poi compila `.env`:
 > dell'account. Piu' nomi separati da virgola (es. `Marco, Giulia, Luca`)
 > vengono alternati, un video a testa: Samaritan annota in
 > `cronologia_trend.json` quale voce ha usato e il giro dopo passa alla
-> successiva. Un nome che nell'account non esiste salta il proprio turno
+> successiva. L'annotazione arriva solo se ElevenLabs ha prodotto l'audio
+> davvero, cosi' il campo `voce` dice con che voce parla il video e non quale
+> era stata scelta; se e' entrato un ripiego, il turno non e' speso. Un nome che nell'account non esiste salta il proprio turno
 > invece di far ripiegare tutto sulla voce Microsoft. Uno Short da 400 caratteri costa circa 400 crediti, quindi due
 > video al giorno stanno dentro il piano da 30.000 al mese e non dentro quello
 > gratuito da 10.000.

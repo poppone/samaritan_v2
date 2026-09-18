@@ -46,8 +46,10 @@ VOCI_CON_DESCRIZIONE = {"voices": [
 @pytest.fixture(autouse=True)
 def azzera_cache():
     voice._voce_risolta = None
+    voice._nome_scelto = None
     yield
     voice._voce_risolta = None
+    voice._nome_scelto = None
 
 
 def _chiedi(monkeypatch, valore, precedente=None):
@@ -192,7 +194,7 @@ class TestVociAlternate:
 
         assert voice._risolvi_voce("k") == "id-primo"
 
-    def test_la_voce_scelta_viene_annotata(self, monkeypatch):
+    def test_sceglie_senza_annotare_subito(self, monkeypatch):
         self._con_voci(monkeypatch)
         annotate = []
         _chiedi(monkeypatch, "Marco, Giulia", precedente="Marco")
@@ -200,8 +202,11 @@ class TestVociAlternate:
 
         voice._risolvi_voce("k")
 
-        # Senza l'annotazione la rotazione ripartirebbe sempre da capo.
-        assert annotate == ["Giulia"]
+        # Scegliere non basta: finche' ElevenLabs non ha prodotto l'audio il
+        # turno non e' speso, altrimenti la cronologia direbbe 'Giulia' su un
+        # video che parla con la voce Microsoft.
+        assert annotate == []
+        assert voice._nome_scelto == "Giulia"
 
     def test_se_nessun_nome_esiste_lo_dice(self, monkeypatch):
         self._con_voci(monkeypatch)
@@ -273,6 +278,7 @@ class TestSintesiElevenLabs:
 
     @pytest.mark.parametrize("codice,atteso", [
         (401, "non valida"),
+        (402, "piano a pagamento"),
         (429, "credito"),
     ])
     def test_errori_spiegati_in_italiano(self, monkeypatch, tmp_path, codice, atteso):
@@ -331,6 +337,44 @@ class TestCatenaDeiRipieghi:
 
         assert voice.genera_voce_samaritan("Ciao a tutti") is not None
         assert usato == ["edge"]
+
+    def test_la_voce_si_annota_solo_se_ha_parlato(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(config, "ELEVENLABS_API_KEY", "k")
+        monkeypatch.setattr(config, "DIR_TEMP", str(tmp_path))
+        annotate = []
+        monkeypatch.setattr(voice, "_segna_voce_usata", annotate.append)
+
+        def finto(testo, destinazione):
+            voice._nome_scelto = "Davide"
+            open(destinazione, "wb").write(b"x" * 2048)
+
+        monkeypatch.setattr(voice, "_sintetizza_elevenlabs", finto)
+        voice.genera_voce_samaritan("Ciao a tutti")
+
+        assert annotate == ["Davide"]
+
+    def test_col_ripiego_non_si_annota_niente(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(config, "ELEVENLABS_API_KEY", "k")
+        monkeypatch.setattr(config, "DIR_TEMP", str(tmp_path))
+        annotate = []
+        monkeypatch.setattr(voice, "_segna_voce_usata", annotate.append)
+
+        def rifiutato(testo, destinazione):
+            # La voce era stata scelta, poi ElevenLabs ha detto no: e' il caso
+            # del 402 visto in produzione il 18 settembre 2026.
+            voice._nome_scelto = "Davide"
+            raise RuntimeError("402 pagamento richiesto")
+
+        async def edge(testo, destinazione):
+            open(destinazione, "wb").write(b"x" * 2048)
+
+        monkeypatch.setattr(voice, "_sintetizza_elevenlabs", rifiutato)
+        monkeypatch.setattr(voice, "_sintetizza_edge", edge)
+        voice.genera_voce_samaritan("Ciao a tutti")
+
+        # Il video parla Microsoft: la cronologia non deve dire 'Davide', e il
+        # turno di Davide non e' speso.
+        assert annotate == []
 
     def test_senza_chiave_si_parte_da_edge(self, monkeypatch, tmp_path):
         monkeypatch.setattr(config, "ELEVENLABS_API_KEY", None)
