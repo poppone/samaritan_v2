@@ -273,6 +273,7 @@ class TestSintesiElevenLabs:
 
     @pytest.mark.parametrize("codice,atteso", [
         (401, "non valida"),
+        (402, "piano a pagamento"),
         (429, "credito"),
     ])
     def test_errori_spiegati_in_italiano(self, monkeypatch, tmp_path, codice, atteso):

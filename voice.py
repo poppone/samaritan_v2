@@ -215,6 +215,15 @@ def _sintetizza_elevenlabs(testo, output_filename):
     )
     if risposta.status_code == 401:
         raise RuntimeError("chiave ElevenLabs non valida")
+    if risposta.status_code == 402:
+        # ElevenLabs risponde 402 sia quando il credito e' finito sia quando la
+        # voce richiesta e' riservata ai piani a pagamento: dal codice non si
+        # distingue, e la differenza si vede solo dal pannello dell'account.
+        raise RuntimeError(
+            "ElevenLabs ha rifiutato per pagamento (402): credito del mese "
+            "finito, oppure questa voce e' riservata a un piano a pagamento. "
+            "Si controlla su elevenlabs.io, in Usage e in Subscription"
+        )
     if risposta.status_code == 429:
         raise RuntimeError("credito ElevenLabs esaurito o troppe richieste")
     risposta.raise_for_status()
