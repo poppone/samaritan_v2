@@ -128,3 +128,36 @@ class TestSchemaRisposta:
         assert set(brain._SCHEMA_RISPOSTA["schema"]["required"]) == chiavi
         assert brain._SCHEMA_RISPOSTA["strict"] is True
         assert brain._SCHEMA_RISPOSTA["schema"]["additionalProperties"] is False
+
+
+class TestCronacaSenzaFonte:
+    """Il 18 settembre 2026 la pipeline ha prodotto uno Short su un leak di
+    Forza Horizon 6 con date, velocita' e conferme degli sviluppatori, e
+    `fonte` vuota: notizia inventata su un prodotto vero, pubblicata da sola."""
+
+    SCRIPT_LEAK = (
+        "Stai sottovalutando Forza Horizon 6? Un file e' trapelato cinque giorni "
+        "prima del lancio. Gli sviluppatori hanno confermato una nuova modalita'."
+    )
+
+    def test_scarta_il_leak_senza_fonte(self):
+        assert brain._cronaca_senza_fonte(self.SCRIPT_LEAK, "") is True
+
+    def test_lo_stesso_script_passa_se_cita_una_notizia(self):
+        fonte = "Forza Horizon 6 annunciato (Eurogamer)"
+        assert brain._cronaca_senza_fonte(self.SCRIPT_LEAK, fonte) is False
+
+    @pytest.mark.parametrize("script", [
+        "Nessuno ti ha detto che questo boss si batte senza sparare un colpo.",
+        "Stai sbagliando tutto sulla guida in curva: molla il gas prima.",
+        "",
+    ])
+    def test_non_scarta_gli_script_senza_cronaca(self, script):
+        assert brain._cronaca_senza_fonte(script, "") is False
+
+    @pytest.mark.parametrize("spia", [
+        "un leak mostra la mappa", "e' stato annunciato ieri",
+        "secondo le indiscrezioni", "la data di uscita e' vicina",
+    ])
+    def test_riconosce_le_forme_piu_comuni(self, spia):
+        assert brain._cronaca_senza_fonte(f"Senti qua: {spia}.", "") is True

@@ -580,7 +580,13 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti):
         "7. QUERY VIDEO: in INGLESE, 2-4 parole, usata solo come ripiego se il "
         "gioco non e' reperibile (es: 'cyberpunk gameplay', 'fps shooter action').\n"
         "8. DESCRIZIONE: 2 righe + UNA domanda finale che spinga a commentare.\n"
-        "9. NON riusare questi titoli gia' pubblicati:\n"
+        "9. NIENTE CRONACA INVENTATA. Se non stai citando una delle notizie "
+        "elencate sopra (cioe' se 'indice_notizia' non punta a una di quelle), "
+        "lo script NON puo' contenere leak, date di uscita, numeri di vendite, "
+        "annunci o conferme attribuite agli sviluppatori: sono fatti verificabili "
+        "e inventarli fa danno al canale. In quel caso parla di meccaniche, "
+        "segreti di gioco o consigli, che non hanno bisogno di una fonte.\n"
+        "10. NON riusare questi titoli gia' pubblicati:\n"
         f"   {json.dumps(ultimi_titoli, ensure_ascii=False)}\n\n"
         "Rispondi ESCLUSIVAMENTE con un JSON valido con le chiavi: "
         "'titolo', 'script', 'gioco', 'query_video', 'descrizione', "
@@ -612,6 +618,30 @@ _SCHEMA_RISPOSTA = {
         "additionalProperties": False,
     },
 }
+
+
+# Parole che segnalano un'affermazione di cronaca: qualcosa che o' e' vero e
+# allora ha una fonte, o e' inventato. Il modello le usa volentieri perche'
+# "bucano" lo scroll, anche quando nessuna notizia gliele ha suggerite.
+_SPIE_DI_CRONACA = (
+    "trapelat", "leak", "leek", "confermat", "annunciat", "ufficializzat",
+    "rumor", "indiscrezion", "data di uscita", "esce il ", "in arrivo il ",
+    "hanno dichiarato", "ha dichiarato", "gli sviluppatori hanno",
+    "la software house", "secondo il comunicato",
+)
+
+
+def _cronaca_senza_fonte(script, fonte):
+    """Vero se lo script afferma fatti di cronaca ma non cita nessuna notizia.
+
+    Uno Short che racconta un leak inesistente e' una notizia falsa su un
+    prodotto vero, pubblicata in automatico su un canale senza nessuno che la
+    rilegga. Meglio rigenerare.
+    """
+    if fonte:
+        return False
+    testo = (script or "").lower()
+    return any(spia in testo for spia in _SPIE_DI_CRONACA)
 
 
 def _estrai_json(testo):
@@ -703,17 +733,9 @@ def genera_script_samaritan(tema=None):
                 descrizione = str(data.get("descrizione", "")).strip()
                 gioco = _pulisci_nome_gioco(str(data.get("gioco", "")))
 
-                ok, motivo = valida_script(titolo, script)
-                if ok:
-                    ok, motivo = valida_titolo(titolo, gioco)
-                if not ok:
-                    print(f"[Samaritan Brain] SCARTATO: {motivo}. Rigenero.")
-                    continue
-
-                if "gameplay" not in query_video.lower():
-                    query_video = f"{query_video} gameplay"
-
-                # Traccia la fonte reale: trasparenza = segnale di qualita'
+                # La fonte serve gia' in validazione: uno script che parla di
+                # leak e conferme senza una notizia dietro va scartato prima di
+                # diventare un video.
                 fonte, fonte_url = "", ""
                 try:
                     idx = int(data.get("indice_notizia", -1))
@@ -724,6 +746,19 @@ def genera_script_samaritan(tema=None):
                         fonte_url = notizie[idx].get("link", "")
                 except (TypeError, ValueError):
                     pass
+
+                ok, motivo = valida_script(titolo, script)
+                if ok:
+                    ok, motivo = valida_titolo(titolo, gioco)
+                if ok and _cronaca_senza_fonte(script, fonte):
+                    ok = False
+                    motivo = "afferma fatti di cronaca senza citare una notizia"
+                if not ok:
+                    print(f"[Samaritan Brain] SCARTATO: {motivo}. Rigenero.")
+                    continue
+
+                if "gameplay" not in query_video.lower():
+                    query_video = f"{query_video} gameplay"
 
                 risultato = {
                     "titolo": titolo,
