@@ -1,12 +1,20 @@
-groq
-requests
-python-dotenv
-edge-tts
-gTTS
-openai-whisper
-moviepy>=2.0.0
-Pillow
-numpy
-google-api-python-client
-google-auth-httplib2
-google-auth-oauthlib
+# Versioni delimitate al major: il job schedulato reinstalla tutto a ogni run,
+# senza un tetto basterebbe un rilascio incompatibile a monte per rompere la
+# pubblicazione da sola, di notte, senza che nessuno abbia toccato il codice.
+# I limiti minimi sono le versioni con cui la pipeline gira oggi.
+
+groq>=1.7,<2
+requests>=2.32,<3
+python-dotenv>=1.2,<2
+
+edge-tts>=7.2,<8
+gTTS>=2.5,<3
+openai-whisper==20250625
+
+moviepy>=2.2,<3
+Pillow>=11,<12          # tetto imposto da moviepy 2.x (pillow<12)
+numpy>=2.4,<3
+
+google-api-python-client>=2.200,<3
+google-auth-httplib2>=0.4,<1
+google-auth-oauthlib>=1.4,<2

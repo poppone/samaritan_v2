@@ -1,0 +1,19 @@
+# Dipendenze per eseguire la suite di test.
+#
+# Volutamente NON include requirements.txt: i test coprono solo logica pura
+# (riconoscimento del gioco, validazione dello script, punteggi), quindi non
+# servono torch, whisper e moviepy, che da soli sono qualche giga di download.
+# Cosi' la CI gira in meno di un minuto invece che in dieci.
+#
+# Che requirements.txt sia coerente viene verificato a parte nel workflow di
+# test, con un 'pip install --dry-run'.
+
+groq>=1.7,<2
+requests>=2.32,<3
+python-dotenv>=1.2,<2
+
+google-api-python-client>=2.200,<3
+google-auth-httplib2>=0.4,<1
+google-auth-oauthlib>=1.4,<2
+
+pytest>=8,<10

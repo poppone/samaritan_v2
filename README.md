@@ -65,8 +65,10 @@ Poi compila `.env`:
 | `TELEGRAM_BOT_TOKEN` | @BotFather su Telegram (opzionale) |
 | `TELEGRAM_CHAT_ID` | @userinfobot su Telegram (opzionale) |
 
-> `.env`, `client_secret.json` e `token.pickle` sono in `.gitignore`.
-> Non finiranno mai su GitHub.
+> `.env`, `client_secret.json` e `token.pickle` sono in `.gitignore` e non
+> devono mai finire in un commit. Il test `tests/test_regressioni.py` lo
+> verifica a ogni push: se uno di questi file torna sotto controllo di
+> versione, la CI diventa rossa.
 
 ## 3. Autenticazione YouTube (una sola volta)
 
@@ -83,6 +85,13 @@ Si apre il browser: autorizza il canale. Viene creato `token.pickle`.
 > `token.pickle` e rifai questo passaggio. Il nuovo token include lo scope
 > `yt-analytics.readonly`, senza il quale il feedback loop non funziona.
 
+> **Nota per chi aveva gia' il repository prima del 18 settembre 2026**: fino a
+> quella data `token.pickle` era committato per errore. Ora e' stato rimosso dal
+> repository, quindi al primo `git pull` sparisce anche dalla tua cartella: e'
+> normale, rifai il passaggio qui sopra. Quel vecchio token andrebbe anche
+> revocato da https://myaccount.google.com/permissions, perche' resta comunque
+> nella storia di git.
+
 ## 4. Uso
 
 ```bash
@@ -96,7 +105,23 @@ python maker.py                         # produci il video senza caricarlo
 python analyst.py                       # report performance e pesi dei formati
 ```
 
-## 5. Automazione su GitHub Actions
+## 5. Test
+
+```bash
+pip install -r requirements-dev.txt
+pytest tests/ -v
+```
+
+I test coprono solo logica pura e non toccano la rete: riconoscimento del gioco
+su Steam (il controllo che impedisce a 'Portal' di scaricare 'Portal 2'),
+validazione dello script, punteggi e pesi dei formati, piu' alcune guardie di
+regressione. Per questo `requirements-dev.txt` e' piu' leggero di
+`requirements.txt`: niente torch, whisper e moviepy.
+
+Girano da soli a ogni push e a ogni pull request
+(`.github/workflows/test.yml`).
+
+## 6. Automazione su GitHub Actions
 
 ```bash
 python setup_secrets.py
@@ -113,8 +138,14 @@ Stampa i valori base64 da incollare in **Settings > Secrets and variables > Acti
 **Variables opzionali**
 `NOME_CANALE`, `VOCE_TTS`, `WHISPER_MODEL`
 
-Il workflow parte alle 14:00 e alle 20:00 ora italiana, oppure a mano dalla
-tab Actions (dove puoi anche scegliere tema e visibilita').
+Il workflow parte alle 12:00 e alle 18:00 UTC, oppure a mano dalla tab Actions
+(dove puoi anche scegliere tema e visibilita').
+
+Attenzione al fuso: il cron di GitHub e' sempre in UTC e non conosce l'ora
+legale. Da fine marzo a fine ottobre sono le 14:00 e le 20:00 italiane, nel
+resto dell'anno diventano le 13:00 e le 19:00. Per tenere fissi gli orari
+italiani vanno spostate le ore in `.github/workflows/samaritan.yml` al cambio
+di stagione.
 
 ---
 

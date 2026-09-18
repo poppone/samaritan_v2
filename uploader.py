@@ -25,8 +25,11 @@ SCOPES = [
     "https://www.googleapis.com/auth/yt-analytics.readonly",
 ]
 
-TOKEN_FILE = "token.pickle"
-CLIENT_SECRET_FILE = "client_secret.json"
+# Percorsi ANCORATI alla cartella del progetto, come tutto il resto in
+# config.py: cosi' l'autenticazione funziona anche quando Samaritan viene
+# lanciato da una working directory diversa (Task Scheduler, cron, .bat).
+TOKEN_FILE = os.path.join(config.DIR_PROGETTO, "token.pickle")
+CLIENT_SECRET_FILE = os.path.join(config.DIR_PROGETTO, "client_secret.json")
 
 
 def ottieni_credenziali():
