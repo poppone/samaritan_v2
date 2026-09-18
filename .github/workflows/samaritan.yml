@@ -81,6 +81,7 @@ jobs:
           NOME_CANALE: ${{ vars.NOME_CANALE || 'Poppone TV' }}
           VOCE_TTS: ${{ vars.VOCE_TTS || 'it-IT-DiegoNeural' }}
           WHISPER_MODEL: ${{ vars.WHISPER_MODEL || 'base' }}
+          GROQ_MODELLI: ${{ vars.GROQ_MODELLI }}
           # Passato via env e non interpolato nel comando: evita script injection
           TEMA: ${{ inputs.tema }}
         run: python main.py "$TEMA"

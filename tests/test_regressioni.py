@@ -99,18 +99,49 @@ class TestModelliGroq:
         assert "llama-3.1-8b-instant" not in testo
         assert "modelli = config.GROQ_MODELLI" in testo
 
-    def test_l_elenco_si_cambia_da_variabile_d_ambiente(self, monkeypatch):
-        monkeypatch.setenv("GROQ_MODELLI", "primo/modello, secondo/modello ")
+    def _ricarica(self, monkeypatch, valore):
         import importlib
 
         import config
 
+        if valore is None:
+            monkeypatch.delenv("GROQ_MODELLI", raising=False)
+        else:
+            monkeypatch.setenv("GROQ_MODELLI", valore)
         importlib.reload(config)
+        return config.GROQ_MODELLI
+
+    def test_l_elenco_si_cambia_da_variabile_d_ambiente(self, monkeypatch):
         try:
-            assert config.GROQ_MODELLI == ["primo/modello", "secondo/modello"]
+            assert self._ricarica(monkeypatch, "primo/modello, secondo/modello ") == [
+                "primo/modello",
+                "secondo/modello",
+            ]
         finally:
-            monkeypatch.delenv("GROQ_MODELLI")
-            importlib.reload(config)
+            self._ricarica(monkeypatch, None)
+
+    def test_una_variabile_vuota_non_svuota_l_elenco(self, monkeypatch):
+        # Su GitHub Actions ${{ vars.GROQ_MODELLI }} non impostata arriva come
+        # stringa vuota: se vincesse sul default, nessun modello verrebbe
+        # provato e - tolto il ripiego - non uscirebbe alcun video.
+        try:
+            for vuota in ("", "   ", " , , "):
+                assert self._ricarica(monkeypatch, vuota) == [
+                    "openai/gpt-oss-120b",
+                    "openai/gpt-oss-20b",
+                ]
+        finally:
+            self._ricarica(monkeypatch, None)
+
+    def test_il_workflow_passa_la_variabile_al_job(self):
+        # Senza questa riga la variabile del repository non arriva mai a
+        # config.py, e cambiarla da GitHub non avrebbe alcun effetto.
+        testo = open(
+            os.path.join(RADICE, ".github", "workflows", "samaritan.yml"),
+            encoding="utf-8",
+        ).read()
+
+        assert "GROQ_MODELLI: ${{ vars.GROQ_MODELLI }}" in testo
 
 
 class TestNienteTestoDiRipiego:
