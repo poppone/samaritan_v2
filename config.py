@@ -35,6 +35,8 @@ PEXELS_API_KEY = _get("PEXELS_API_KEY", obbligatoria=True)
 
 # ------------------------------------------------------------ Identita canale
 NOME_CANALE = _get("NOME_CANALE", "Poppone TV")
+# Handle YouTube: finisce nella descrizione di ogni video come link al canale.
+HANDLE_CANALE = _get("HANDLE_CANALE", "@PopponeTV")
 LINGUA = _get("LINGUA", "it")
 
 # ------------------------------------------------------------------ Voce (TTS)
@@ -85,6 +87,10 @@ FILE_CRONOLOGIA = os.path.join(DIR_PROGETTO, "cronologia_trend.json")
 FILE_PERFORMANCE = os.path.join(DIR_PROGETTO, "performance.json")
 DIR_TEMP = os.path.join(DIR_PROGETTO, "temp_assets")
 DIR_OUTPUT = os.path.join(DIR_PROGETTO, "output_videos")
+
+# Miniatura personalizzata dello Short. Senza, YouTube estrae un fotogramma a
+# caso: nella griglia del canale si vede, e si vede male.
+FILE_MINIATURA = os.path.join(DIR_OUTPUT, "samaritan_miniatura.jpg")
 
 os.makedirs(DIR_TEMP, exist_ok=True)
 os.makedirs(DIR_OUTPUT, exist_ok=True)

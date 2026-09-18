@@ -67,7 +67,36 @@ def autentica_youtube():
     return build("youtube", "v3", credentials=ottieni_credenziali())
 
 
-def carica_short(filepath, titolo, descrizione, tag=None, privacy=None):
+def imposta_miniatura(youtube, video_id, percorso):
+    """Imposta la miniatura personalizzata. Non e' mai fatale.
+
+    Serve un canale verificato via telefono: se non lo e', YouTube risponde 403
+    e il video resta online con un fotogramma estratto a caso. Meglio uno Short
+    pubblicato senza miniatura che una pipeline che si ferma qui.
+    """
+    if not percorso or not os.path.exists(percorso):
+        return False
+    try:
+        youtube.thumbnails().set(
+            videoId=video_id,
+            media_body=MediaFileUpload(percorso, mimetype="image/jpeg"),
+        ).execute()
+        print("[Upload] Miniatura personalizzata impostata.")
+        return True
+    except HttpError as e:
+        if e.resp.status == 403:
+            print("[Warning Upload] Miniatura rifiutata: il canale non e' "
+                  "verificato via telefono (Studio > Impostazioni > Canale > "
+                  "Idoneita' alle funzioni).")
+        else:
+            print(f"[Warning Upload] Miniatura non impostata: {e}")
+    except Exception as e:
+        print(f"[Warning Upload] Miniatura non impostata: {e}")
+    return False
+
+
+def carica_short(filepath, titolo, descrizione, tag=None, privacy=None,
+                 miniatura=None):
     """Carica il video e ritorna l'ID YouTube (o None se fallisce)."""
     privacy = privacy or config.PRIVACY_STATUS
     tag = tag or []
@@ -117,6 +146,8 @@ def carica_short(filepath, titolo, descrizione, tag=None, privacy=None):
                 return None
 
     video_id = risposta.get("id")
+    if video_id:
+        imposta_miniatura(youtube, video_id, miniatura)
     print(f"\nVIDEO CARICATO: https://youtube.com/shorts/{video_id}")
     return video_id
 

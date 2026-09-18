@@ -15,6 +15,7 @@ import random
 import time
 import re
 import html
+import unicodedata
 import xml.etree.ElementTree as ET
 
 import requests
@@ -70,6 +71,54 @@ APERTURE_VIETATE = (
 MIN_PAROLE_SCRIPT = 45
 MAX_PAROLE_SCRIPT = 95
 
+# Oltre i 60 caratteri il titolo viene troncato nel feed Shorts da telefono,
+# e la parte tagliata e' sempre la fine, cioe' dove sta l'informazione utile.
+MAX_CARATTERI_TITOLO = 60
+
+_CLASSE_EMOJI = (
+    "\U0001F000-\U0001FAFF"      # pittogrammi, emoticon, simboli
+    "\U00002190-\U000021FF"      # frecce
+    "\U00002300-\U000023FF"      # simboli tecnici (orologi, play)
+    "\U00002600-\U000027BF"      # simboli vari, dingbats
+    "\U00002B00-\U00002BFF"      # simboli e frecce aggiuntivi
+    "\U0001F1E6-\U0001F1FF"      # bandiere
+    "\u2122\u24C2"
+)
+# Per TOGLIERE le emoji servono anche i modificatori (selettore di variante e
+# keycap), che da soli non sono emoji ma restano appiccicati.
+_RE_EMOJI = re.compile(f"[{_CLASSE_EMOJI}\uFE0F\u20E3]+")
+# Per CONTARLE serve il carattere singolo: due emoji attaccate sono un solo
+# gruppo, e contare i gruppi le farebbe passare entrambe per una sola.
+_RE_EMOJI_SINGOLA = re.compile(f"[{_CLASSE_EMOJI}]")
+
+# Parole che non reggono da sole in fondo a una miniatura: tagliare a un numero
+# fisso di parole lascia code tipo "L'ERRORE CHE TI FA", che non dice niente.
+_PAROLE_DEBOLI = {
+    "che", "ti", "fa", "di", "da", "del", "della", "dei", "degli", "delle",
+    "il", "lo", "la", "i", "gli", "le", "un", "uno", "una", "e", "ed", "a",
+    "al", "allo", "alla", "ai", "in", "nel", "nella", "per", "con", "su",
+    "non", "ma", "se", "come", "piu", "ha", "hanno", "ci", "si", "ne", "sul",
+    "quasi", "molto", "tanto", "cosi", "ogni", "questo", "questa", "quel",
+    "quella", "tra", "fra", "senza", "dal", "dalla", "suo", "sua", "loro",
+}
+
+# Tema in hashtag per ogni formato: il primo hashtag della descrizione e'
+# l'unico che YouTube mostra sopra al titolo, quindi non va sprecato.
+TEMA_PER_FORMATO = {
+    "VIRAL_HOOK_NEWS": "newsgaming",
+    "MYTH_BUSTING_VIRAL": "rumor",
+    "EASTER_EGG_SECRET": "easteregg",
+    "SEAMLESS_LOOP_FACTS": "curiosita",
+    "DONT_DO_THIS": "consigli",
+    "TIER_LIST_LAMPO": "tierlist",
+    "DOMANDA_AL_PUBBLICO": "gamingita",
+}
+
+# Tag presenti su ogni video. Da soli pesano poco sul ranking, ma cinque tag
+# IDENTICI su ogni upload sono una delle impronte che fanno riconoscere un
+# canale automatizzato: per questo costruisci_tag() ne aggiunge di variabili.
+TAG_FISSI = ["gaming ita", "videogiochi", "shorts ita", "curiosita gaming"]
+
 
 # ===========================================================================
 # MEMORIA
@@ -107,6 +156,7 @@ def salva_in_cronologia(dati):
         "gioco": dati.get("gioco", ""),
         "query_video": dati["query_video"],
         "fonte": dati.get("fonte", ""),
+        "fonte_url": dati.get("fonte_url", ""),
         "video_id": None,          # riempito dopo l'upload
     })
     cronologia = cronologia[-200:]
@@ -236,11 +286,88 @@ def scegli_formato(notizie_disponibili):
 # VALIDAZIONE
 # ===========================================================================
 def _pulisci_titolo(titolo):
+    """Normalizza il titolo prima della validazione.
+
+    Sistema meccanicamente quello che si puo' sistemare senza rigenerare:
+    l'hashtag inutile, le emoji in eccesso e soprattutto l'emoji in apertura,
+    che ruba il posto alla keyword del gioco. Quello che non si puo' aggiustare
+    da fuori (titolo troppo lungo, tutto maiuscolo) lo rifiuta valida_titolo().
+    """
     t = titolo.strip().strip('"').strip("'")
     # "#Shorts" nel titolo non serve piu' dal 2023 e ruba caratteri utili
     t = re.sub(r"#shorts\b", "", t, flags=re.IGNORECASE).strip()
-    t = re.sub(r"\s+", " ", t)
+
+    # Una sola emoji, e in fondo: in apertura i caratteri piu' preziosi del
+    # titolo li deve occupare il nome del gioco, non una faccina.
+    prima = _RE_EMOJI_SINGOLA.search(t)
+    if prima:
+        emoji = prima.group()
+        t = _RE_EMOJI.sub(" ", t)
+        t = re.sub(r"\s+", " ", t).strip(" -–—:")
+        t = f"{t} {emoji}"
+
+    t = re.sub(r"\s+", " ", t).strip()
     return t[:100]                        # limite duro YouTube
+
+
+def _senza_accenti(testo):
+    """'Curiosita\u0300' -> 'Curiosita'. Serve per gli hashtag, che non li accettano."""
+    scomposto = unicodedata.normalize("NFKD", testo)
+    return "".join(c for c in scomposto if not unicodedata.combining(c))
+
+
+def _gioco_nel_titolo(titolo, gioco):
+    """True se il titolo nomina il gioco, anche con la sigla d'uso comune.
+
+    'GTA 6' e 'Grand Theft Auto VI' sono lo stesso gioco: il modello restituisce
+    il nome ufficiale dello store, il titolo usa quello che la gente digita.
+    """
+    if not gioco:
+        return True
+
+    t = _senza_accenti(titolo).lower()
+    parole = [p for p in re.split(r"[^0-9a-zA-Z]+", _senza_accenti(gioco).lower()) if p]
+    if not parole:
+        return True
+
+    if any(len(p) >= 3 and p in t for p in parole):
+        return True
+
+    # Sigla: 'Grand Theft Auto VI' -> 'gtavi', che copre anche 'GTA 6'
+    sigla = "".join(p[0] for p in parole)
+    return len(sigla) >= 3 and (sigla in t or sigla[:3] in t)
+
+
+def valida_titolo(titolo, gioco=""):
+    """Ritorna (True, "") se il titolo e' pubblicabile, altrimenti (False, motivo).
+
+    Le regole non sono di gusto: il troncamento a 60 caratteri e il nome del
+    gioco in chiaro decidono se il video e' raggiungibile dalla ricerca, e il
+    maiuscolo integrale e' fra gli esempi che YouTube cita come titolo spam.
+    """
+    if not titolo:
+        return False, "titolo vuoto"
+
+    if len(titolo) > MAX_CARATTERI_TITOLO:
+        return False, (f"titolo troppo lungo ({len(titolo)} caratteri, "
+                       f"max {MAX_CARATTERI_TITOLO}: verrebbe troncato nel feed)")
+
+    if "#short" in titolo.lower():
+        return False, "'#Shorts' nel titolo: YouTube riconosce il formato da solo"
+
+    lettere = [c for c in titolo if c.isalpha()]
+    if len(lettere) >= 10:
+        quota_maiuscole = sum(1 for c in lettere if c.isupper()) / len(lettere)
+        if quota_maiuscole > 0.7:
+            return False, "titolo quasi tutto in maiuscolo"
+
+    if len(_RE_EMOJI_SINGOLA.findall(titolo)) > 1:
+        return False, "piu' di una emoji nel titolo"
+
+    if not _gioco_nel_titolo(titolo, gioco):
+        return False, f"il titolo non nomina '{gioco}': invisibile nella ricerca"
+
+    return True, ""
 
 
 def _pulisci_nome_gioco(gioco):
@@ -277,6 +404,120 @@ def valida_script(titolo, script):
         return False, f"script troppo lungo ({n_parole} parole, lo Short sforerebbe)"
 
     return True, ""
+
+
+# ===========================================================================
+# CONFEZIONAMENTO (titolo, descrizione, tag, miniatura)
+# ===========================================================================
+def _hashtag(testo):
+    pulito = "".join(c for c in _senza_accenti(testo) if c.isalnum()).lower()
+    return f"#{pulito}" if pulito else ""
+
+
+def costruisci_hashtag(dati, massimo=3):
+    """Gli hashtag della descrizione, in ordine di importanza.
+
+    Conta soprattutto il primo: e' l'unico che YouTube mostra SOPRA al titolo
+    del video, quindi ci va il gioco, non '#Shorts'. Tre bastano e avanzano:
+    oltre i 15 YouTube li ignora tutti quanti.
+    """
+    candidati = [
+        _hashtag(dati.get("gioco", "")),
+        _hashtag(TEMA_PER_FORMATO.get(dati.get("stile", ""), "")),
+        "#gamingita",
+    ]
+    visti, risultato = set(), []
+    for h in candidati:
+        if h and h not in visti:
+            visti.add(h)
+            risultato.append(h)
+    return risultato[:massimo]
+
+
+def costruisci_tag(dati, massimo=15, max_caratteri=450):
+    """Tag fissi piu' tag che cambiano col video.
+
+    YouTube accetta 500 caratteri di tag in totale e oltre quella soglia
+    rifiuta l'upload intero, non i tag in eccesso: qui si taglia a 450.
+    """
+    tag = list(TAG_FISSI)
+    if config.NOME_CANALE:
+        tag.append(config.NOME_CANALE.lower())
+
+    gioco = (dati.get("gioco") or "").strip()
+    if gioco:
+        tag.append(gioco.lower())
+        parole = gioco.split()
+        if len(parole) > 1:
+            tag.append(" ".join(parole[:-1]).lower())   # la saga senza il numero
+        tema = TEMA_PER_FORMATO.get(dati.get("stile", ""), "")
+        if tema:
+            tag.append(f"{gioco.lower()} {tema}")
+
+    visti, risultato, totale = set(), [], 0
+    for t in tag:
+        t = re.sub(r"\s+", " ", str(t)).strip()
+        if not t or t.lower() in visti:
+            continue
+        if len(risultato) >= massimo or totale + len(t) > max_caratteri:
+            break
+        visti.add(t.lower())
+        risultato.append(t)
+        totale += len(t)
+    return risultato
+
+
+def costruisci_descrizione(dati):
+    """Descrizione del video.
+
+    Prima solo le prime due righe cambiavano da un video all'altro e tutto il
+    resto era identico su ogni upload: e' il pattern che fa riconoscere un
+    canale automatizzato. Ora cambiano anche la fonte (con il link vero, non
+    solo il nome della testata) e gli hashtag finali.
+    """
+    parti = [dati.get("descrizione") or dati.get("titolo", "")]
+
+    fonte_url = (dati.get("fonte_url") or "").strip()
+    if fonte_url:
+        parti.append(f"\nFonte: {fonte_url}")
+    elif dati.get("fonte"):
+        parti.append(f"\nFonte: {dati['fonte']}")
+
+    if dati.get("gioco"):
+        parti.append(
+            f"\nFilmati e immagini di {dati['gioco']}: materiale promozionale "
+            "ufficiale dei rispettivi editori."
+        )
+
+    # Dichiararlo qui non cambia nulla per YouTube (la dichiarazione formale la
+    # fa gia' uploader.py), ma toglie di mano il commento "e' fatto con l'AI".
+    parti.append(
+        "\nVideo realizzato con voce sintetica e montaggio automatico, "
+        "su fatti e notizie verificabili."
+    )
+    parti.append(
+        f"\nAltri Shorts gaming ogni giorno su {config.NOME_CANALE}: "
+        f"youtube.com/{config.HANDLE_CANALE}"
+    )
+    parti.append("\n" + " ".join(costruisci_hashtag(dati)))
+    return "\n".join(parti)
+
+
+def testo_miniatura(titolo, massimo_parole=4):
+    """Le poche parole da stampare grandi sulla miniatura.
+
+    Il nome del gioco sta gia' nel titolo, che YouTube mostra sotto: qui serve
+    l'amo, cioe' quello che viene dopo i due punti. Oltre le quattro parole,
+    a quella dimensione, nella griglia del canale non si legge piu' niente.
+    """
+    t = _RE_EMOJI.sub(" ", titolo or "")
+    if ":" in t:
+        t = t.split(":", 1)[1]
+    t = re.sub(r"\s+", " ", t).strip(" -\u2013\u2014:.!?")
+    parole = t.split()[:massimo_parole]
+    while len(parole) > 1 and parole[-1].lower().strip(".,;:!?'\u2019") in _PAROLE_DEBOLI:
+        parole.pop()
+    return " ".join(parole).upper()
 
 
 # ===========================================================================
@@ -327,8 +568,10 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti):
         "3. RITMO: frasi corte. Una informazione per frase. Niente subordinate.\n"
         f"4. CTA fluida e breve a '{config.NOME_CANALE}', mai piu' di 6 parole, "
         "mai in apertura.\n"
-        "5. TITOLO: massimo 70 caratteri, keyword del gioco all'inizio, UNA sola "
-        "emoji, NIENTE '#Shorts'.\n"
+        f"5. TITOLO: massimo {MAX_CARATTERI_TITOLO} caratteri (oltre viene "
+        "troncato nel feed), nome del gioco come PRIMA parola, poi i due punti "
+        "e l'amo. UNA sola emoji e in FONDO, mai in apertura. Niente '#Shorts'. "
+        "Niente maiuscolo integrale: YouTube lo tratta come titolo spam.\n"
         "6. GIOCO: il titolo ESATTO e UFFICIALE del videogioco di cui parla lo "
         "Short, come appare sullo store (es: 'Cyberpunk 2077', 'ELDEN RING', "
         "'Counter-Strike 2'). Serve a scaricare gameplay reale di quel gioco: "
@@ -398,6 +641,8 @@ def genera_script_samaritan(tema=None):
                 gioco = _pulisci_nome_gioco(str(data.get("gioco", "")))
 
                 ok, motivo = valida_script(titolo, script)
+                if ok:
+                    ok, motivo = valida_titolo(titolo, gioco)
                 if not ok:
                     print(f"[Samaritan Brain] SCARTATO: {motivo}. Rigenero.")
                     continue
@@ -406,11 +651,14 @@ def genera_script_samaritan(tema=None):
                     query_video = f"{query_video} gameplay"
 
                 # Traccia la fonte reale: trasparenza = segnale di qualita'
-                fonte = ""
+                fonte, fonte_url = "", ""
                 try:
                     idx = int(data.get("indice_notizia", -1))
                     if 0 <= idx < len(notizie):
                         fonte = f"{notizie[idx]['titolo']} ({notizie[idx]['fonte']})"
+                        # Il link lo avevamo gia' e lo buttavamo via: in
+                        # descrizione e' il segnale di serieta' piu' forte.
+                        fonte_url = notizie[idx].get("link", "")
                 except (TypeError, ValueError):
                     pass
 
@@ -421,6 +669,7 @@ def genera_script_samaritan(tema=None):
                     "query_video": query_video,
                     "descrizione": descrizione,
                     "fonte": fonte,
+                    "fonte_url": fonte_url,
                     "stile": formato,
                 }
                 salva_in_cronologia(risultato)
@@ -444,7 +693,9 @@ def genera_script_samaritan(tema=None):
         "Baldur's Gate 3", "Red Dead Redemption 2",
     ])
     risultato = {
-        "titolo": f"{gioco}: il dettaglio che il 99% dei giocatori non ha mai notato",
+        # Anche il ripiego deve rispettare valida_titolo(): il vecchio titolo
+        # era di 70 caratteri e sarebbe uscito troncato nel feed.
+        "titolo": f"{gioco}: il dettaglio che quasi nessuno nota",
         "script": (
             f"Stai giocando a {gioco} da anni e non hai mai notato questo dettaglio. "
             "Gli sviluppatori lo hanno nascosto talmente bene che serve rigiocare "
@@ -460,6 +711,7 @@ def genera_script_samaritan(tema=None):
             "Tu l'avevi notato? Scrivilo nei commenti."
         ),
         "fonte": "",
+        "fonte_url": "",
         "stile": formato,
     }
     salva_in_cronologia(risultato)
