@@ -52,6 +52,10 @@ _API_ELEVENLABS = "https://api.elevenlabs.io/v1"
 # L'id della voce si risolve una volta sola per processo: e' una chiamata di
 # rete in piu' e il nome non cambia a meta' esecuzione.
 _voce_risolta = None
+# Nome della voce che la rotazione ha scelto per questo video. Si annota solo
+# se ElevenLabs produce davvero l'audio: un record che dice 'Davide' mentre il
+# video parla Microsoft e' peggio di nessun record.
+_nome_scelto = None
 
 
 def _elenco_voci(chiave):
@@ -172,13 +176,14 @@ def _risolvi_voce(chiave):
         partenza = (richieste.index(precedente) + 1) % len(richieste)
     ordinate = richieste[partenza:] + richieste[:partenza]
 
+    global _nome_scelto
     for nome in ordinate:
         trovata = _cerca_voce(voci, nome)
         if trovata:
             if len(richieste) > 1:
                 print(f"[Samaritan Voice] {len(richieste)} voci a rotazione, "
                       f"questo video usa '{nome}'.")
-                _segna_voce_usata(nome)
+            _nome_scelto = nome
             _voce_risolta = trovata
             return _voce_risolta
         print(f"[Warning Voice] Voce '{nome}' non e' nell'account, provo la successiva.")
@@ -264,6 +269,10 @@ def genera_voce_samaritan(testo, output_filename=None):
 
             if os.path.exists(output_filename) and os.path.getsize(output_filename) > 1024:
                 print(f"[Samaritan Voice] Audio ElevenLabs salvato: {output_filename}")
+                # Ora il video parla con questa voce: la rotazione puo' segnare
+                # il turno come speso e passare alla prossima.
+                if _nome_scelto:
+                    _segna_voce_usata(_nome_scelto)
                 return output_filename
             raise RuntimeError("ElevenLabs ha prodotto un file vuoto")
 
