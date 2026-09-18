@@ -33,6 +33,15 @@ VOCI = {"voices": [
     {"voice_id": "id-secondo", "name": "Giulia"},
 ]}
 
+# Come ElevenLabs li restituisce davvero: nome piu' descrizione. I tre nomi
+# sono quelli veri dell'account di popponetv, con il trattino mediano che
+# ElevenLabs usa su uno solo dei tre.
+VOCI_CON_DESCRIZIONE = {"voices": [
+    {"voice_id": "id-romario", "name": "Romario - Credible, Calm and Balanced"},
+    {"voice_id": "id-brando", "name": "Brando Vox – Expressive, Confident, Conversational"},
+    {"voice_id": "id-davide", "name": "Davide - Sports Commentator"},
+]}
+
 
 @pytest.fixture(autouse=True)
 def azzera_cache():
@@ -102,6 +111,51 @@ class TestSceltaDellaVoce:
         voice._risolvi_voce("k")
 
         assert len(chiamate) == 1
+
+
+class TestNomeConDescrizione:
+    """ElevenLabs aggiunge la descrizione al nome, chi compila scrive il corto."""
+
+    def _con_voci(self, monkeypatch):
+        monkeypatch.setattr(
+            voice.requests, "get",
+            lambda *a, **k: RispostaFinta(dati=VOCI_CON_DESCRIZIONE),
+        )
+
+    @pytest.mark.parametrize("scritto,atteso", [
+        ("Romario", "id-romario"),
+        ("Davide", "id-davide"),
+        ("Brando Vox", "id-brando"),          # trattino mediano nel nome vero
+        ("brando vox", "id-brando"),          # maiuscole sbagliate
+        ("Brando VOx", "id-brando"),          # come l'ha scritto popponetv
+        # Nome intero incollato da ElevenLabs: le sue virgole separano le voci,
+        # quindi qui arriva solo il primo pezzo. Deve bastare lo stesso.
+        ("Romario - Credible", "id-romario"),
+    ])
+    def test_basta_il_nome_corto(self, monkeypatch, scritto, atteso):
+        self._con_voci(monkeypatch)
+        _chiedi(monkeypatch, scritto)
+
+        assert voice._risolvi_voce("k") == atteso
+
+    def test_l_elenco_dell_errore_mostra_i_nomi_corti(self, monkeypatch):
+        self._con_voci(monkeypatch)
+        _chiedi(monkeypatch, "Gianni")
+
+        with pytest.raises(RuntimeError) as errore:
+            voice._risolvi_voce("k")
+
+        # Deve suggerire quello che si scrive, non il nome con la descrizione.
+        messaggio = str(errore.value)
+        assert "Credible" not in messaggio
+        for corto in ("Romario", "Brando Vox", "Davide"):
+            assert corto in messaggio
+
+    def test_la_rotazione_funziona_con_i_nomi_veri(self, monkeypatch):
+        self._con_voci(monkeypatch)
+        _chiedi(monkeypatch, "Romario, Brando VOx, Davide", precedente="Romario")
+
+        assert voice._risolvi_voce("k") == "id-brando"
 
 
 class TestVociAlternate:

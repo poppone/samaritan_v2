@@ -108,10 +108,32 @@ def _segna_voce_usata(nome):
               f"il prossimo video potrebbe ripeterla.")
 
 
+# ElevenLabs restituisce il nome completo di descrizione, tipo
+# "Romario - Credible, Calm and Balanced", mentre sul sito si legge "Romario".
+# Chi compila l'impostazione scrive il nome corto, quindi si confronta anche
+# quello. Il trattino puo' essere normale, lungo o mediano.
+_RE_DESCRIZIONE = re.compile(r"\s+[-–—]\s+")
+
+
+def _nome_corto(nome):
+    """Da 'Romario - Credible, Calm and Balanced' ricava 'Romario'."""
+    return _RE_DESCRIZIONE.split(nome.strip(), 1)[0].strip()
+
+
 def _cerca_voce(voci, richiesta):
     """Trova una voce per nome come si legge sul sito, o per id. None se non c'e'."""
+    cercato = richiesta.strip().lower()
+    if not cercato:
+        return None
     for voce in voci:
-        if voce.get("name", "").strip().lower() == richiesta.lower():
+        nome = voce.get("name", "").strip()
+        if cercato in (nome.lower(), _nome_corto(nome).lower()):
+            return voce["voice_id"]
+    # Chi incolla il nome intero preso da ElevenLabs si porta dietro le virgole
+    # della descrizione, che qui separano una voce dall'altra: quel pezzo
+    # arriva troncato. Basta che sia l'inizio del nome vero per riconoscerlo.
+    for voce in voci:
+        if voce.get("name", "").strip().lower().startswith(cercato):
             return voce["voice_id"]
     if any(voce.get("voice_id") == richiesta for voce in voci):
         return richiesta
@@ -161,7 +183,9 @@ def _risolvi_voce(chiave):
             return _voce_risolta
         print(f"[Warning Voice] Voce '{nome}' non e' nell'account, provo la successiva.")
 
-    nomi = ", ".join(sorted(v.get("name", "?") for v in voci))
+    # Nell'elenco vanno i nomi corti: sono quelli che si leggono sul sito e
+    # che vanno scritti nell'impostazione.
+    nomi = ", ".join(sorted({_nome_corto(v.get("name", "?")) for v in voci}))
     raise RuntimeError(
         f"nessuna delle voci richieste ({', '.join(richieste)}) esiste "
         f"nell'account. Disponibili: {nomi}"
