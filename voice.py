@@ -15,6 +15,7 @@ l'hook dei primi 3 secondi "suona" davvero come un hook.
 """
 import os
 import re
+import json
 import asyncio
 
 import requests
@@ -65,40 +66,106 @@ def _elenco_voci(chiave):
     return risposta.json().get("voices", [])
 
 
+def _carica_cronologia():
+    """La memoria storica, o lista vuota se il file manca o e' illeggibile."""
+    try:
+        with open(config.FILE_CRONOLOGIA, "r", encoding="utf-8") as f:
+            dati = json.load(f)
+        return dati if isinstance(dati, list) else []
+    except Exception:
+        return []
+
+
+def _ultima_voce_usata():
+    """Il nome della voce dell'ultimo video che l'ha annotata.
+
+    La rotazione si ricorda dove era arrivata guardando qui, non contando i
+    video: la cronologia viene tagliata a 200 elementi, quindi un contatore
+    si bloccherebbe da solo dopo qualche mese, in silenzio.
+    """
+    for elemento in reversed(_carica_cronologia()):
+        if isinstance(elemento, dict) and elemento.get("voce"):
+            return elemento["voce"]
+    return None
+
+
+def _segna_voce_usata(nome):
+    """Annota sulla cronologia la voce di questo video.
+
+    Sta qui e non in brain.py perche' e' voice.py a decidere quale voce esce
+    davvero: il nome nella variabile puo' non esistere nell'account. Il
+    workflow committa gia' questo file, quindi il prossimo giro lo ritrova.
+    """
+    cronologia = _carica_cronologia()
+    if not cronologia or not isinstance(cronologia[-1], dict):
+        return
+    cronologia[-1]["voce"] = nome
+    try:
+        with open(config.FILE_CRONOLOGIA, "w", encoding="utf-8") as f:
+            json.dump(cronologia, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"[Warning Voice] Voce scelta non annotata ({e}): "
+              f"il prossimo video potrebbe ripeterla.")
+
+
+def _cerca_voce(voci, richiesta):
+    """Trova una voce per nome come si legge sul sito, o per id. None se non c'e'."""
+    for voce in voci:
+        if voce.get("name", "").strip().lower() == richiesta.lower():
+            return voce["voice_id"]
+    if any(voce.get("voice_id") == richiesta for voce in voci):
+        return richiesta
+    return None
+
+
 def _risolvi_voce(chiave):
-    """Ritorna l'id della voce da usare.
+    """Ritorna l'id della voce da usare per questo video.
 
     `ELEVENLABS_VOCE` accetta il nome che si legge sul sito, perche' e' quello
-    che un umano ha sotto gli occhi, oppure direttamente un id. Vuoto: si
-    prende la prima voce dell'account.
+    che un umano ha sotto gli occhi, oppure direttamente un id. Piu' nomi
+    separati da virgola vengono alternati: il video di oggi parte da quello
+    dopo l'ultimo usato. Vuoto: si prende la prima voce dell'account.
     """
     global _voce_risolta
     if _voce_risolta:
         return _voce_risolta
 
-    richiesta = (config.ELEVENLABS_VOCE or "").strip()
     voci = _elenco_voci(chiave)
     if not voci:
         raise RuntimeError("l'account ElevenLabs non ha nessuna voce")
 
-    if richiesta:
-        for voce in voci:
-            if voce.get("name", "").strip().lower() == richiesta.lower():
-                _voce_risolta = voce["voice_id"]
-                return _voce_risolta
-        # Non e' un nome noto: forse e' gia' un id.
-        if any(voce.get("voice_id") == richiesta for voce in voci):
-            _voce_risolta = richiesta
-            return _voce_risolta
-        nomi = ", ".join(sorted(v.get("name", "?") for v in voci))
-        raise RuntimeError(
-            f"voce '{richiesta}' non trovata nell'account. Disponibili: {nomi}"
-        )
+    richieste = config.ELEVENLABS_VOCI
+    if not richieste:
+        _voce_risolta = voci[0]["voice_id"]
+        print(f"[Samaritan Voice] Nessuna voce indicata: uso "
+              f"'{voci[0].get('name', _voce_risolta)}'.")
+        return _voce_risolta
 
-    _voce_risolta = voci[0]["voice_id"]
-    print(f"[Samaritan Voice] Nessuna voce indicata: uso "
-          f"'{voci[0].get('name', _voce_risolta)}'.")
-    return _voce_risolta
+    # Si riparte da quella dopo l'ultima usata. Se l'ultima non e' piu' in
+    # elenco (lista cambiata) si ricomincia dall'inizio. Un nome scritto male
+    # fa saltare il suo turno, non l'intera sintesi.
+    partenza = 0
+    precedente = _ultima_voce_usata()
+    if precedente in richieste:
+        partenza = (richieste.index(precedente) + 1) % len(richieste)
+    ordinate = richieste[partenza:] + richieste[:partenza]
+
+    for nome in ordinate:
+        trovata = _cerca_voce(voci, nome)
+        if trovata:
+            if len(richieste) > 1:
+                print(f"[Samaritan Voice] {len(richieste)} voci a rotazione, "
+                      f"questo video usa '{nome}'.")
+                _segna_voce_usata(nome)
+            _voce_risolta = trovata
+            return _voce_risolta
+        print(f"[Warning Voice] Voce '{nome}' non e' nell'account, provo la successiva.")
+
+    nomi = ", ".join(sorted(v.get("name", "?") for v in voci))
+    raise RuntimeError(
+        f"nessuna delle voci richieste ({', '.join(richieste)}) esiste "
+        f"nell'account. Disponibili: {nomi}"
+    )
 
 
 def _sintetizza_elevenlabs(testo, output_filename):

@@ -6,6 +6,7 @@ la catena dei ripieghi si comporti come deve. Serve perche' la voce sta nel
 percorso che pubblica: se questa parte sbaglia, il video esce muto o robotico.
 """
 import importlib
+import json
 
 import pytest
 
@@ -40,6 +41,20 @@ def azzera_cache():
     voice._voce_risolta = None
 
 
+def _chiedi(monkeypatch, valore, precedente=None):
+    """Imposta la voce richiesta come farebbe config leggendo la variabile.
+
+    `precedente` e' la voce che risulterebbe usata dal video prima, cioe' il
+    punto da cui la rotazione riparte.
+    """
+    monkeypatch.setattr(config, "ELEVENLABS_VOCE", valore)
+    monkeypatch.setattr(
+        config, "ELEVENLABS_VOCI", [v.strip() for v in valore.split(",") if v.strip()]
+    )
+    monkeypatch.setattr(voice, "_ultima_voce_usata", lambda: precedente)
+    monkeypatch.setattr(voice, "_segna_voce_usata", lambda nome: None)
+
+
 class TestSceltaDellaVoce:
     def _con_voci(self, monkeypatch):
         monkeypatch.setattr(
@@ -48,25 +63,25 @@ class TestSceltaDellaVoce:
 
     def test_per_nome_come_si_legge_sul_sito(self, monkeypatch):
         self._con_voci(monkeypatch)
-        monkeypatch.setattr(config, "ELEVENLABS_VOCE", "giulia")
+        _chiedi(monkeypatch, "giulia")
 
         assert voice._risolvi_voce("k") == "id-secondo"
 
     def test_anche_l_id_diretto_funziona(self, monkeypatch):
         self._con_voci(monkeypatch)
-        monkeypatch.setattr(config, "ELEVENLABS_VOCE", "id-primo")
+        _chiedi(monkeypatch, "id-primo")
 
         assert voice._risolvi_voce("k") == "id-primo"
 
     def test_senza_indicazione_prende_la_prima(self, monkeypatch):
         self._con_voci(monkeypatch)
-        monkeypatch.setattr(config, "ELEVENLABS_VOCE", "")
+        _chiedi(monkeypatch, "")
 
         assert voice._risolvi_voce("k") == "id-primo"
 
     def test_nome_sbagliato_elenca_quelli_veri(self, monkeypatch):
         self._con_voci(monkeypatch)
-        monkeypatch.setattr(config, "ELEVENLABS_VOCE", "Gianni")
+        _chiedi(monkeypatch, "Gianni")
 
         with pytest.raises(RuntimeError) as errore:
             voice._risolvi_voce("k")
@@ -81,12 +96,118 @@ class TestSceltaDellaVoce:
             return RispostaFinta(dati=VOCI)
 
         monkeypatch.setattr(voice.requests, "get", conta)
-        monkeypatch.setattr(config, "ELEVENLABS_VOCE", "Marco")
+        _chiedi(monkeypatch, "Marco")
 
         voice._risolvi_voce("k")
         voice._risolvi_voce("k")
 
         assert len(chiamate) == 1
+
+
+class TestVociAlternate:
+    """Piu' nomi separati da virgola: un video a testa, a turno."""
+
+    def _con_voci(self, monkeypatch):
+        monkeypatch.setattr(
+            voice.requests, "get", lambda *a, **k: RispostaFinta(dati=VOCI)
+        )
+
+    @pytest.mark.parametrize("precedente,atteso", [
+        (None, "id-primo"),       # primo video in assoluto
+        ("Marco", "id-secondo"),
+        ("Giulia", "id-primo"),   # chiuso il giro, si ricomincia
+        ("Sconosciuta", "id-primo"),  # lista cambiata: si riparte dall'inizio
+    ])
+    def test_ogni_video_prende_la_voce_successiva(self, monkeypatch, precedente, atteso):
+        self._con_voci(monkeypatch)
+        _chiedi(monkeypatch, "Marco, Giulia", precedente=precedente)
+
+        assert voice._risolvi_voce("k") == atteso
+
+    def test_gli_spazi_intorno_ai_nomi_non_contano(self, monkeypatch):
+        self._con_voci(monkeypatch)
+        _chiedi(monkeypatch, "  Marco ,   Giulia  ", precedente="Marco")
+
+        assert voice._risolvi_voce("k") == "id-secondo"
+
+    def test_un_nome_sbagliato_fa_passare_al_successivo(self, monkeypatch):
+        self._con_voci(monkeypatch)
+        # Tocca a 'Gianni', che nell'account non esiste: il video esce lo
+        # stesso con la voce dopo, invece di ripiegare sulla voce Microsoft.
+        _chiedi(monkeypatch, "Marco, Gianni", precedente="Marco")
+
+        assert voice._risolvi_voce("k") == "id-primo"
+
+    def test_la_voce_scelta_viene_annotata(self, monkeypatch):
+        self._con_voci(monkeypatch)
+        annotate = []
+        _chiedi(monkeypatch, "Marco, Giulia", precedente="Marco")
+        monkeypatch.setattr(voice, "_segna_voce_usata", annotate.append)
+
+        voice._risolvi_voce("k")
+
+        # Senza l'annotazione la rotazione ripartirebbe sempre da capo.
+        assert annotate == ["Giulia"]
+
+    def test_se_nessun_nome_esiste_lo_dice(self, monkeypatch):
+        self._con_voci(monkeypatch)
+        _chiedi(monkeypatch, "Gianni, Piero")
+
+        with pytest.raises(RuntimeError) as errore:
+            voice._risolvi_voce("k")
+
+        assert "Marco" in str(errore.value) and "Giulia" in str(errore.value)
+
+
+class TestMemoriaDellaRotazione:
+    def _storico(self, monkeypatch, tmp_path, contenuto):
+        percorso = tmp_path / "cronologia.json"
+        percorso.write_text(contenuto, encoding="utf-8")
+        monkeypatch.setattr(config, "FILE_CRONOLOGIA", str(percorso))
+        return percorso
+
+    def test_legge_l_ultima_voce_annotata(self, monkeypatch, tmp_path):
+        # L'ultimo record e' il video in corso, che la voce non ce l'ha ancora.
+        self._storico(monkeypatch, tmp_path, json.dumps([
+            {"titolo": "vecchio", "voce": "Marco"},
+            {"titolo": "in corso"},
+        ]))
+
+        assert voice._ultima_voce_usata() == "Marco"
+
+    def test_vecchie_voci_stringa_non_rompono_niente(self, monkeypatch, tmp_path):
+        self._storico(monkeypatch, tmp_path, json.dumps(["titolo vecchio formato"]))
+
+        assert voice._ultima_voce_usata() is None
+
+    @pytest.mark.parametrize("contenuto", ["", "{ non e' json", '{"a": 1}'])
+    def test_cronologia_illeggibile_riparte_dall_inizio(self, monkeypatch, tmp_path, contenuto):
+        self._storico(monkeypatch, tmp_path, contenuto)
+
+        assert voice._ultima_voce_usata() is None
+
+    def test_cronologia_assente_riparte_dall_inizio(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(config, "FILE_CRONOLOGIA", str(tmp_path / "manca.json"))
+
+        assert voice._ultima_voce_usata() is None
+
+    def test_annota_sull_ultimo_record(self, monkeypatch, tmp_path):
+        percorso = self._storico(monkeypatch, tmp_path, json.dumps([
+            {"titolo": "vecchio", "voce": "Marco"},
+            {"titolo": "in corso"},
+        ]))
+
+        voice._segna_voce_usata("Giulia")
+
+        salvato = json.loads(percorso.read_text(encoding="utf-8"))
+        assert salvato[-1]["voce"] == "Giulia"
+        assert salvato[-1]["titolo"] == "in corso"   # il resto non si tocca
+        assert salvato[0]["voce"] == "Marco"
+
+    def test_senza_cronologia_non_esplode(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(config, "FILE_CRONOLOGIA", str(tmp_path / "manca.json"))
+
+        voice._segna_voce_usata("Giulia")   # non deve sollevare
 
 
 class TestSintesiElevenLabs:
