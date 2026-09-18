@@ -84,3 +84,44 @@ class TestScopeOAuth:
         assert "https://www.googleapis.com/auth/yt-analytics.readonly" \
             in uploader.SCOPES
         assert "https://www.googleapis.com/auth/youtube.upload" in uploader.SCOPES
+
+
+class TestModelliGroq:
+    """I due modelli llama erano scritti nel codice; Groq li ha spostati sul
+    piano Enterprise il 18 settembre 2026 e hanno iniziato a rispondere 404."""
+
+    def test_i_modelli_non_sono_scritti_nel_codice(self):
+        testo = open(
+            os.path.join(RADICE, "brain.py"), encoding="utf-8"
+        ).read()
+
+        assert "llama-3.3-70b-versatile" not in testo
+        assert "llama-3.1-8b-instant" not in testo
+        assert "modelli = config.GROQ_MODELLI" in testo
+
+    def test_l_elenco_si_cambia_da_variabile_d_ambiente(self, monkeypatch):
+        monkeypatch.setenv("GROQ_MODELLI", "primo/modello, secondo/modello ")
+        import importlib
+
+        import config
+
+        importlib.reload(config)
+        try:
+            assert config.GROQ_MODELLI == ["primo/modello", "secondo/modello"]
+        finally:
+            monkeypatch.delenv("GROQ_MODELLI")
+            importlib.reload(config)
+
+
+class TestNienteTestoDiRipiego:
+    """Scelta di popponetv del 18 settembre 2026: se l'intelligenza non
+    risponde, meglio saltare il video che pubblicarne uno finto."""
+
+    def test_il_ripiego_e_stato_rimosso(self):
+        testo = open(
+            os.path.join(RADICE, "brain.py"), encoding="utf-8"
+        ).read()
+
+        assert "uso il fallback" not in testo
+        assert "il dettaglio che quasi nessuno nota" not in testo
+        assert "Nessun modello Groq ha risposto" in testo

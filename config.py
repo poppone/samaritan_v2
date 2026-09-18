@@ -33,6 +33,17 @@ def _get(nome, default=None, obbligatoria=False):
 GROQ_API_KEY = _get("GROQ_API_KEY", obbligatoria=True)
 PEXELS_API_KEY = _get("PEXELS_API_KEY", obbligatoria=True)
 
+# Modelli Groq da provare, in ordine di preferenza. Groq sposta i modelli fra i
+# piani senza preavviso: quando uno non e' piu' accessibile risponde 404 e
+# Samaritan ripiega sul testo finto, in silenzio. Per cambiarli basta il Secret
+# GROQ_MODELLI (nomi separati da virgola), senza rimettere mano al codice.
+# Elenco aggiornato: https://console.groq.com/docs/models
+GROQ_MODELLI = [
+    m.strip()
+    for m in _get("GROQ_MODELLI", "openai/gpt-oss-120b,openai/gpt-oss-20b").split(",")
+    if m.strip()
+]
+
 # ------------------------------------------------------------ Identita canale
 NOME_CANALE = _get("NOME_CANALE", "Poppone TV")
 # Handle YouTube: finisce nella descrizione di ogni video come link al canale.

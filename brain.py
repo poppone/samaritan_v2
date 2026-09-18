@@ -612,7 +612,7 @@ def genera_script_samaritan(tema=None):
     if tema:
         prompt_utente += f" Focus specifico richiesto: {tema}"
 
-    modelli = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+    modelli = config.GROQ_MODELLI
 
     for modello in modelli:
         for tentativo in range(1, 3):       # 2 tentativi per modello
@@ -684,38 +684,18 @@ def genera_script_samaritan(tema=None):
             except Exception as e:
                 print(f"[Groq Warning] {modello}: {e}")
 
-    # ----------------------------------------------------------- Fallback
-    print("[Samaritan Brain] Tutti i modelli hanno fallito: uso il fallback.")
-    # Solo giochi presenti su Steam: cosi' anche il fallback ottiene
-    # gameplay reale invece di stock generico.
-    gioco = random.choice([
-        "Cyberpunk 2077", "ELDEN RING", "Counter-Strike 2",
-        "Baldur's Gate 3", "Red Dead Redemption 2",
-    ])
-    risultato = {
-        # Anche il ripiego deve rispettare valida_titolo(): il vecchio titolo
-        # era di 70 caratteri e sarebbe uscito troncato nel feed.
-        "titolo": f"{gioco}: il dettaglio che quasi nessuno nota",
-        "script": (
-            f"Stai giocando a {gioco} da anni e non hai mai notato questo dettaglio. "
-            "Gli sviluppatori lo hanno nascosto talmente bene che serve rigiocare "
-            "la prima missione per accorgersene. Una volta che lo vedi, non riesci "
-            f"piu' a ignorarlo. Iscriviti a {config.NOME_CANALE} per gli altri. "
-            f"E stai giocando a {gioco} da anni senza accorgertene."
-        ),
-        "gioco": gioco,
-        "query_video": f"{gioco.lower()} gameplay",
-        "descrizione": (
-            f"Un dettaglio di {gioco} che passa inosservato praticamente a tutti.\n"
-            f"Altri segreti gaming ogni giorno su {config.NOME_CANALE}.\n\n"
-            "Tu l'avevi notato? Scrivilo nei commenti."
-        ),
-        "fonte": "",
-        "fonte_url": "",
-        "stile": formato,
-    }
-    salva_in_cronologia(risultato)
-    return risultato
+    # ------------------------------------------------- Nessun modello risponde
+    # Prima qui c'era un testo di ripiego scritto a mano: il video usciva lo
+    # stesso, generico e slegato da qualsiasi notizia, e nessuno se ne
+    # accorgeva perche' la pipeline chiudeva verde. Meglio saltare il video:
+    # l'eccezione fa fallire il workflow, cosi' il problema si vede subito.
+    raise RuntimeError(
+        "Nessun modello Groq ha risposto: "
+        f"provati {', '.join(modelli)}. "
+        "Salto il video invece di pubblicare un testo di ripiego. "
+        "Controlla il Secret GROQ_API_KEY e l'elenco GROQ_MODELLI "
+        "(modelli disponibili: https://console.groq.com/docs/models)."
+    )
 
 
 if __name__ == "__main__":
