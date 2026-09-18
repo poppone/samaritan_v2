@@ -94,9 +94,33 @@ jobs:
         run: |
           git config --global user.name "Samaritan Bot"
           git config --global user.email "bot@samaritan.local"
-          git add cronologia_trend.json performance.json 2>/dev/null || true
-          git diff --staged --quiet || git commit -m "Aggiornamento memoria Samaritan [skip ci]"
-          git push || echo "Nessuna modifica da pubblicare"
+
+          # Un file alla volta, e MAI due percorsi nello stesso 'git add':
+          # se uno dei due non esiste, git fallisce senza mettere in stage
+          # nemmeno l'altro. performance.json nasce solo quando YouTube
+          # Analytics risponde, quindi all'inizio non c'e': e' per questo che
+          # la memoria non veniva mai salvata.
+          for file_memoria in cronologia_trend.json performance.json; do
+            if [ -f "$file_memoria" ]; then
+              git add -- "$file_memoria"
+            fi
+          done
+
+          if git diff --staged --quiet; then
+            echo "Nessuna modifica alla memoria da salvare."
+            exit 0
+          fi
+
+          git commit -m "Aggiornamento memoria Samaritan [skip ci]"
+
+          # Il push puo' essere rifiutato se il branch e' avanzato nel
+          # frattempo: riallineo e riprovo una volta sola.
+          if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+            exit 0
+          fi
+          echo "Push rifiutato, riallineo sulla base remota e riprovo."
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
 
       - name: Conserva il video prodotto
         if: always()
