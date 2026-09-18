@@ -75,11 +75,14 @@ jobs:
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           PRIVACY_STATUS: ${{ inputs.privacy || 'public' }}
           NOME_CANALE: ${{ vars.NOME_CANALE || 'Poppone TV' }}
           VOCE_TTS: ${{ vars.VOCE_TTS || 'it-IT-DiegoNeural' }}
+          ELEVENLABS_VOCE: ${{ vars.ELEVENLABS_VOCE }}
+          ELEVENLABS_MODELLO: ${{ vars.ELEVENLABS_MODELLO }}
           WHISPER_MODEL: ${{ vars.WHISPER_MODEL || 'base' }}
           GROQ_MODELLI: ${{ vars.GROQ_MODELLI }}
           # Passato via env e non interpolato nel comando: evita script injection

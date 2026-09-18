@@ -40,6 +40,20 @@ def _get(nome, default=None, obbligatoria=False):
 GROQ_API_KEY = _get("GROQ_API_KEY", obbligatoria=True)
 PEXELS_API_KEY = _get("PEXELS_API_KEY", obbligatoria=True)
 
+# ElevenLabs: voce piu' realistica di Edge-TTS, ma a consumo. Se la chiave non
+# c'e' o il credito finisce, voice.py ripiega da solo su Edge-TTS: il video
+# esce comunque, con la voce di prima.
+ELEVENLABS_API_KEY = _get("ELEVENLABS_API_KEY")
+# Nome della voce come appare su elevenlabs.io, oppure il suo id. Vuoto = si
+# usa la prima voce dell'account.
+ELEVENLABS_VOCE = _get("ELEVENLABS_VOCE", "")
+# multilingual_v2 e' il modello con la resa migliore in italiano; turbo costa
+# meno della meta' ma suona piu' piatto.
+ELEVENLABS_MODELLO = _get("ELEVENLABS_MODELLO", "eleven_multilingual_v2")
+# Stabilita bassa = piu' espressivo e piu' variabile; alta = piu' monotono.
+ELEVENLABS_STABILITA = float(_get("ELEVENLABS_STABILITA", "0.45"))
+ELEVENLABS_SOMIGLIANZA = float(_get("ELEVENLABS_SOMIGLIANZA", "0.8"))
+
 # Modelli Groq da provare, in ordine di preferenza. Groq sposta i modelli fra i
 # piani senza preavviso: quando uno non e' piu' accessibile risponde 404 e
 # Samaritan ripiega sul testo finto, in silenzio. Per cambiarli basta il Secret
