@@ -16,9 +16,16 @@ except ImportError:
 
 
 def _get(nome, default=None, obbligatoria=False):
-    valore = os.getenv(nome, default)
+    valore = os.getenv(nome)
     if isinstance(valore, str):
         valore = valore.strip()
+    # Su GitHub Actions una variabile di repository non impostata arriva come
+    # stringa VUOTA, non come assente: con os.getenv(nome, default) il default
+    # non scatterebbe mai e la configurazione resterebbe a mani vuote.
+    if not valore:
+        valore = default
+        if isinstance(valore, str):
+            valore = valore.strip()
     # Scarta i placeholder rimasti nel .env
     if valore and valore.startswith("inserisci_qui"):
         valore = None
@@ -32,6 +39,16 @@ def _get(nome, default=None, obbligatoria=False):
 # ---------------------------------------------------------------- API esterne
 GROQ_API_KEY = _get("GROQ_API_KEY", obbligatoria=True)
 PEXELS_API_KEY = _get("PEXELS_API_KEY", obbligatoria=True)
+
+# Modelli Groq da provare, in ordine di preferenza. Groq sposta i modelli fra i
+# piani senza preavviso: quando uno non e' piu' accessibile risponde 404 e
+# Samaritan ripiega sul testo finto, in silenzio. Per cambiarli basta il Secret
+# GROQ_MODELLI (nomi separati da virgola), senza rimettere mano al codice.
+# Elenco aggiornato: https://console.groq.com/docs/models
+_GROQ_MODELLI_DEFAULT = "openai/gpt-oss-120b,openai/gpt-oss-20b"
+GROQ_MODELLI = [
+    m.strip() for m in _get("GROQ_MODELLI", _GROQ_MODELLI_DEFAULT).split(",") if m.strip()
+] or _GROQ_MODELLI_DEFAULT.split(",")
 
 # ------------------------------------------------------------ Identita canale
 NOME_CANALE = _get("NOME_CANALE", "Poppone TV")

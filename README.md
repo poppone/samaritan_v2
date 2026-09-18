@@ -61,9 +61,21 @@ Poi compila `.env`:
 | Variabile | Dove ottenerla |
 |---|---|
 | `GROQ_API_KEY` | console.groq.com (gratuita) |
+| `GROQ_MODELLI` | opzionale: modelli da provare, separati da virgola |
 | `PEXELS_API_KEY` | pexels.com/api (gratuita) |
 | `TELEGRAM_BOT_TOKEN` | @BotFather su Telegram (opzionale) |
 | `TELEGRAM_CHAT_ID` | @userinfobot su Telegram (opzionale) |
+
+> Groq sposta i modelli fra i piani senza preavviso: quando quelli in uso
+> diventano irraggiungibili la chiamata risponde `404 model_not_found`. In quel
+> caso non serve toccare il codice, basta aggiornare `GROQ_MODELLI` con nomi
+> presi da https://console.groq.com/docs/models. Il valore di default e'
+> `openai/gpt-oss-120b,openai/gpt-oss-20b`, disponibili sul piano gratuito;
+> `llama-3.3-70b-versatile` e `llama-3.1-8b-instant` sono passati a Enterprise
+> il 18 settembre 2026.
+>
+> Se nessun modello risponde, Samaritan **non pubblica**: la pipeline fallisce
+> con un errore invece di mandare online un testo di ripiego generico.
 
 > `.env`, `client_secret.json` e `token.pickle` sono in `.gitignore` e non
 > devono mai finire in un commit. Il test `tests/test_regressioni.py` lo

@@ -580,12 +580,85 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti):
         "7. QUERY VIDEO: in INGLESE, 2-4 parole, usata solo come ripiego se il "
         "gioco non e' reperibile (es: 'cyberpunk gameplay', 'fps shooter action').\n"
         "8. DESCRIZIONE: 2 righe + UNA domanda finale che spinga a commentare.\n"
-        "9. NON riusare questi titoli gia' pubblicati:\n"
+        "9. NIENTE CRONACA INVENTATA. Se non stai citando una delle notizie "
+        "elencate sopra (cioe' se 'indice_notizia' non punta a una di quelle), "
+        "lo script NON puo' contenere leak, date di uscita, numeri di vendite, "
+        "annunci o conferme attribuite agli sviluppatori: sono fatti verificabili "
+        "e inventarli fa danno al canale. In quel caso parla di meccaniche, "
+        "segreti di gioco o consigli, che non hanno bisogno di una fonte.\n"
+        "10. NON riusare questi titoli gia' pubblicati:\n"
         f"   {json.dumps(ultimi_titoli, ensure_ascii=False)}\n\n"
         "Rispondi ESCLUSIVAMENTE con un JSON valido con le chiavi: "
         "'titolo', 'script', 'gioco', 'query_video', 'descrizione', "
         "'indice_notizia'."
     )
+
+
+# Schema vincolato per la risposta del modello. Con "strict" la decodifica e'
+# guidata dallo schema: il JSON non puo' piu' uscire invalido. Supportato dai
+# modelli gpt-oss; se un modello non lo accetta, il secondo tentativo ripiega
+# sul testo libero. https://console.groq.com/docs/structured-outputs
+_SCHEMA_RISPOSTA = {
+    "name": "short_samaritan",
+    "strict": True,
+    "schema": {
+        "type": "object",
+        "properties": {
+            "titolo": {"type": "string"},
+            "script": {"type": "string"},
+            "gioco": {"type": "string"},
+            "query_video": {"type": "string"},
+            "descrizione": {"type": "string"},
+            "indice_notizia": {"type": "integer"},
+        },
+        "required": [
+            "titolo", "script", "gioco",
+            "query_video", "descrizione", "indice_notizia",
+        ],
+        "additionalProperties": False,
+    },
+}
+
+
+# Parole che segnalano un'affermazione di cronaca: qualcosa che o' e' vero e
+# allora ha una fonte, o e' inventato. Il modello le usa volentieri perche'
+# "bucano" lo scroll, anche quando nessuna notizia gliele ha suggerite.
+_SPIE_DI_CRONACA = (
+    "trapelat", "leak", "leek", "confermat", "annunciat", "ufficializzat",
+    "rumor", "indiscrezion", "data di uscita", "esce il ", "in arrivo il ",
+    "hanno dichiarato", "ha dichiarato", "gli sviluppatori hanno",
+    "la software house", "secondo il comunicato",
+)
+
+
+def _cronaca_senza_fonte(script, fonte):
+    """Vero se lo script afferma fatti di cronaca ma non cita nessuna notizia.
+
+    Uno Short che racconta un leak inesistente e' una notizia falsa su un
+    prodotto vero, pubblicata in automatico su un canale senza nessuno che la
+    rilegga. Meglio rigenerare.
+    """
+    if fonte:
+        return False
+    testo = (script or "").lower()
+    return any(spia in testo for spia in _SPIE_DI_CRONACA)
+
+
+def _estrai_json(testo):
+    """Ritaglia il primo oggetto JSON da una risposta in testo libero.
+
+    Serve quando lo schema vincolato non e' utilizzabile: il modello a volte
+    incornicia il JSON con ```json ... ``` o lo fa precedere da una riga di
+    commento.
+    """
+    testo = (testo or "").strip()
+    if testo.startswith("```"):
+        testo = re.sub(r"^```[a-zA-Z]*\s*", "", testo)
+        testo = re.sub(r"```\s*$", "", testo).strip()
+    inizio, fine = testo.find("{"), testo.rfind("}")
+    if inizio == -1 or fine <= inizio:
+        raise ValueError("nessun oggetto JSON nella risposta")
+    return json.loads(testo[inizio:fine + 1])
 
 
 def genera_script_samaritan(tema=None):
@@ -612,45 +685,57 @@ def genera_script_samaritan(tema=None):
     if tema:
         prompt_utente += f" Focus specifico richiesto: {tema}"
 
-    modelli = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+    modelli = config.GROQ_MODELLI
 
     for modello in modelli:
         for tentativo in range(1, 3):       # 2 tentativi per modello
             try:
+                # Primo tentativo con lo schema vincolato, secondo in testo
+                # libero ritagliando il JSON: cosi' anche un modello che non
+                # supporta lo schema riesce comunque a rispondere.
+                con_schema = tentativo == 1
                 print(f"[Samaritan Brain] {modello} - tentativo {tentativo} "
-                      f"(formato {formato})...")
-                response = client.chat.completions.create(
-                    model=modello,
-                    messages=[
+                      f"(formato {formato}, "
+                      f"{'schema' if con_schema else 'testo libero'})...")
+                parametri = {
+                    "model": modello,
+                    "messages": [
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": prompt_utente},
                     ],
-                    temperature=0.9,
-                    max_tokens=700,
-                    response_format={"type": "json_object"},
-                )
+                    "temperature": 0.9,
+                    # Nei modelli di ragionamento questo tetto copre anche i
+                    # token di ragionamento: con 700 il ragionamento si mangiava
+                    # tutto il budget e Groq rispondeva 400 json_validate_failed
+                    # con generazione vuota.
+                    "max_tokens": 2000,
+                }
+                if con_schema:
+                    parametri["response_format"] = {
+                        "type": "json_schema",
+                        "json_schema": _SCHEMA_RISPOSTA,
+                    }
+                if "gpt-oss" in modello:
+                    # Meno ragionamento, piu' token per la risposta vera.
+                    parametri["reasoning_effort"] = "low"
+
+                response = client.chat.completions.create(**parametri)
                 contenuto = response.choices[0].message.content
                 if not contenuto:
+                    print("[Samaritan Brain] Risposta vuota, riprovo.")
                     continue
 
-                data = json.loads(contenuto)
+                data = json.loads(contenuto) if con_schema \
+                    else _estrai_json(contenuto)
                 titolo = _pulisci_titolo(str(data.get("titolo", "")))
                 script = str(data.get("script", "")).strip()
                 query_video = str(data.get("query_video", "gameplay")).strip()
                 descrizione = str(data.get("descrizione", "")).strip()
                 gioco = _pulisci_nome_gioco(str(data.get("gioco", "")))
 
-                ok, motivo = valida_script(titolo, script)
-                if ok:
-                    ok, motivo = valida_titolo(titolo, gioco)
-                if not ok:
-                    print(f"[Samaritan Brain] SCARTATO: {motivo}. Rigenero.")
-                    continue
-
-                if "gameplay" not in query_video.lower():
-                    query_video = f"{query_video} gameplay"
-
-                # Traccia la fonte reale: trasparenza = segnale di qualita'
+                # La fonte serve gia' in validazione: uno script che parla di
+                # leak e conferme senza una notizia dietro va scartato prima di
+                # diventare un video.
                 fonte, fonte_url = "", ""
                 try:
                     idx = int(data.get("indice_notizia", -1))
@@ -661,6 +746,19 @@ def genera_script_samaritan(tema=None):
                         fonte_url = notizie[idx].get("link", "")
                 except (TypeError, ValueError):
                     pass
+
+                ok, motivo = valida_script(titolo, script)
+                if ok:
+                    ok, motivo = valida_titolo(titolo, gioco)
+                if ok and _cronaca_senza_fonte(script, fonte):
+                    ok = False
+                    motivo = "afferma fatti di cronaca senza citare una notizia"
+                if not ok:
+                    print(f"[Samaritan Brain] SCARTATO: {motivo}. Rigenero.")
+                    continue
+
+                if "gameplay" not in query_video.lower():
+                    query_video = f"{query_video} gameplay"
 
                 risultato = {
                     "titolo": titolo,
@@ -684,38 +782,18 @@ def genera_script_samaritan(tema=None):
             except Exception as e:
                 print(f"[Groq Warning] {modello}: {e}")
 
-    # ----------------------------------------------------------- Fallback
-    print("[Samaritan Brain] Tutti i modelli hanno fallito: uso il fallback.")
-    # Solo giochi presenti su Steam: cosi' anche il fallback ottiene
-    # gameplay reale invece di stock generico.
-    gioco = random.choice([
-        "Cyberpunk 2077", "ELDEN RING", "Counter-Strike 2",
-        "Baldur's Gate 3", "Red Dead Redemption 2",
-    ])
-    risultato = {
-        # Anche il ripiego deve rispettare valida_titolo(): il vecchio titolo
-        # era di 70 caratteri e sarebbe uscito troncato nel feed.
-        "titolo": f"{gioco}: il dettaglio che quasi nessuno nota",
-        "script": (
-            f"Stai giocando a {gioco} da anni e non hai mai notato questo dettaglio. "
-            "Gli sviluppatori lo hanno nascosto talmente bene che serve rigiocare "
-            "la prima missione per accorgersene. Una volta che lo vedi, non riesci "
-            f"piu' a ignorarlo. Iscriviti a {config.NOME_CANALE} per gli altri. "
-            f"E stai giocando a {gioco} da anni senza accorgertene."
-        ),
-        "gioco": gioco,
-        "query_video": f"{gioco.lower()} gameplay",
-        "descrizione": (
-            f"Un dettaglio di {gioco} che passa inosservato praticamente a tutti.\n"
-            f"Altri segreti gaming ogni giorno su {config.NOME_CANALE}.\n\n"
-            "Tu l'avevi notato? Scrivilo nei commenti."
-        ),
-        "fonte": "",
-        "fonte_url": "",
-        "stile": formato,
-    }
-    salva_in_cronologia(risultato)
-    return risultato
+    # ------------------------------------------------- Nessun modello risponde
+    # Prima qui c'era un testo di ripiego scritto a mano: il video usciva lo
+    # stesso, generico e slegato da qualsiasi notizia, e nessuno se ne
+    # accorgeva perche' la pipeline chiudeva verde. Meglio saltare il video:
+    # l'eccezione fa fallire il workflow, cosi' il problema si vede subito.
+    raise RuntimeError(
+        "Nessun modello Groq ha risposto: "
+        f"provati {', '.join(modelli)}. "
+        "Salto il video invece di pubblicare un testo di ripiego. "
+        "Controlla il Secret GROQ_API_KEY e l'elenco GROQ_MODELLI "
+        "(modelli disponibili: https://console.groq.com/docs/models)."
+    )
 
 
 if __name__ == "__main__":
