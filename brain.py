@@ -68,6 +68,16 @@ APERTURE_VIETATE = (
     "come state", "raga,", "ragazzi,",
 )
 
+# Quante voci di cronologia guardare per decidere se qualcosa si sta ripetendo.
+# Due video al giorno: tre voci coprono circa un giorno e mezzo, cioe' la
+# finestra in cui lo stesso spettatore puo' vedere passare due Short di fila.
+MEMORIA_RIPETIZIONI = 3
+
+# Quante parole iniziali confrontare per dire "questo attacco l'abbiamo gia'
+# usato". Tre bastano: gli Short scartati si somigliavano proprio li'
+# ("Stai sbagliando tutto su X", "Nessuno ti ha detto che Y").
+PAROLE_APERTURA = 3
+
 MIN_PAROLE_SCRIPT = 45
 MAX_PAROLE_SCRIPT = 95
 
@@ -387,7 +397,20 @@ def _pulisci_nome_gioco(gioco):
     return g
 
 
-def valida_script(titolo, script):
+def _impronta_apertura(script, n_parole=PAROLE_APERTURA):
+    """Le prime parole dello script, ridotte a una forma confrontabile.
+
+    Serve solo a rispondere a "questo attacco l'abbiamo gia' usato?": accenti,
+    maiuscole e punteggiatura non contano, contano le parole. Il gioco
+    nominato di solito arriva dopo la terza parola, quindi due aperture
+    identiche su giochi diversi hanno la stessa impronta, che e' il caso da
+    prendere.
+    """
+    parole = [p for p in re.split(r"[^0-9a-zA-Z]+", _senza_accenti(script or "").lower()) if p]
+    return " ".join(parole[:n_parole])
+
+
+def valida_script(titolo, script, aperture_recenti=()):
     """Ritorna (True, "") se lo script e' pubblicabile, altrimenti (False, motivo)."""
     if not titolo or not script:
         return False, "titolo o script vuoti"
@@ -396,6 +419,14 @@ def valida_script(titolo, script):
     for vietata in APERTURE_VIETATE:
         if inizio.startswith(vietata):
             return False, f"apertura debole vietata: '{vietata}'"
+
+    # Nove Short di fila aperti con "Stai..." o "Nessuno ti ha detto che..."
+    # sono il motivo per cui questo controllo esiste: e' la firma del
+    # contenuto prodotto in serie, quello che YouTube guarda quando decide
+    # se un canale e' monetizzabile.
+    impronta = _impronta_apertura(script)
+    if impronta and impronta in set(aperture_recenti):
+        return False, f"apre come un video recente ('{impronta}...')"
 
     n_parole = len(script.split())
     if n_parole < MIN_PAROLE_SCRIPT:
@@ -526,7 +557,9 @@ def testo_miniatura(titolo, massimo_parole=4):
 # ===========================================================================
 # GENERAZIONE
 # ===========================================================================
-def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti):
+def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti,
+                              aperture_recenti=(), giochi_recenti=(),
+                              notizie_gia_usate=()):
     meta = FORMATI_VIDEO[formato]
 
     blocco_notizie = "NESSUNA notizia fresca disponibile."
@@ -539,7 +572,8 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti):
     if hook_vincenti:
         blocco_hook = (
             "\nHOOK CHE HANNO FUNZIONATO DAVVERO su questo canale "
-            "(replicane la struttura, NON il contenuto):\n"
+            "(replicane il meccanismo, NON le parole: se li ricopi alla "
+            "lettera ottieni dieci video che attaccano uguali):\n"
             + "\n".join(f"  - {h}" for h in hook_vincenti) + "\n"
         )
 
@@ -553,6 +587,30 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti):
         "Imposta 'indice_notizia' a -1.\n"
     )
 
+    # Le regole 11 e 12 compaiono solo quando c'e' davvero qualcosa da evitare:
+    # al primo video della vita del canale una lista vuota sarebbe rumore che
+    # occupa contesto e non dice niente.
+    righe_ripetizioni = []
+    if aperture_recenti:
+        righe_ripetizioni.append(
+            "11. NON aprire lo script come questi video recenti. Cambia proprio "
+            "le prime parole, non basta cambiare il gioco nominato:\n"
+            + "\n".join(f"   - \"{a}...\"" for a in aperture_recenti)
+        )
+    if giochi_recenti or notizie_gia_usate:
+        vietati = []
+        if giochi_recenti:
+            vietati.append(f"giochi: {json.dumps(list(giochi_recenti), ensure_ascii=False)}")
+        if notizie_gia_usate:
+            vietati.append(f"notizie: {json.dumps(list(notizie_gia_usate), ensure_ascii=False)}")
+        righe_ripetizioni.append(
+            "12. NIENTE DOPPIONI: questi sono gia' usciti, scegli altro.\n   "
+            + "\n   ".join(vietati)
+        )
+    blocco_ripetizioni = "\n".join(righe_ripetizioni)
+    if blocco_ripetizioni:
+        blocco_ripetizioni += "\n"   # la riga vuota prima di "Rispondi..."
+
     return (
         f"Sei il Lead Social Media Manager di '{config.NOME_CANALE}', canale YouTube "
         "Gaming italiano. Scrivi uno script per uno Short ad ALTISSIMA RETENTION "
@@ -564,8 +622,13 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti):
         "REGOLE TASSATIVE:\n"
         "1. PRIMA FRASE = HOOK. Deve bloccare lo scroll in 3 secondi. "
         "VIETATO iniziare con saluti ('Ciao', 'Raga', 'Benvenuti', 'Oggi vi parlo'). "
-        "Inizia con una contraddizione, un numero shock o un'accusa diretta allo "
-        "spettatore (es: 'Stai sbagliando tutto su...', 'Nessuno ti ha detto che...').\n"
+        "Attacca con un meccanismo forte, scegliendone uno diverso ogni volta: "
+        "una contraddizione, un numero che stona, un'accusa diretta allo "
+        "spettatore, una scena raccontata a meta', una domanda secca, un "
+        "confronto fra due cose che non c'entrano. Cambia anche le parole, non "
+        "solo il gioco nominato: due Short che aprono uguali si leggono come "
+        "contenuto prodotto in serie, ed e' cosi' che un canale perde la "
+        "monetizzazione.\n"
         "2. SEAMLESS LOOP: l'ultima frase deve ricollegarsi in modo naturale alla "
         "prima parola dello script, cosi' il video riparte senza stacco percepibile.\n"
         "3. RITMO: frasi corte. Una informazione per frase. Niente subordinate.\n"
@@ -590,7 +653,8 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti):
         "e inventarli fa danno al canale. In quel caso parla di meccaniche, "
         "segreti di gioco o consigli, che non hanno bisogno di una fonte.\n"
         "10. NON riusare questi titoli gia' pubblicati:\n"
-        f"   {json.dumps(ultimi_titoli, ensure_ascii=False)}\n\n"
+        f"   {json.dumps(ultimi_titoli, ensure_ascii=False)}\n"
+        f"{blocco_ripetizioni}\n"
         "Rispondi ESCLUSIVAMENTE con un JSON valido con le chiavi: "
         "'titolo', 'script', 'gioco', 'query_video', 'descrizione', "
         "'indice_notizia'."
@@ -634,6 +698,27 @@ _SPIE_DI_CRONACA = (
 )
 
 
+def _doppione_recente(gioco, fonte, gioco_precedente, fonti_recenti):
+    """Motivo per cui questo video sarebbe un doppione, o stringa vuota.
+
+    Due controlli diversi con due finestre diverse. La notizia non si riusa
+    entro MEMORIA_RIPETIZIONI video: e' il caso vero visto il 18 settembre
+    2026, due Short usciti dallo stesso articolo su No Man's Sky. Il gioco
+    invece si blocca solo sul video immediatamente precedente, perche'
+    vietarlo piu' a lungo puo' non lasciare nessuna notizia utilizzabile e
+    far saltare la pubblicazione, che e' un danno peggiore della ripetizione.
+    """
+    f = (fonte or "").strip().lower()
+    if f and f in set(fonti_recenti):
+        return "riusa la stessa notizia di un video gia' pubblicato"
+
+    g = (gioco or "").strip().lower()
+    if g and g == (gioco_precedente or "").strip().lower():
+        return f"parla di {gioco} come il video precedente"
+
+    return ""
+
+
 def _cronaca_senza_fonte(script, fonte):
     """Vero se lo script afferma fatti di cronaca ma non cita nessuna notizia.
 
@@ -675,6 +760,22 @@ def genera_script_samaritan(tema=None):
     cronologia = carica_cronologia()
     ultimi_titoli = [_normalizza(i).get("titolo", "") for i in cronologia[-12:]]
 
+    # Due liste dalla stessa fonte: al modello servono aperture leggibili da
+    # evitare, alla validazione serve l'impronta di tre parole da confrontare.
+    recenti = [_normalizza(i) for i in cronologia[-MEMORIA_RIPETIZIONI:]]
+    estratti = [r.get("estratto_script", "") for r in recenti]
+    aperture_da_mostrare = [" ".join(e.split()[:8]) for e in estratti if e.strip()]
+    impronte_aperture = {_impronta_apertura(e) for e in estratti}
+    impronte_aperture.discard("")
+
+    notizie_gia_usate = sorted({r.get("fonte", "").strip() for r in recenti} - {""})
+    fonti_recenti = {f.lower() for f in notizie_gia_usate}
+
+    # Il gioco si blocca solo sull'ultimo video, non su tutta la finestra:
+    # vedi _doppione_recente per il perche'.
+    gioco_precedente = recenti[-1].get("gioco", "") if recenti else ""
+    giochi_recenti = [gioco_precedente] if gioco_precedente.strip() else []
+
     try:
         from analyst import migliori_hook
         hook_vincenti = migliori_hook(n=3)
@@ -682,7 +783,8 @@ def genera_script_samaritan(tema=None):
         hook_vincenti = []
 
     system_prompt = _costruisci_system_prompt(
-        formato, notizie, ultimi_titoli, hook_vincenti
+        formato, notizie, ultimi_titoli, hook_vincenti,
+        aperture_da_mostrare, giochi_recenti, notizie_gia_usate
     )
     prompt_base = "Scrivi lo Short di oggi."
     if tema:
@@ -761,12 +863,19 @@ def genera_script_samaritan(tema=None):
                 except (TypeError, ValueError):
                     pass
 
-                ok, motivo = valida_script(titolo, script)
+                ok, motivo = valida_script(titolo, script, impronte_aperture)
                 if ok:
                     ok, motivo = valida_titolo(titolo, gioco)
                 if ok and _cronaca_senza_fonte(script, fonte):
                     ok = False
                     motivo = "afferma fatti di cronaca senza citare una notizia"
+                if ok:
+                    doppione = _doppione_recente(
+                        gioco, fonte, gioco_precedente, fonti_recenti
+                    )
+                    if doppione:
+                        ok = False
+                        motivo = doppione
                 if not ok:
                     print(f"[Samaritan Brain] SCARTATO: {motivo}. Rigenero.")
                     motivo_scarto = motivo

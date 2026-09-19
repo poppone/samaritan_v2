@@ -278,3 +278,142 @@ class TestRigenerazioneInformata:
         assert "scartato" not in prompt_visti[0].lower()
         assert "troppo lungo" in prompt_visti[1], prompt_visti[1]
         assert risultato["titolo"] == "Elden Ring: il boss dietro la cascata"
+
+
+class TestAperturaRipetuta:
+    """Nove Short di fila aperti nello stesso modo sono il rischio vero.
+
+    Il 18 settembre 2026 tutti e nove gli script della giornata iniziavano
+    con "Stai..." oppure "Nessuno ti ha detto che...", perche' erano i due
+    esempi scritti dentro il prompt e il modello li ricopiava. E' esattamente
+    la firma del contenuto prodotto in serie che YouTube guarda quando decide
+    se un canale puo' essere monetizzato.
+    """
+
+    def test_l_impronta_ignora_accenti_maiuscole_e_punteggiatura(self):
+        assert brain._impronta_apertura("Perche' NON l'hai") == \
+            brain._impronta_apertura("perche, non l hai mai visto")
+
+    def test_due_aperture_uguali_su_giochi_diversi_hanno_la_stessa_impronta(self):
+        # Il caso vero: cambia solo il gioco dopo le prime tre parole.
+        a = brain._impronta_apertura("Stai sbagliando tutto su Fortnite. Primo posto.")
+        b = brain._impronta_apertura("Stai sbagliando tutto su Game Pass. Oggi aggiunge due.")
+        assert a == b == "stai sbagliando tutto"
+
+    def test_valida_script_scarta_l_apertura_gia_usata(self):
+        script = TestRigenerazioneInformata._SCRIPT
+        impronta = brain._impronta_apertura(script)
+        ok, motivo = brain.valida_script("Portal: la stanza 19", script, {impronta})
+        assert not ok
+        assert "apre come un video recente" in motivo
+
+    def test_lo_stesso_script_passa_se_non_c_e_niente_da_ripetere(self):
+        ok, motivo = brain.valida_script(
+            "Portal: la stanza 19", TestRigenerazioneInformata._SCRIPT, set()
+        )
+        assert ok, motivo
+
+    def test_il_prompt_non_suggerisce_piu_le_due_aperture_fisse(self):
+        prompt = brain._costruisci_system_prompt(
+            "EASTER_EGG_SECRET", [], [], []
+        )
+        assert "Stai sbagliando tutto su" not in prompt
+        assert "Nessuno ti ha detto che" not in prompt
+
+    def test_il_prompt_elenca_le_aperture_da_evitare(self):
+        prompt = brain._costruisci_system_prompt(
+            "EASTER_EGG_SECRET", [], [], [],
+            aperture_recenti=["Nessuno ti ha detto che il decennio"],
+        )
+        assert "Nessuno ti ha detto che il decennio" in prompt
+
+    def test_senza_cronologia_la_regola_non_compare(self):
+        # Al primo video del canale una lista vuota sarebbe solo rumore.
+        prompt = brain._costruisci_system_prompt("EASTER_EGG_SECRET", [], [], [])
+        assert "11." not in prompt
+        assert "12." not in prompt
+
+
+class TestDoppioni:
+    """Il 18 settembre 2026 sono usciti due Short sullo stesso gioco e dalla
+    stessa identica notizia, perche' il controllo guardava solo i titoli."""
+
+    FONTE = "10 anni di No Man's Sky: arriva l'update Cosmos (tomshw.it)"
+
+    def test_scarta_la_notizia_gia_usata(self):
+        motivo = brain._doppione_recente(
+            "Hollow Knight", self.FONTE, "", {self.FONTE.lower()}
+        )
+        assert "stessa notizia" in motivo
+
+    def test_scarta_il_gioco_del_video_precedente(self):
+        motivo = brain._doppione_recente(
+            "No Man's Sky", "", "no man's sky", set()
+        )
+        assert "come il video precedente" in motivo
+
+    def test_lascia_passare_un_gioco_diverso_con_una_notizia_nuova(self):
+        assert brain._doppione_recente(
+            "Hollow Knight", "Silksong ha una data (Eurogamer)",
+            "no man's sky", {self.FONTE.lower()}
+        ) == ""
+
+    def test_il_video_senza_gioco_e_senza_fonte_non_e_mai_un_doppione(self):
+        # 'gioco' vuoto e' legittimo: lo Short non parla di un gioco solo.
+        assert brain._doppione_recente("", "", "", set()) == ""
+
+    def test_il_prompt_elenca_gioco_e_notizia_da_non_ripetere(self):
+        prompt = brain._costruisci_system_prompt(
+            "EASTER_EGG_SECRET", [], [], [],
+            giochi_recenti=["No Man's Sky"], notizie_gia_usate=[self.FONTE],
+        )
+        assert "No Man's Sky" in prompt
+        assert self.FONTE in prompt
+
+
+class TestAperturaRipetutaDalVivo:
+    """La prova che conta: con un video gia' in cronologia, uno script che
+    riapre allo stesso modo viene davvero scartato e rigenerato."""
+
+    _CODA = (
+        "La stanza numero diciannove sembra un corridoio qualunque, e invece "
+        "nasconde il primo disegno lasciato dagli autori durante le prove "
+        "interne. Per vederlo devi appoggiare il cubo sul pulsante sbagliato e "
+        "restare fermo una decina di secondi buoni. Poi la parete scorre e resta "
+        "aperta finche' non esci dal livello. Provaci stasera prima di dormire."
+    )
+    RIPETUTO = "Stai sbagliando tutto su Portal. " + _CODA
+    NUOVO = "Dietro una parete che sembra decorazione c'e' altro. " + _CODA
+
+    def test_lo_script_che_riapre_uguale_viene_scartato_e_rifatto(self, monkeypatch):
+        import json as _json
+
+        def risposta(script):
+            return _json.dumps({
+                "titolo": "Portal: la stanza che non apre nessuno",
+                "script": script, "gioco": "Portal",
+                "query_video": "portal gameplay",
+                "descrizione": "Un segreto.", "indice_notizia": -1,
+            })
+
+        cronologia = [{
+            "titolo": "Fortnite: Tier List Lampo",
+            "estratto_script": "Stai sbagliando tutto su Fortnite. Primo posto: la skin nuova.",
+            "stile": "TIER_LIST_LAMPO", "gioco": "Fortnite",
+            "fonte": "", "video_id": "hBMDcRhugbA",
+        }]
+
+        prompt_visti = []
+        finto = TestRigenerazioneInformata()._finto_client(
+            [risposta(self.RIPETUTO), risposta(self.NUOVO)], prompt_visti
+        )
+        monkeypatch.setattr(brain, "client", finto)
+        monkeypatch.setattr(brain, "recupera_trend_gaming_online", lambda: [])
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: cronologia)
+        monkeypatch.setattr(brain, "salva_in_cronologia", lambda r: None)
+
+        risultato = brain.genera_script_samaritan()
+
+        assert len(prompt_visti) == 2, "il primo script doveva essere scartato"
+        assert "apre come un video recente" in prompt_visti[1]
+        assert risultato["script"] == self.NUOVO
