@@ -39,6 +39,14 @@ scaricare gameplay di 'Grand Theft Auto IV', o 'Portal' quello di 'Portal 2'.
 I trailer Steam sono 16:9: vengono montati dentro il 9:16 con sfondo sfocato
 ricavato dal frame stesso, che e' il formato standard degli Shorts gaming.
 
+**Sullo stesso gioco non esce due volte lo stesso materiale.** Quanti Short
+sono gia' usciti su quel titolo (contati sulla cronologia) decide da che punto
+dell'elenco si comincia a pescare trailer e screenshot, e da che secondo del
+trailer si taglia lo spezzone. I trailer principali scelti dall'editore
+restano comunque davanti ai teaser: cambia il materiale, non la qualita'. Se
+un trailer e' troppo corto per il taglio spostato, si ripiega sul punto
+normale e poi sull'inizio, invece di perdere la sorgente.
+
 ---
 
 ## 1. Installazione

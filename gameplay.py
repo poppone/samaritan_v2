@@ -16,7 +16,15 @@ Catena delle fonti:
   1. Trailer ufficiali Steam del gioco esatto  (gameplay vero)
   2. Screenshot ufficiali Steam animati in Ken Burns  (gioco esatto, statico)
   3. Pexels  (stock generico, solo se il gioco non e' identificabile)
+
+Sullo stesso gioco non esce due volte lo stesso materiale: quanti Short sono
+gia' usciti su quel titolo decide da che punto dell'elenco si comincia a
+pescare trailer e screenshot, e da che secondo del trailer si taglia. Senza,
+due video sullo stesso gioco a settimane di distanza montano le stesse
+identiche clip, che e' il modo piu' rapido per farsi riconoscere come canale
+automatizzato.
 """
+import json
 import os
 import re
 import subprocess
@@ -137,6 +145,46 @@ def _somiglianza(richiesto, ufficiale):
     )
 
 
+def video_gia_fatti(gioco):
+    """Quanti Short sono gia' usciti su questo gioco, secondo la cronologia.
+
+    Il confronto e' fra il nome che ha scritto il modello e quelli che aveva
+    scritto le volte precedenti, non col nome ufficiale di Steam: sono la
+    stessa penna, quindi si assomigliano molto piu' di quanto 'GTA 6'
+    assomigli a 'Grand Theft Auto VI'. Gli alias noti sono appianati prima.
+    """
+    if not gioco:
+        return 0
+    cercato = ALIAS_GIOCHI.get(_normalizza(gioco), gioco)
+    try:
+        with open(config.FILE_CRONOLOGIA, "r", encoding="utf-8") as f:
+            cronologia = json.load(f)
+    except Exception:
+        return 0
+    if not isinstance(cronologia, list):
+        return 0
+
+    quanti = 0
+    for elemento in cronologia:
+        if not isinstance(elemento, dict):
+            continue
+        passato = (elemento.get("gioco") or "").strip()
+        if not passato:
+            continue
+        passato = ALIAS_GIOCHI.get(_normalizza(passato), passato)
+        if _somiglianza(passato, cercato) >= SOGLIA_CORRISPONDENZA:
+            quanti += 1
+    return quanti
+
+
+def ruota(elementi, salto):
+    """Stessa lista, cominciando da un altro punto. Lista vuota: niente da fare."""
+    if not elementi:
+        return elementi
+    inizio = salto % len(elementi)
+    return elementi[inizio:] + elementi[:inizio]
+
+
 def cerca_gioco_steam(nome):
     """Ritorna (appid, nome_ufficiale) oppure (None, None)."""
     nome = ALIAS_GIOCHI.get(_normalizza(nome), nome)
@@ -251,14 +299,33 @@ def _estrai_mp4(url_stream, destinazione, salta=SALTA_INTRO_SEC):
     return os.path.exists(destinazione) and os.path.getsize(destinazione) > 100_000
 
 
-def scarica_trailer_steam(appid, dati, quanti=3):
-    """Scarica i trailer ufficiali come mp4 muti. Ritorna i percorsi locali."""
+def scarica_trailer_steam(appid, dati, quanti=3, salto=0):
+    """Scarica i trailer ufficiali come mp4 muti. Ritorna i percorsi locali.
+
+    `salto` e' quanti Short sono gia' usciti su questo gioco: sposta sia il
+    punto da cui si comincia a pescare nell'elenco, sia il secondo da cui si
+    taglia lo spezzone, cosi' il secondo video sullo stesso titolo non monta
+    gli stessi fotogrammi del primo.
+    """
     filmati = dati.get("movies", []) or []
     if not filmati:
         return []
 
     # I trailer marcati 'highlight' sono quelli principali scelti dall'editore
-    filmati = sorted(filmati, key=lambda m: not m.get("highlight", False))
+    # e restano davanti: la rotazione avviene dentro i due gruppi, cosi' il
+    # video di ripasso cambia materiale ma non ripiega sugli scarti.
+    principali = [m for m in filmati if m.get("highlight", False)]
+    altri = [m for m in filmati if not m.get("highlight", False)]
+    filmati = ruota(principali, salto) + ruota(altri, salto)
+
+    # Un trailer dura in genere un paio di minuti: spostarsi di venti secondi
+    # per ogni passaggio da' quattro inquadrature d'apertura diverse prima di
+    # tornare al punto di partenza.
+    inizio = SALTA_INTRO_SEC + (salto % 4) * 20
+    tentativi = [inizio]
+    if inizio != SALTA_INTRO_SEC:
+        tentativi.append(SALTA_INTRO_SEC)   # trailer troppo corto per il salto
+    tentativi.append(0)                     # piu' corto anche dell'intro
 
     percorsi = []
     for filmato in filmati:
@@ -280,19 +347,22 @@ def scarica_trailer_steam(appid, dati, quanti=3):
         nome_breve = filmato.get("name", "")[:48]
         print(f"[Gameplay] Scarico trailer ufficiale: {nome_breve}")
 
-        if _estrai_mp4(url_stream, destinazione):
-            percorsi.append(destinazione)
-        elif _estrai_mp4(url_stream, destinazione, salta=0):
-            # Trailer piu' corto del salto intro: riprovo dall'inizio
-            percorsi.append(destinazione)
+        for salta in tentativi:
+            if _estrai_mp4(url_stream, destinazione, salta=salta):
+                percorsi.append(destinazione)
+                break
 
     print(f"[Gameplay] {len(percorsi)} trailer ufficiali pronti.")
     return percorsi
 
 
-def scarica_screenshot_steam(appid, dati, quanti=4):
-    """Screenshot ufficiali in 1920x1080: usati come inserti animati."""
-    screenshot = dati.get("screenshots", []) or []
+def scarica_screenshot_steam(appid, dati, quanti=4, salto=0):
+    """Screenshot ufficiali in 1920x1080: usati come inserti animati.
+
+    `salto` sposta il punto di partenza nell'elenco: un gioco con dodici
+    screenshot ne ha tre gruppi diversi prima di ripetersi.
+    """
+    screenshot = ruota(dati.get("screenshots", []) or [], salto * quanti)
     percorsi = []
 
     for shot in screenshot[:quanti * 2]:
@@ -334,12 +404,19 @@ def procura_materiale(gioco=None, query_pexels="gameplay", minimo=3):
         if appid:
             dati = dettagli_gioco(appid)
             if dati:
+                # Quante volte abbiamo gia' parlato di questo gioco: decide da
+                # dove si pesca, cosi' il materiale non si ripete.
+                salto = video_gia_fatti(gioco)
+                if salto:
+                    print(f"[Gameplay] Short numero {salto + 1} su "
+                          f"'{nome_ufficiale}': cambio materiale.")
                 for percorso in scarica_trailer_steam(appid, dati,
-                                                      config.STEAM_MAX_TRAILER):
+                                                      config.STEAM_MAX_TRAILER,
+                                                      salto):
                     sorgenti.append({"tipo": "video", "path": percorso,
                                      "gioco": nome_ufficiale})
-                for percorso in scarica_screenshot_steam(appid, dati,
-                                                         config.STEAM_MAX_SCREENSHOT):
+                for percorso in scarica_screenshot_steam(
+                        appid, dati, config.STEAM_MAX_SCREENSHOT, salto):
                     sorgenti.append({"tipo": "immagine", "path": percorso,
                                      "gioco": nome_ufficiale})
 
