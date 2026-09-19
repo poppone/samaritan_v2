@@ -81,6 +81,12 @@ PAROLE_APERTURA = 3
 MIN_PAROLE_SCRIPT = 45
 MAX_PAROLE_SCRIPT = 95
 
+# Con cosa puo' finire uno script per essere considerato finito. Il tetto
+# di token copre anche il ragionamento del modello, quindi ogni tanto la
+# risposta si interrompe a meta' parola: nel video si sente, perche' la
+# voce legge la chiusura e poi aggiunge una parola a vuoto.
+PUNTEGGIATURA_FINALE = ".!?\u2026"
+
 # Oltre i 60 caratteri il titolo viene troncato nel feed Shorts da telefono,
 # e la parte tagliata e' sempre la fine, cioe' dove sta l'informazione utile.
 MAX_CARATTERI_TITOLO = 60
@@ -435,6 +441,48 @@ def _impronta_apertura(script, n_parole=PAROLE_APERTURA):
     return " ".join(parole[:n_parole])
 
 
+def _ultima_chiusura(script):
+    """L'indice dell'ultima punteggiatura di fine frase, -1 se non ce n'e'."""
+    return max(script.rfind(segno) for segno in PUNTEGGIATURA_FINALE)
+
+
+def _senza_decorazioni_finali(script):
+    """Lo script senza emoji, virgolette e parentesi in coda.
+
+    Servono a capire dove finisce davvero la frase: un '!' seguito da un
+    emoji e' una frase chiusa, una parola seguita da un emoji no.
+    """
+    nudo = (script or "").rstrip()
+    while nudo and nudo[-1] not in PUNTEGGIATURA_FINALE and not nudo[-1].isalnum():
+        nudo = nudo[:-1].rstrip()
+    return nudo
+
+
+def _senza_coda_troncata(script):
+    """Toglie l'ultima frase quando si interrompe a meta'.
+
+    Si ripara invece di scartare apposta: rigenerare costerebbe uno dei
+    quattro tentativi e puo' far saltare la pubblicazione, mentre la coda
+    tronca arriva sempre dopo la chiusura vera, quindi togliendola lo script
+    resta completo. Se non c'e' nessuna frase chiusa lo script torna intatto e
+    a scartarlo ci pensa valida_script().
+    """
+    testo = (script or "").strip()
+    nudo = _senza_decorazioni_finali(testo)
+    if not nudo or nudo[-1] in PUNTEGGIATURA_FINALE:
+        return testo
+    fine = _ultima_chiusura(nudo)
+    if fine < 0:
+        return testo
+    return nudo[:fine + 1].rstrip()
+
+
+def _script_troncato(script):
+    """True se lo script finisce a meta' frase."""
+    nudo = _senza_decorazioni_finali(script)
+    return not nudo or nudo[-1] not in PUNTEGGIATURA_FINALE
+
+
 def valida_script(titolo, script, aperture_recenti=()):
     """Ritorna (True, "") se lo script e' pubblicabile, altrimenti (False, motivo)."""
     if not titolo or not script:
@@ -462,6 +510,8 @@ def valida_script(titolo, script, aperture_recenti=()):
         return False, f"script troppo corto ({n_parole} parole)"
     if n_parole > MAX_PAROLE_SCRIPT:
         return False, f"script troppo lungo ({n_parole} parole, lo Short sforerebbe)"
+    if _script_troncato(script):
+        return False, "lo script si interrompe a meta' frase"
 
     return True, ""
 
@@ -904,6 +954,10 @@ def genera_script_samaritan(tema=None):
                     else _estrai_json(contenuto)
                 titolo = _pulisci_titolo(str(data.get("titolo", "")))
                 script = str(data.get("script", "")).strip()
+                intero = script
+                script = _senza_coda_troncata(script)
+                if script != intero:
+                    print("[Samaritan Brain] Coda tronca rimossa dallo script.")
                 query_video = str(data.get("query_video", "gameplay")).strip()
                 descrizione = str(data.get("descrizione", "")).strip()
                 gioco = _pulisci_nome_gioco(str(data.get("gioco", "")))
