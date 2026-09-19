@@ -580,3 +580,89 @@ class TestCodaTroncata:
 
         assert len(prompt_visti) == 1, "non doveva servire un secondo tentativo"
         assert risultato["script"].endswith("non perderti nulla.")
+
+
+class TestNotiziaGiaUsata:
+    """Il 19 settembre 2026 l'update Cosmos di No Man's Sky e' diventato due
+    Short a un giorno di distanza. Il filtro delle notizie confrontava le
+    parole del titolo della notizia con i TITOLI dei video gia' fatti, che
+    pero' il modello riscrive: "No Man's Sky: 10 anni di esplorazione" non
+    somiglia abbastanza a "10 anni di No Man's Sky: arriva l'update Cosmos".
+    La notizia usata pero' e' scritta per intero in cronologia, quindi il
+    confronto si puo' fare esatto."""
+
+    NOTIZIA = "10 anni di No Man's Sky: arriva l'update Cosmos"
+    IN_CRONOLOGIA = "10 anni di No Man's Sky: arriva l'update Cosmos (tomshw.it)"
+
+    def _rss(self, titoli):
+        voci = "".join(
+            f"<item><title>{t} - Testata</title>"
+            f"<link>https://example.com/{i}</link></item>"
+            for i, t in enumerate(titoli)
+        )
+        corpo = f"<rss><channel>{voci}</channel></rss>".encode()
+
+        class Risposta:
+            content = corpo
+
+            def raise_for_status(self):
+                return None
+
+        return lambda *a, **k: Risposta()
+
+    def test_la_testata_in_coda_non_impedisce_il_confronto(self):
+        assert (brain._notizia_di_una_voce(self.IN_CRONOLOGIA)
+                == brain._impronta_notizia(self.NOTIZIA))
+
+    def test_accenti_e_apostrofi_non_contano(self):
+        assert (brain._impronta_notizia("L'update Cosmos è qui!")
+                == brain._impronta_notizia("l update cosmos e qui"))
+
+    def test_una_voce_senza_fonte_non_blocca_niente(self):
+        assert brain._notizia_di_una_voce("") == ""
+        assert brain._notizia_di_una_voce(None) == ""
+
+    def test_la_notizia_gia_diventata_video_viene_scartata(self, monkeypatch):
+        cronologia = [{
+            "titolo": "No Man's Sky: 10 anni di esplorazione",
+            "estratto_script": "Dieci anni dopo, arriva Cosmos.",
+            "stile": "SEAMLESS_LOOP_FACTS", "gioco": "No Mans Sky",
+            "fonte": self.IN_CRONOLOGIA, "video_id": "KxbKYIyTqIQ",
+        }]
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: cronologia)
+        monkeypatch.setattr(
+            brain.requests, "get",
+            self._rss([self.NOTIZIA, "Hollow Knight Silksong ha una data"]),
+        )
+
+        notizie = brain.recupera_trend_gaming_online()
+
+        titoli = [n["titolo"] for n in notizie]
+        assert self.NOTIZIA not in titoli
+        assert "Hollow Knight Silksong ha una data" in titoli
+
+    def test_senza_cronologia_la_notizia_passa(self, monkeypatch):
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: [])
+        monkeypatch.setattr(brain.requests, "get", self._rss([self.NOTIZIA]))
+
+        assert [n["titolo"] for n in brain.recupera_trend_gaming_online()] == [self.NOTIZIA]
+
+    def test_il_filtro_guarda_oltre_la_finestra_delle_ripetizioni(self, monkeypatch):
+        """La notizia era sette voci indietro: la finestra di
+        MEMORIA_RIPETIZIONI non la vedeva."""
+        vecchia = {
+            "titolo": "No Man's Sky: 10 anni di esplorazione", "estratto_script": "",
+            "stile": "SEAMLESS_LOOP_FACTS", "gioco": "No Mans Sky",
+            "fonte": self.IN_CRONOLOGIA, "video_id": "KxbKYIyTqIQ",
+        }
+        riempitivo = [{
+            "titolo": f"Un altro video {n}", "estratto_script": "", "stile": "TIER_LIST_LAMPO",
+            "gioco": f"Gioco {n}", "fonte": f"Una notizia diversa {n} (Testata)",
+            "video_id": None,
+        } for n in range(7)]
+        assert len(riempitivo) > brain.MEMORIA_RIPETIZIONI
+
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: [vecchia] + riempitivo)
+        monkeypatch.setattr(brain.requests, "get", self._rss([self.NOTIZIA]))
+
+        assert brain.recupera_trend_gaming_online() == []
