@@ -239,3 +239,28 @@ class TestScreenshotDiversiAOgniGiro:
                                                      quanti=4, salto=1)
         assert len(percorsi) == 4
         assert len(set(scaricati)) == len(scaricati)
+
+
+class TestQualeFfmpeg:
+    """Quale binario si usa non e' un dettaglio: quello di imageio-ffmpeg va in
+    segmentation fault sugli stream HLS di Steam, e con lui i video escono di
+    soli screenshot fermi."""
+
+    def test_si_preferisce_quello_di_sistema(self, monkeypatch):
+        monkeypatch.setattr(gameplay.shutil, "which",
+                            lambda nome: "/usr/bin/ffmpeg" if nome == "ffmpeg" else None)
+        assert gameplay._ffmpeg() == "/usr/bin/ffmpeg"
+
+    def test_senza_quello_di_sistema_si_ripiega_su_imageio(self, monkeypatch):
+        monkeypatch.setattr(gameplay.shutil, "which", lambda nome: None)
+        import types
+        finto = types.ModuleType("imageio_ffmpeg")
+        finto.get_ffmpeg_exe = lambda: "/altrove/ffmpeg"
+        monkeypatch.setitem(__import__("sys").modules, "imageio_ffmpeg", finto)
+        assert gameplay._ffmpeg() == "/altrove/ffmpeg"
+
+    def test_senza_niente_si_prova_comunque_il_nome_nudo(self, monkeypatch):
+        monkeypatch.setattr(gameplay.shutil, "which", lambda nome: None)
+        import sys as _sys
+        monkeypatch.setitem(_sys.modules, "imageio_ffmpeg", None)
+        assert gameplay._ffmpeg() == "ffmpeg"

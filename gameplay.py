@@ -27,6 +27,7 @@ automatizzato.
 import json
 import os
 import re
+import shutil
 import subprocess
 from difflib import SequenceMatcher
 from urllib.parse import quote, urljoin
@@ -66,8 +67,22 @@ ALIAS_GIOCHI = {
 
 
 def _ffmpeg():
-    """Trova ffmpeg. moviepy lo installa via imageio-ffmpeg, quindi e'
-    disponibile anche quando non e' nel PATH di sistema."""
+    """Trova ffmpeg, preferendo quello di sistema.
+
+    L'ordine conta, e non e' un dettaglio di gusto: il binario che si porta
+    dietro imageio-ffmpeg va in segmentation fault sugli stream HLS di Steam.
+    Verificato sulle run del 18 e 19 settembre 2026, dove OGNI trailer falliva
+    sia in remux sia in ricodifica e il log chiudeva con "0 trailer ufficiali
+    pronti": i video uscivano di soli screenshot fermi, mentre il montaggio e'
+    costruito sull'idea che i trailer diano il movimento.
+
+    Quello di sistema legge gli stessi stream senza problemi ed e' gia'
+    installato dal workflow con apt. imageio resta il ripiego per chi lavora
+    in locale senza ffmpeg nel PATH.
+    """
+    percorso = shutil.which("ffmpeg")
+    if percorso:
+        return percorso
     try:
         from imageio_ffmpeg import get_ffmpeg_exe
         return get_ffmpeg_exe()
