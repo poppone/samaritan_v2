@@ -73,6 +73,14 @@ APERTURE_VIETATE = (
 # finestra in cui lo stesso spettatore puo' vedere passare due Short di fila.
 MEMORIA_RIPETIZIONI = 3
 
+# Le notizie invece si ricordano per tutta la cronologia. Il 19 settembre
+# 2026 lo stesso update Cosmos di No Man's Sky e' diventato due Short a un
+# giorno di distanza: la notizia era sette voci indietro, fuori dalla
+# finestra qui sopra. Ricordarle tutte non costa niente e non puo' far
+# saltare una pubblicazione, perche' scarta una notizia prima di sceglierla
+# invece di scartare uno script gia' scritto.
+MEMORIA_NOTIZIE = 0          # 0 = tutta la cronologia
+
 # Quante parole iniziali confrontare per dire "questo attacco l'abbiamo gia'
 # usato". Tre bastano: gli Short scartati si somigliavano proprio li'
 # ("Stai sbagliando tutto su X", "Nessuno ti ha detto che Y").
@@ -195,6 +203,30 @@ def aggiorna_ultimo_video_id(video_id):
 # ===========================================================================
 # RICERCA NOTIZIE REALI
 # ===========================================================================
+def _impronta_notizia(titolo):
+    """Forma confrontabile del titolo di una notizia.
+
+    Accenti, maiuscole e punteggiatura non contano: la stessa notizia
+    ripresa due giorni dopo puo' avere un apostrofo diverso e resta la
+    stessa notizia.
+    """
+    parole = [p for p in re.split(r"[^0-9a-zA-Z]+", _senza_accenti(titolo or "").lower()) if p]
+    return " ".join(parole)
+
+
+def _notizia_di_una_voce(fonte):
+    """L'impronta della notizia usata da un video gia' pubblicato.
+
+    In cronologia la fonte e' scritta come "Titolo della notizia (Testata)",
+    mentre l'RSS da' il titolo da solo: la testata in coda va tolta prima di
+    confrontare.
+    """
+    testo = (fonte or "").strip()
+    if testo.endswith(")") and "(" in testo:
+        testo = testo[:testo.rfind("(")]
+    return _impronta_notizia(testo)
+
+
 def recupera_trend_gaming_online(max_notizie=8):
     """Scarica notizie gaming fresche e scarta quelle gia' sfruttate.
 
@@ -206,9 +238,15 @@ def recupera_trend_gaming_online(max_notizie=8):
            "?q=videogiochi+gaming+quando+esce+aggiornamento&hl=it&gl=IT&ceid=IT:it")
 
     cronologia = carica_cronologia()
-    titoli_passati = " ".join(
-        _normalizza(i).get("titolo", "") for i in cronologia
-    ).lower()
+    voci = [_normalizza(i) for i in cronologia]
+    titoli_passati = " ".join(v.get("titolo", "") for v in voci).lower()
+    # Le notizie gia' sfruttate, confrontate per intero e non per parole: il
+    # filtro sulle parole qui sotto guarda i TITOLI dei video, che sono
+    # riscritti dal modello e possono non somigliare alla notizia da cui
+    # nascono.
+    da_guardare = voci[-MEMORIA_NOTIZIE:] if MEMORIA_NOTIZIE else voci
+    notizie_passate = {_notizia_di_una_voce(v.get("fonte", "")) for v in da_guardare}
+    notizie_passate.discard("")
 
     notizie = []
     try:
@@ -227,6 +265,10 @@ def recupera_trend_gaming_online(max_notizie=8):
                 titolo, fonte = titolo_completo.rsplit(" - ", 1)
             else:
                 titolo, fonte = titolo_completo, "Google News"
+
+            # Questa notizia e' gia' diventata un video: saltala.
+            if _impronta_notizia(titolo) in notizie_passate:
+                continue
 
             # Salta le notizie troppo simili a quelle gia' usate
             parole = [w.lower() for w in titolo.split() if len(w) > 4]
