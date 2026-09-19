@@ -478,3 +478,37 @@ class TestRigaMateriale:
         assert "resoconto=materiale" in main_py
         assert "costruisci_descrizione(dati, materiale)" in main_py
         assert 'resoconto["sorgenti_ufficiali"]' in maker_py
+
+
+class TestNomeFormatoInChiaro:
+    """La prova in privato del 19 settembre 2026 ha prodotto il titolo
+    "Stalker 2: DONT_DO_THIS - non spendere energia sbagliata": il modello ha
+    ricopiato l'etichetta interna dalla riga FORMATO RICHIESTO del prompt.
+    Senza questo controllo quel titolo sarebbe uscito pubblico."""
+
+    TITOLO_SPORCO = "Stalker 2: DONT_DO_THIS - non spendere energia sbagliata"
+
+    def test_riconosce_l_etichetta_nel_titolo(self):
+        assert brain._nome_formato_in_chiaro(self.TITOLO_SPORCO) == "DONT_DO_THIS"
+
+    def test_valida_titolo_lo_scarta(self):
+        ok, motivo = brain.valida_titolo(self.TITOLO_SPORCO, "Stalker 2")
+        assert not ok
+        assert "nome interno del formato" in motivo
+
+    def test_valida_script_lo_scarta(self):
+        sporco = "VIRAL_HOOK_NEWS. " + TestRigenerazioneInformata._SCRIPT
+        ok, motivo = brain.valida_script("Portal: la stanza 19", sporco)
+        assert not ok
+        assert "nome interno del formato" in motivo
+
+    def test_non_scarta_un_titolo_italiano_legittimo(self):
+        # "Fortnite: Tier List Lampo" e' un titolo vero gia' pubblicato: con
+        # gli spazi non e' l'etichetta interna e deve passare.
+        assert brain._nome_formato_in_chiaro("Fortnite: Tier List Lampo") == ""
+        ok, motivo = brain.valida_titolo("Fortnite: Tier List Lampo", "Fortnite")
+        assert ok, motivo
+
+    def test_il_prompt_avvisa_che_la_sigla_non_va_scritta(self):
+        prompt = brain._costruisci_system_prompt("DONT_DO_THIS", [], [], [])
+        assert "etichetta interna" in prompt

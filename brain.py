@@ -377,6 +377,10 @@ def valida_titolo(titolo, gioco=""):
     if not _gioco_nel_titolo(titolo, gioco):
         return False, f"il titolo non nomina '{gioco}': invisibile nella ricerca"
 
+    formato = _nome_formato_in_chiaro(titolo)
+    if formato:
+        return False, f"il titolo contiene il nome interno del formato ({formato})"
+
     return True, ""
 
 
@@ -395,6 +399,27 @@ def _pulisci_nome_gioco(gioco):
                      "games", "game", "nessuno", "n/a", "none", "vari"}:
         return ""
     return g
+
+
+def _nome_formato_in_chiaro(testo):
+    """Ritorna il nome interno del formato se e' finito nel testo.
+
+    Visto dal vivo nella prova del 19 settembre 2026: il modello ha scritto
+    "Stalker 2: DONT_DO_THIS - non spendere energia sbagliata". Il prompt dice
+    "FORMATO RICHIESTO: DONT_DO_THIS" e ogni tanto quella riga viene copiata
+    di peso. Su un canale che chiedera' la monetizzazione un titolo con dentro
+    una costante di codice e' il segnale piu' chiaro possibile che il video
+    l'ha sputato fuori una macchina senza che nessuno lo guardasse.
+
+    Confronta solo la forma esatta con gli underscore: 'TIER LIST LAMPO' con
+    gli spazi e' un titolo italiano legittimo, gia' pubblicato, e scartarlo
+    sarebbe un falso positivo.
+    """
+    maiuscolo = (testo or "").upper()
+    for nome in FORMATI_VIDEO:
+        if nome in maiuscolo:
+            return nome
+    return ""
 
 
 def _impronta_apertura(script, n_parole=PAROLE_APERTURA):
@@ -427,6 +452,10 @@ def valida_script(titolo, script, aperture_recenti=()):
     impronta = _impronta_apertura(script)
     if impronta and impronta in set(aperture_recenti):
         return False, f"apre come un video recente ('{impronta}...')"
+
+    formato = _nome_formato_in_chiaro(script)
+    if formato:
+        return False, f"lo script contiene il nome interno del formato ({formato})"
 
     n_parole = len(script.split())
     if n_parole < MIN_PAROLE_SCRIPT:
@@ -643,7 +672,9 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti,
         f"Sei il Lead Social Media Manager di '{config.NOME_CANALE}', canale YouTube "
         "Gaming italiano. Scrivi uno script per uno Short ad ALTISSIMA RETENTION "
         "(24-30 secondi, quindi 55-85 parole).\n\n"
-        f"FORMATO RICHIESTO: {formato} - {meta['descrizione']}\n\n"
+        f"FORMATO RICHIESTO: {formato} - {meta['descrizione']}\n"
+        "(quella sigla e' un'etichetta interna: non deve comparire ne' nel "
+        "titolo ne' nello script)\n\n"
         f"NOTIZIE GAMING REALI DI OGGI:\n{blocco_notizie}\n\n"
         f"{vincolo_fatti}"
         f"{blocco_hook}\n"
