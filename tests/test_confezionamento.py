@@ -207,12 +207,308 @@ class TestTestoMiniatura:
         assert brain.testo_miniatura("Gioco: e che ti fa") != ""
 
 
-class TestRipiego:
-    def test_il_titolo_di_ripiego_rispetta_le_stesse_regole(self):
-        # Quando Groq non risponde esce il ripiego: se il suo titolo non passa
-        # il filtro, il filtro serve a poco proprio nel momento peggiore.
-        for gioco in ("Cyberpunk 2077", "ELDEN RING", "Counter-Strike 2",
-                      "Baldur's Gate 3", "Red Dead Redemption 2"):
-            titolo = f"{gioco}: il dettaglio che quasi nessuno nota"
-            ok, motivo = brain.valida_titolo(brain._pulisci_titolo(titolo), gioco)
-            assert ok, f"{gioco}: {motivo}"
+class TestRigenerazioneInformata:
+    """Dopo uno scarto il modello deve sapere cosa ha sbagliato.
+
+    Senza questo ogni tentativo riparte dallo stesso identico input: quattro
+    tentativi sono quattro tiri di dado invece di quattro correzioni.
+    """
+
+    # Uno script che passa valida_script(): abbastanza lungo, apertura non
+    # vietata, e chiude riprendendo l'apertura come vuole il formato loop.
+    _SCRIPT = (
+        "Nessuno lo trova al primo giro in tutta la regione iniziale del gioco. "
+        "Dietro la cascata piu' grande c'e' una porta che sembra decorazione. "
+        "Si apre soltanto suonando la campana trovata nella cripta a nord, e "
+        "dentro ti aspetta un boss che nessuna guida italiana ha mai filmato "
+        "per davvero. Ti lascia un'arma che cambia completamente la build. "
+        "Provaci stasera prima di andare avanti con la storia principale. "
+        "Nessuno lo trova al primo giro."
+    )
+
+    def _finto_client(self, risposte, prompt_visti):
+        class FinteCompletions:
+            @staticmethod
+            def create(**kw):
+                prompt_visti.append(kw["messages"][1]["content"])
+
+                class Scelta:
+                    class message:
+                        content = risposte.pop(0)
+
+                class Risposta:
+                    choices = [Scelta()]
+
+                return Risposta()
+
+        class FintoClient:
+            class chat:
+                completions = FinteCompletions()
+
+        return FintoClient()
+
+    def test_il_motivo_dello_scarto_arriva_al_tentativo_dopo(self, monkeypatch):
+        import json as _json
+
+        # Primo titolo: 70 caratteri, viene scartato. Secondo: valido.
+        scartato = _json.dumps({
+            "titolo": "Elden Ring: il boss segreto che quasi nessun giocatore "
+                      "ha mai battuto davvero",
+            "script": self._SCRIPT,
+            "gioco": "Elden Ring", "query_video": "elden ring gameplay",
+            "descrizione": "Un segreto.", "indice_notizia": -1,
+        })
+        buono = _json.dumps({
+            "titolo": "Elden Ring: il boss dietro la cascata",
+            "script": self._SCRIPT,
+            "gioco": "Elden Ring", "query_video": "elden ring gameplay",
+            "descrizione": "Un segreto.", "indice_notizia": -1,
+        })
+
+        prompt_visti = []
+        monkeypatch.setattr(brain, "client",
+                            self._finto_client([scartato, buono], prompt_visti))
+        monkeypatch.setattr(brain, "recupera_trend_gaming_online", lambda: [])
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: [])
+        monkeypatch.setattr(brain, "salva_in_cronologia", lambda r: None)
+
+        risultato = brain.genera_script_samaritan()
+
+        assert len(prompt_visti) == 2
+        assert "scartato" not in prompt_visti[0].lower()
+        assert "troppo lungo" in prompt_visti[1], prompt_visti[1]
+        assert risultato["titolo"] == "Elden Ring: il boss dietro la cascata"
+
+
+class TestAperturaRipetuta:
+    """Nove Short di fila aperti nello stesso modo sono il rischio vero.
+
+    Il 18 settembre 2026 tutti e nove gli script della giornata iniziavano
+    con "Stai..." oppure "Nessuno ti ha detto che...", perche' erano i due
+    esempi scritti dentro il prompt e il modello li ricopiava. E' esattamente
+    la firma del contenuto prodotto in serie che YouTube guarda quando decide
+    se un canale puo' essere monetizzato.
+    """
+
+    def test_l_impronta_ignora_accenti_maiuscole_e_punteggiatura(self):
+        assert brain._impronta_apertura("Perche' NON l'hai") == \
+            brain._impronta_apertura("perche, non l hai mai visto")
+
+    def test_due_aperture_uguali_su_giochi_diversi_hanno_la_stessa_impronta(self):
+        # Il caso vero: cambia solo il gioco dopo le prime tre parole.
+        a = brain._impronta_apertura("Stai sbagliando tutto su Fortnite. Primo posto.")
+        b = brain._impronta_apertura("Stai sbagliando tutto su Game Pass. Oggi aggiunge due.")
+        assert a == b == "stai sbagliando tutto"
+
+    def test_valida_script_scarta_l_apertura_gia_usata(self):
+        script = TestRigenerazioneInformata._SCRIPT
+        impronta = brain._impronta_apertura(script)
+        ok, motivo = brain.valida_script("Portal: la stanza 19", script, {impronta})
+        assert not ok
+        assert "apre come un video recente" in motivo
+
+    def test_lo_stesso_script_passa_se_non_c_e_niente_da_ripetere(self):
+        ok, motivo = brain.valida_script(
+            "Portal: la stanza 19", TestRigenerazioneInformata._SCRIPT, set()
+        )
+        assert ok, motivo
+
+    def test_il_prompt_non_suggerisce_piu_le_due_aperture_fisse(self):
+        prompt = brain._costruisci_system_prompt(
+            "EASTER_EGG_SECRET", [], [], []
+        )
+        assert "Stai sbagliando tutto su" not in prompt
+        assert "Nessuno ti ha detto che" not in prompt
+
+    def test_il_prompt_elenca_le_aperture_da_evitare(self):
+        prompt = brain._costruisci_system_prompt(
+            "EASTER_EGG_SECRET", [], [], [],
+            aperture_recenti=["Nessuno ti ha detto che il decennio"],
+        )
+        assert "Nessuno ti ha detto che il decennio" in prompt
+
+    def test_senza_cronologia_la_regola_non_compare(self):
+        # Al primo video del canale una lista vuota sarebbe solo rumore.
+        prompt = brain._costruisci_system_prompt("EASTER_EGG_SECRET", [], [], [])
+        assert "11." not in prompt
+        assert "12." not in prompt
+
+
+class TestDoppioni:
+    """Il 18 settembre 2026 sono usciti due Short sullo stesso gioco e dalla
+    stessa identica notizia, perche' il controllo guardava solo i titoli."""
+
+    FONTE = "10 anni di No Man's Sky: arriva l'update Cosmos (tomshw.it)"
+
+    def test_scarta_la_notizia_gia_usata(self):
+        motivo = brain._doppione_recente(
+            "Hollow Knight", self.FONTE, "", {self.FONTE.lower()}
+        )
+        assert "stessa notizia" in motivo
+
+    def test_scarta_il_gioco_del_video_precedente(self):
+        motivo = brain._doppione_recente(
+            "No Man's Sky", "", "no man's sky", set()
+        )
+        assert "come il video precedente" in motivo
+
+    def test_lascia_passare_un_gioco_diverso_con_una_notizia_nuova(self):
+        assert brain._doppione_recente(
+            "Hollow Knight", "Silksong ha una data (Eurogamer)",
+            "no man's sky", {self.FONTE.lower()}
+        ) == ""
+
+    def test_il_video_senza_gioco_e_senza_fonte_non_e_mai_un_doppione(self):
+        # 'gioco' vuoto e' legittimo: lo Short non parla di un gioco solo.
+        assert brain._doppione_recente("", "", "", set()) == ""
+
+    def test_il_prompt_elenca_gioco_e_notizia_da_non_ripetere(self):
+        prompt = brain._costruisci_system_prompt(
+            "EASTER_EGG_SECRET", [], [], [],
+            giochi_recenti=["No Man's Sky"], notizie_gia_usate=[self.FONTE],
+        )
+        assert "No Man's Sky" in prompt
+        assert self.FONTE in prompt
+
+
+class TestAperturaRipetutaDalVivo:
+    """La prova che conta: con un video gia' in cronologia, uno script che
+    riapre allo stesso modo viene davvero scartato e rigenerato."""
+
+    _CODA = (
+        "La stanza numero diciannove sembra un corridoio qualunque, e invece "
+        "nasconde il primo disegno lasciato dagli autori durante le prove "
+        "interne. Per vederlo devi appoggiare il cubo sul pulsante sbagliato e "
+        "restare fermo una decina di secondi buoni. Poi la parete scorre e resta "
+        "aperta finche' non esci dal livello. Provaci stasera prima di dormire."
+    )
+    RIPETUTO = "Stai sbagliando tutto su Portal. " + _CODA
+    NUOVO = "Dietro una parete che sembra decorazione c'e' altro. " + _CODA
+
+    def test_lo_script_che_riapre_uguale_viene_scartato_e_rifatto(self, monkeypatch):
+        import json as _json
+
+        def risposta(script):
+            return _json.dumps({
+                "titolo": "Portal: la stanza che non apre nessuno",
+                "script": script, "gioco": "Portal",
+                "query_video": "portal gameplay",
+                "descrizione": "Un segreto.", "indice_notizia": -1,
+            })
+
+        cronologia = [{
+            "titolo": "Fortnite: Tier List Lampo",
+            "estratto_script": "Stai sbagliando tutto su Fortnite. Primo posto: la skin nuova.",
+            "stile": "TIER_LIST_LAMPO", "gioco": "Fortnite",
+            "fonte": "", "video_id": "hBMDcRhugbA",
+        }]
+
+        prompt_visti = []
+        finto = TestRigenerazioneInformata()._finto_client(
+            [risposta(self.RIPETUTO), risposta(self.NUOVO)], prompt_visti
+        )
+        monkeypatch.setattr(brain, "client", finto)
+        monkeypatch.setattr(brain, "recupera_trend_gaming_online", lambda: [])
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: cronologia)
+        monkeypatch.setattr(brain, "salva_in_cronologia", lambda r: None)
+
+        risultato = brain.genera_script_samaritan()
+
+        assert len(prompt_visti) == 2, "il primo script doveva essere scartato"
+        assert "apre come un video recente" in prompt_visti[1]
+        assert risultato["script"] == self.NUOVO
+
+
+class TestRigaMateriale:
+    """La descrizione dichiarava "materiale promozionale ufficiale dei
+    rispettivi editori" ogni volta che il modello aveva indicato un gioco.
+    Ma `procura_materiale()` ripiega su clip d'archivio senza azzerare
+    'gioco': su quei video la riga che dovrebbe dare credibilita' diceva il
+    falso. Su un canale che chiedera' la monetizzazione e' il dettaglio che
+    non conviene avere in giro."""
+
+    SOLO_UFFICIALE = {"gioco_ufficiale": "Grand Theft Auto V",
+                      "sorgenti_ufficiali": 5, "sorgenti_stock": 0}
+    MISTO = {"gioco_ufficiale": "Grand Theft Auto V",
+             "sorgenti_ufficiali": 2, "sorgenti_stock": 2}
+    SOLO_ARCHIVIO = {"gioco_ufficiale": None,
+                     "sorgenti_ufficiali": 0, "sorgenti_stock": 4}
+
+    def test_dichiara_l_ufficialita_solo_quando_e_vera(self):
+        testo = brain.costruisci_descrizione(DATI_GTA, self.SOLO_UFFICIALE)
+        assert "materiale promozionale ufficiale" in testo
+        assert "d'archivio" not in testo
+
+    def test_usa_il_nome_ufficiale_di_steam_non_quello_del_modello(self):
+        # Il credito parla di cosa e' stato scaricato davvero.
+        testo = brain.costruisci_descrizione(DATI_GTA, self.SOLO_UFFICIALE)
+        assert "Grand Theft Auto V:" in testo
+
+    def test_sul_montaggio_misto_lo_dice(self):
+        testo = brain.costruisci_descrizione(DATI_GTA, self.MISTO)
+        assert "materiale promozionale ufficiale" in testo
+        assert "integrato con filmati d'archivio" in testo
+
+    def test_niente_editori_se_il_video_e_tutto_d_archivio(self):
+        # Il caso del bug: 'gioco' e' valorizzato ma Steam non ha dato niente.
+        testo = brain.costruisci_descrizione(DATI_GTA, self.SOLO_ARCHIVIO)
+        assert "ufficiale dei rispettivi editori" not in testo
+        assert "Filmati d'archivio" in testo
+
+    def test_senza_resoconto_non_afferma_niente(self):
+        testo = brain.costruisci_descrizione(DATI_GTA)
+        assert "ufficiale dei rispettivi editori" not in testo
+        assert "a scopo illustrativo" in testo
+
+    def test_la_pipeline_collega_davvero_montaggio_e_descrizione(self):
+        """Senza questo collegamento la correzione non serve a niente.
+
+        main.py e maker.py non sono importabili nei test (tirano dentro
+        moviepy e le librerie Google), quindi il controllo e' sul sorgente:
+        e' sufficiente, perche' l'errore che si vuole impedire e' proprio
+        che qualcuno rimuova il passaggio del resoconto.
+        """
+        import os
+        radice = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        with open(os.path.join(radice, "main.py"), encoding="utf-8") as f:
+            main_py = f.read()
+        with open(os.path.join(radice, "maker.py"), encoding="utf-8") as f:
+            maker_py = f.read()
+
+        assert "resoconto=materiale" in main_py
+        assert "costruisci_descrizione(dati, materiale)" in main_py
+        assert 'resoconto["sorgenti_ufficiali"]' in maker_py
+
+
+class TestNomeFormatoInChiaro:
+    """La prova in privato del 19 settembre 2026 ha prodotto il titolo
+    "Stalker 2: DONT_DO_THIS - non spendere energia sbagliata": il modello ha
+    ricopiato l'etichetta interna dalla riga FORMATO RICHIESTO del prompt.
+    Senza questo controllo quel titolo sarebbe uscito pubblico."""
+
+    TITOLO_SPORCO = "Stalker 2: DONT_DO_THIS - non spendere energia sbagliata"
+
+    def test_riconosce_l_etichetta_nel_titolo(self):
+        assert brain._nome_formato_in_chiaro(self.TITOLO_SPORCO) == "DONT_DO_THIS"
+
+    def test_valida_titolo_lo_scarta(self):
+        ok, motivo = brain.valida_titolo(self.TITOLO_SPORCO, "Stalker 2")
+        assert not ok
+        assert "nome interno del formato" in motivo
+
+    def test_valida_script_lo_scarta(self):
+        sporco = "VIRAL_HOOK_NEWS. " + TestRigenerazioneInformata._SCRIPT
+        ok, motivo = brain.valida_script("Portal: la stanza 19", sporco)
+        assert not ok
+        assert "nome interno del formato" in motivo
+
+    def test_non_scarta_un_titolo_italiano_legittimo(self):
+        # "Fortnite: Tier List Lampo" e' un titolo vero gia' pubblicato: con
+        # gli spazi non e' l'etichetta interna e deve passare.
+        assert brain._nome_formato_in_chiaro("Fortnite: Tier List Lampo") == ""
+        ok, motivo = brain.valida_titolo("Fortnite: Tier List Lampo", "Fortnite")
+        assert ok, motivo
+
+    def test_il_prompt_avvisa_che_la_sigla_non_va_scritta(self):
+        prompt = brain._costruisci_system_prompt("DONT_DO_THIS", [], [], [])
+        assert "etichetta interna" in prompt

@@ -517,7 +517,8 @@ def genera_sottotitoli_clips(audio_path, titolo="", gioco="", stile=None):
 # PIPELINE
 # ===========================================================================
 def assembla_video_finale(testo_per_audio=None, query_video="gameplay",
-                          titolo="", gioco="", tema="Gaming"):
+                          titolo="", gioco="", tema="Gaming",
+                          resoconto=None):
     os.makedirs(config.DIR_OUTPUT, exist_ok=True)
     print("\n--- SAMARITAN MAKER: PRODUZIONE VIDEO ---")
 
@@ -546,6 +547,16 @@ def assembla_video_finale(testo_per_audio=None, query_video="gameplay",
     if not sorgenti:
         print("[Errore Maker] Nessun materiale video disponibile: interrompo.")
         return None
+
+    # Qui dentro e' l'unico posto che sa se il materiale e' davvero ufficiale:
+    # procura_materiale() ripiega su clip d'archivio senza azzerare 'gioco',
+    # quindi chi scrive la descrizione non puo' dedurlo dal nome del gioco.
+    # Le sorgenti d'archivio hanno 'gioco' a None, quelle Steam no.
+    if resoconto is not None:
+        ufficiali = sum(1 for s in sorgenti if s.get("gioco"))
+        resoconto["gioco_ufficiale"] = gioco_ufficiale
+        resoconto["sorgenti_ufficiali"] = ufficiali
+        resoconto["sorgenti_stock"] = len(sorgenti) - ufficiali
 
     audio_clip = AudioFileClip(audio_path)
     durata = audio_clip.duration + 0.4

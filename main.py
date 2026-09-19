@@ -54,12 +54,17 @@ def esegui_pipeline_samaritan(tema=None):
 
     # -------------------------------------------------- FASE 2: Montaggio
     print("\n[FASE 2/3] Gameplay, voce, montaggio e sottotitoli...")
+    # Il montaggio riempie questo dizionario con cosa e' finito davvero nel
+    # video: serve alla descrizione, che altrimenti dichiara materiale
+    # ufficiale dell'editore anche sui video fatti di clip d'archivio.
+    materiale = {}
     video_path = assembla_video_finale(
         testo_per_audio=dati["script"],
         query_video=dati["query_video"],
         titolo=dati["titolo"],
         gioco=dati.get("gioco", ""),
         tema=tema or "Gaming",
+        resoconto=materiale,
     )
 
     if not video_path or not os.path.exists(video_path):
@@ -78,7 +83,7 @@ def esegui_pipeline_samaritan(tema=None):
     video_id = carica_short(
         filepath=video_path,
         titolo=dati["titolo"],
-        descrizione=costruisci_descrizione(dati),
+        descrizione=costruisci_descrizione(dati, materiale),
         tag=costruisci_tag(dati),
         privacy=config.PRIVACY_STATUS,
         miniatura=miniatura,
