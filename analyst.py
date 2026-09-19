@@ -71,7 +71,56 @@ def scarica_performance():
             performance[video_id] = record
 
     print(f"[Samaritan Analyst] Metriche raccolte per {len(performance)} video.")
+    _controlla_contro_il_canale(analytics, performance, inizio, oggi)
     return performance
+
+
+def _views_del_canale(analytics, inizio, fine):
+    """Visualizzazioni totali del canale nel periodo, SENZA dimensione video.
+
+    E' la stessa cifra che YouTube Studio mostra nella scheda Visualizzazioni,
+    quindi serve da metro per capire se il dettaglio per video la rispecchia.
+    """
+    risposta = analytics.reports().query(
+        ids="channel==MINE",
+        startDate=inizio.isoformat(),
+        endDate=fine.isoformat(),
+        metrics="views",
+    ).execute()
+    righe = risposta.get("rows") or []
+    if not righe or not righe[0]:
+        return 0
+    return righe[0][0]
+
+
+def _controlla_contro_il_canale(analytics, performance, inizio, fine):
+    """Confronta la somma per video col totale di canale e lo dice nel log.
+
+    Il 19 settembre 2026 YouTube Studio segnava 9.843 visualizzazioni in sette
+    giorni mentre la somma di questo file ne contava 4.488 in novanta: una delle
+    due cifre e' sbagliata, e su quella sbagliata pesi_formati() decide cosa far
+    produrre. Finche' non si sa quale, queste righe servono a saperlo dal log
+    della prossima run invece che a indovinare.
+    """
+    somma = sum(m.get("views", 0) for m in performance.values())
+    try:
+        totale = _views_del_canale(analytics, inizio, fine)
+        ieri = fine - datetime.timedelta(days=1)
+        ultimi_sette = _views_del_canale(
+            analytics, fine - datetime.timedelta(days=7), ieri)
+    except Exception as e:
+        print(f"[Samaritan Analyst] Confronto col totale di canale non riuscito ({e}).")
+        return
+
+    print(f"[Samaritan Analyst] Canale: {totale} views in {GIORNI_ANALISI} giorni, "
+          f"{ultimi_sette} negli ultimi 7 (fino a ieri). "
+          f"Somma per video: {somma}.")
+    if totale and somma < totale * 0.9:
+        mancanti = totale - somma
+        print(f"[Warning Analyst] Il dettaglio per video copre solo il "
+              f"{somma / totale:.0%} del totale: {mancanti} visualizzazioni non "
+              f"sono attribuite a nessun video, quindi i pesi dei formati sono "
+              f"calcolati su una parte sola del canale.")
 
 
 def aggiorna_performance():
