@@ -11,6 +11,7 @@ FASE 1  brain.py     sceglie il formato (pesato sui dati) e scrive lo script
                      ancorandolo a notizie gaming VERE
 FASE 2  gameplay.py  trailer e screenshot UFFICIALI del gioco da Steam
         voice.py     voce neurale Edge-TTS
+        veste.py     sceglie la veste grafica, diversa a ogni video
         maker.py     stacco ogni 2-3s, zoom, sfondo sfocato, sottotitoli
 FASE 3  uploader.py  upload su YouTube
         notifier.py  notifica Telegram
@@ -212,6 +213,21 @@ YouTube estrae un fotogramma a caso: nel feed non cambia niente, nella griglia
 del canale e nella ricerca si vede eccome. Serve il canale verificato via
 telefono: se non lo e', YouTube risponde 403 e il video sale lo stesso senza
 miniatura.
+
+**Veste grafica** (`veste.py`): colori dei sottotitoli, altezza a cui
+compaiono, corpo del testo, presenza e posizione del banner del titolo,
+spessore e colore della barra di avanzamento, verso dello zoom, velocita' degli
+stacchi. Non e' una sola: ce ne sono cinque e ruotano, una per video. Due Short
+di fila non hanno mai lo stesso aspetto, e non e' una questione estetica: un
+canale i cui video sono tutti visivamente identici e' il profilo che YouTube
+chiama "contenuto ripetitivo" e non ammette alla monetizzazione.
+
+La rotazione si ricorda dove e' arrivata scrivendo il nome della veste in
+`cronologia_trend.json`, e lo scrive solo a rendering riuscito: se il video non
+esce, quella veste non e' spesa e tocca a lei il giro dopo. Aggiungere o
+togliere vesti significa modificare la lista `VESTI`; `tests/test_veste.py`
+boccia le combinazioni in cui il testo finirebbe fuori dallo schermo o sotto i
+comandi di YouTube.
 
 ---
 
