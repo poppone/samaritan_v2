@@ -11,6 +11,7 @@ FASE 1  brain.py     sceglie il formato (pesato sui dati) e scrive lo script
                      ancorandolo a notizie gaming VERE
 FASE 2  gameplay.py  trailer e screenshot UFFICIALI del gioco da Steam
         voice.py     voce neurale Edge-TTS
+        veste.py     sceglie la veste grafica, diversa a ogni video
         maker.py     stacco ogni 2-3s, zoom, sfondo sfocato, sottotitoli
 FASE 3  uploader.py  upload su YouTube
         notifier.py  notifica Telegram
@@ -37,6 +38,14 @@ scaricare gameplay di 'Grand Theft Auto IV', o 'Portal' quello di 'Portal 2'.
 
 I trailer Steam sono 16:9: vengono montati dentro il 9:16 con sfondo sfocato
 ricavato dal frame stesso, che e' il formato standard degli Shorts gaming.
+
+**Sullo stesso gioco non esce due volte lo stesso materiale.** Quanti Short
+sono gia' usciti su quel titolo (contati sulla cronologia) decide da che punto
+dell'elenco si comincia a pescare trailer e screenshot, e da che secondo del
+trailer si taglia lo spezzone. I trailer principali scelti dall'editore
+restano comunque davanti ai teaser: cambia il materiale, non la qualita'. Se
+un trailer e' troppo corto per il taglio spostato, si ripiega sul punto
+normale e poi sull'inizio, invece di perdere la sorgente.
 
 ---
 
@@ -212,6 +221,21 @@ YouTube estrae un fotogramma a caso: nel feed non cambia niente, nella griglia
 del canale e nella ricerca si vede eccome. Serve il canale verificato via
 telefono: se non lo e', YouTube risponde 403 e il video sale lo stesso senza
 miniatura.
+
+**Veste grafica** (`veste.py`): colori dei sottotitoli, altezza a cui
+compaiono, corpo del testo, presenza e posizione del banner del titolo,
+spessore e colore della barra di avanzamento, verso dello zoom, velocita' degli
+stacchi. Non e' una sola: ce ne sono cinque e ruotano, una per video. Due Short
+di fila non hanno mai lo stesso aspetto, e non e' una questione estetica: un
+canale i cui video sono tutti visivamente identici e' il profilo che YouTube
+chiama "contenuto ripetitivo" e non ammette alla monetizzazione.
+
+La rotazione si ricorda dove e' arrivata scrivendo il nome della veste in
+`cronologia_trend.json`, e lo scrive solo a rendering riuscito: se il video non
+esce, quella veste non e' spesa e tocca a lei il giro dopo. Aggiungere o
+togliere vesti significa modificare la lista `VESTI`; `tests/test_veste.py`
+boccia le combinazioni in cui il testo finirebbe fuori dallo schermo o sotto i
+comandi di YouTube.
 
 ---
 
