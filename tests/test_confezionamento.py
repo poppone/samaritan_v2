@@ -417,3 +417,64 @@ class TestAperturaRipetutaDalVivo:
         assert len(prompt_visti) == 2, "il primo script doveva essere scartato"
         assert "apre come un video recente" in prompt_visti[1]
         assert risultato["script"] == self.NUOVO
+
+
+class TestRigaMateriale:
+    """La descrizione dichiarava "materiale promozionale ufficiale dei
+    rispettivi editori" ogni volta che il modello aveva indicato un gioco.
+    Ma `procura_materiale()` ripiega su clip d'archivio senza azzerare
+    'gioco': su quei video la riga che dovrebbe dare credibilita' diceva il
+    falso. Su un canale che chiedera' la monetizzazione e' il dettaglio che
+    non conviene avere in giro."""
+
+    SOLO_UFFICIALE = {"gioco_ufficiale": "Grand Theft Auto V",
+                      "sorgenti_ufficiali": 5, "sorgenti_stock": 0}
+    MISTO = {"gioco_ufficiale": "Grand Theft Auto V",
+             "sorgenti_ufficiali": 2, "sorgenti_stock": 2}
+    SOLO_ARCHIVIO = {"gioco_ufficiale": None,
+                     "sorgenti_ufficiali": 0, "sorgenti_stock": 4}
+
+    def test_dichiara_l_ufficialita_solo_quando_e_vera(self):
+        testo = brain.costruisci_descrizione(DATI_GTA, self.SOLO_UFFICIALE)
+        assert "materiale promozionale ufficiale" in testo
+        assert "d'archivio" not in testo
+
+    def test_usa_il_nome_ufficiale_di_steam_non_quello_del_modello(self):
+        # Il credito parla di cosa e' stato scaricato davvero.
+        testo = brain.costruisci_descrizione(DATI_GTA, self.SOLO_UFFICIALE)
+        assert "Grand Theft Auto V:" in testo
+
+    def test_sul_montaggio_misto_lo_dice(self):
+        testo = brain.costruisci_descrizione(DATI_GTA, self.MISTO)
+        assert "materiale promozionale ufficiale" in testo
+        assert "integrato con filmati d'archivio" in testo
+
+    def test_niente_editori_se_il_video_e_tutto_d_archivio(self):
+        # Il caso del bug: 'gioco' e' valorizzato ma Steam non ha dato niente.
+        testo = brain.costruisci_descrizione(DATI_GTA, self.SOLO_ARCHIVIO)
+        assert "ufficiale dei rispettivi editori" not in testo
+        assert "Filmati d'archivio" in testo
+
+    def test_senza_resoconto_non_afferma_niente(self):
+        testo = brain.costruisci_descrizione(DATI_GTA)
+        assert "ufficiale dei rispettivi editori" not in testo
+        assert "a scopo illustrativo" in testo
+
+    def test_la_pipeline_collega_davvero_montaggio_e_descrizione(self):
+        """Senza questo collegamento la correzione non serve a niente.
+
+        main.py e maker.py non sono importabili nei test (tirano dentro
+        moviepy e le librerie Google), quindi il controllo e' sul sorgente:
+        e' sufficiente, perche' l'errore che si vuole impedire e' proprio
+        che qualcuno rimuova il passaggio del resoconto.
+        """
+        import os
+        radice = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        with open(os.path.join(radice, "main.py"), encoding="utf-8") as f:
+            main_py = f.read()
+        with open(os.path.join(radice, "maker.py"), encoding="utf-8") as f:
+            maker_py = f.read()
+
+        assert "resoconto=materiale" in main_py
+        assert "costruisci_descrizione(dati, materiale)" in main_py
+        assert 'resoconto["sorgenti_ufficiali"]' in maker_py

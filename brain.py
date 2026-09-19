@@ -498,7 +498,39 @@ def costruisci_tag(dati, massimo=15, max_caratteri=450):
     return risultato
 
 
-def costruisci_descrizione(dati):
+def _riga_materiale(dati, materiale):
+    """La riga di credito sul materiale video.
+
+    Prima diceva "materiale promozionale ufficiale dei rispettivi editori"
+    ogni volta che il modello aveva indicato un gioco. Ma quando Steam non
+    trova il gioco, o ne restituisce meno del minimo, `procura_materiale()`
+    ripiega su clip d'archivio senza azzerare 'gioco': su quei video la
+    descrizione dichiarava il falso proprio nella riga che dovrebbe dare
+    credibilita'. Ora la riga la decide chi ha montato davvero il video, e il
+    nome usato e' quello ufficiale trovato su Steam, non quello scritto dal
+    modello.
+    """
+    if materiale is None:
+        # Chiamante che non sa dire cosa e' finito nel montaggio: meglio una
+        # riga generica ma vera che una precisa e falsa.
+        return "\nFilmati e immagini a scopo illustrativo."
+
+    nome = (materiale.get("gioco_ufficiale") or dati.get("gioco") or "").strip()
+    ufficiali = materiale.get("sorgenti_ufficiali", 0)
+    stock = materiale.get("sorgenti_stock", 0)
+
+    if not (ufficiali and nome):
+        return "\nFilmati d'archivio a scopo illustrativo."
+
+    if stock:
+        return (f"\nFilmati e immagini di {nome}: materiale promozionale "
+                "ufficiale dei rispettivi editori, integrato con filmati "
+                "d'archivio.")
+    return (f"\nFilmati e immagini di {nome}: materiale promozionale "
+            "ufficiale dei rispettivi editori.")
+
+
+def costruisci_descrizione(dati, materiale=None):
     """Descrizione del video.
 
     Prima solo le prime due righe cambiavano da un video all'altro e tutto il
@@ -517,11 +549,7 @@ def costruisci_descrizione(dati):
     elif dati.get("fonte"):
         parti.append(f"\nFonte: {dati['fonte']}")
 
-    if dati.get("gioco"):
-        parti.append(
-            f"\nFilmati e immagini di {dati['gioco']}: materiale promozionale "
-            "ufficiale dei rispettivi editori."
-        )
+    parti.append(_riga_materiale(dati, materiale))
 
     # Dichiararlo qui non cambia nulla per YouTube (la dichiarazione formale la
     # fa gia' uploader.py), ma toglie di mano il commento "e' fatto con l'AI".
