@@ -512,3 +512,71 @@ class TestNomeFormatoInChiaro:
     def test_il_prompt_avvisa_che_la_sigla_non_va_scritta(self):
         prompt = brain._costruisci_system_prompt("DONT_DO_THIS", [], [], [])
         assert "etichetta interna" in prompt
+
+
+class TestCodaTroncata:
+    """Il 19 settembre 2026 lo Short su EA Sports FC 26 e' uscito con lo
+    script chiuso cosi': '...Iscriviti a Poppone TV e non perderti nulla.
+    Hai'. Il tetto di token copre anche il ragionamento del modello, quindi
+    ogni tanto la risposta si interrompe a meta' parola, e nel video si sente:
+    la voce legge la chiusura e poi aggiunge una parola a vuoto."""
+
+    REALE = (
+        "Hai mai creduto che Maradona fosse un mito irraggiungibile? La "
+        "verita' e' che EA Sports FC 26 rilascia l'update The World's Game, e "
+        "include Maradona e Pele totalmente gratis. Nessuna microtransazione, "
+        "solo un download. Il contenuto arriva gia' pronto su Xbox Game Pass "
+        "e PC. Vuoi vedere l'azione dal vivo? Iscriviti a Poppone TV e non "
+        "perderti nulla. Hai"
+    )
+
+    def test_toglie_la_parola_rimasta_a_meta(self):
+        riparato = brain._senza_coda_troncata(self.REALE)
+        assert riparato.endswith("non perderti nulla.")
+        assert not brain._script_troncato(riparato)
+
+    def test_toglie_anche_la_frase_lasciata_a_meta(self):
+        testo = "Prima frase chiusa. La seconda invece si ferma qui dopo"
+        assert brain._senza_coda_troncata(testo) == "Prima frase chiusa."
+
+    def test_una_virgola_finale_conta_come_frase_tronca(self):
+        testo = "Prima frase chiusa. E poi,"
+        assert brain._senza_coda_troncata(testo) == "Prima frase chiusa."
+
+    def test_uno_script_gia_finito_non_si_tocca(self):
+        for testo in ("Frase una. Frase due!", "Frase una. Frase due! \U0001f3ae",
+                      "Boom... ecco la notizia?"):
+            assert brain._senza_coda_troncata(testo) == testo
+            assert not brain._script_troncato(testo)
+
+    def test_senza_nessuna_frase_chiusa_resta_intatto_e_lo_scarta_il_validatore(self):
+        testo = " ".join(["parola"] * 50)
+        assert brain._senza_coda_troncata(testo) == testo
+        ok, motivo = brain.valida_script("Un titolo qualunque su Portal", testo)
+        assert not ok
+        assert "meta' frase" in motivo
+
+    def test_il_generatore_ripara_invece_di_bruciare_un_tentativo(self, monkeypatch):
+        """La riparazione non deve costare un tentativo: rigenerare puo' far
+        saltare la pubblicazione, e la coda tronca arriva sempre dopo la
+        chiusura vera."""
+        import json as _json
+
+        risposta = _json.dumps({
+            "titolo": "EA Sports FC 26: Maradona e Pele gratis?",
+            "script": self.REALE, "gioco": "EA Sports FC 26",
+            "query_video": "ea sports fc 26 gameplay",
+            "descrizione": "L'update The World's Game.", "indice_notizia": -1,
+        })
+
+        prompt_visti = []
+        finto = TestRigenerazioneInformata()._finto_client([risposta], prompt_visti)
+        monkeypatch.setattr(brain, "client", finto)
+        monkeypatch.setattr(brain, "recupera_trend_gaming_online", lambda: [])
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: [])
+        monkeypatch.setattr(brain, "salva_in_cronologia", lambda r: None)
+
+        risultato = brain.genera_script_samaritan()
+
+        assert len(prompt_visti) == 1, "non doveva servire un secondo tentativo"
+        assert risultato["script"].endswith("non perderti nulla.")
