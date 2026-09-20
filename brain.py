@@ -86,6 +86,38 @@ MEMORIA_NOTIZIE = 0          # 0 = tutta la cronologia
 # ("Stai sbagliando tutto su X", "Nessuno ti ha detto che Y").
 PAROLE_APERTURA = 3
 
+# Quante voci guardare per la FORMA dell'attacco (non le parole: la forma).
+# Il 20 settembre 2026 quattro Short di fila hanno aperto con una domanda
+# retorica: "Pensavi che...?", "Scommetti che...?", "Hai mai creduto che...?",
+# "Stai ancora credendo che...?". Nessuna ripeteva le parole dell'altra,
+# quindi il controllo sulle tre parole iniziali le lasciava passare tutte,
+# ma da fuori i quattro video si somigliano lo stesso ed e' esattamente la
+# somiglianza che YouTube guarda. La finestra qui e' piu' corta di
+# MEMORIA_RIPETIZIONI perche' le forme riconoscibili sono poche: vietarne
+# troppe in fila vorrebbe dire scartare script buoni, e ogni scarto costa
+# uno dei quattro tentativi.
+MEMORIA_SCHEMI = 2
+
+SCHEMA_DOMANDA = "una domanda"
+SCHEMA_SECONDA_PERSONA = "una frase rivolta allo spettatore"
+
+# Parole che rivelano che la frase parla in faccia a chi guarda. E' un elenco
+# corto e scelto a mano invece di una regola sulle desinenze: in italiano la
+# seconda persona finisce in -i come mezza lingua ("giochi", "ricordi",
+# "aspetti" sono anche sostantivi) e un falso positivo qui costa un
+# tentativo di generazione, mentre una parola che manca non costa niente.
+# Fuori di proposito: "sei" (anche il numero), "dai" (anche la preposizione)
+# e "vi" (anche il VI di 'GTA VI'). Le aperture in seconda persona piu'
+# comuni sono comunque domande, e quelle le prende il punto interrogativo.
+SECONDA_PERSONA = frozenset((
+    "tu", "ti", "te", "tuo", "tua", "tuoi", "tue", "vostro", "vostra",
+    "hai", "stai", "vai", "fai", "sai", "puoi", "vuoi", "devi",
+    "credi", "pensi", "scommetti", "smetti", "senti", "provi", "conosci",
+    "eri", "avevi", "stavi", "pensavi", "credevi", "sapevi", "volevi",
+    "dovevi", "facevi", "dicevi", "giocavi",
+    "immagina", "dimmi", "fidati", "preparati", "smettila",
+))
+
 MIN_PAROLE_SCRIPT = 45
 MAX_PAROLE_SCRIPT = 95
 
@@ -483,6 +515,42 @@ def _impronta_apertura(script, n_parole=PAROLE_APERTURA):
     return " ".join(parole[:n_parole])
 
 
+def _prima_frase(script):
+    """Solo l'attacco: il testo fino alla prima punteggiatura di fine frase.
+
+    Il resto dello script non c'entra. "Rockstar ha mentito. Ci credi?" apre
+    con un'affermazione, non con una domanda, e va contato per quello.
+    """
+    testo = (script or "").strip()
+    fine = min((i for i, c in enumerate(testo) if c in PUNTEGGIATURA_FINALE),
+               default=-1)
+    return testo if fine < 0 else testo[:fine + 1]
+
+
+def _schema_apertura(script):
+    """Che FORMA ha l'attacco, indipendentemente dalle parole usate.
+
+    Ritorna stringa vuota quando l'attacco e' una frase normale: quella non
+    si blocca mai, altrimenti non resterebbe nessuna apertura consentita.
+    Si riconoscono solo le due forme che si ripetevano davvero.
+
+    Lavora anche sull'estratto di 90 caratteri salvato in cronologia. Se il
+    taglio cade prima del punto interrogativo la domanda non viene vista e
+    il video passa: e' il verso giusto in cui sbagliare, perche' un mancato
+    riconoscimento non costa niente e un riconoscimento sbagliato costa un
+    tentativo.
+    """
+    frase = _prima_frase(script)
+    if not frase:
+        return ""
+    if frase.endswith("?"):
+        return SCHEMA_DOMANDA
+    parole = set(re.split(r"[^0-9a-zA-Z]+", _senza_accenti(frase).lower()))
+    if parole & SECONDA_PERSONA:
+        return SCHEMA_SECONDA_PERSONA
+    return ""
+
+
 def _ultima_chiusura(script):
     """L'indice dell'ultima punteggiatura di fine frase, -1 se non ce n'e'."""
     return max(script.rfind(segno) for segno in PUNTEGGIATURA_FINALE)
@@ -525,7 +593,7 @@ def _script_troncato(script):
     return not nudo or nudo[-1] not in PUNTEGGIATURA_FINALE
 
 
-def valida_script(titolo, script, aperture_recenti=()):
+def valida_script(titolo, script, aperture_recenti=(), schemi_recenti=()):
     """Ritorna (True, "") se lo script e' pubblicabile, altrimenti (False, motivo)."""
     if not titolo or not script:
         return False, "titolo o script vuoti"
@@ -542,6 +610,13 @@ def valida_script(titolo, script, aperture_recenti=()):
     impronta = _impronta_apertura(script)
     if impronta and impronta in set(aperture_recenti):
         return False, f"apre come un video recente ('{impronta}...')"
+
+    # Il controllo qui sopra guarda le parole, questo guarda la forma: quattro
+    # domande retoriche di fila hanno quattro impronte diverse e un solo
+    # schema. Vedi MEMORIA_SCHEMI.
+    schema = _schema_apertura(script)
+    if schema and schema in set(schemi_recenti):
+        return False, f"apre con {schema}, come i video recenti"
 
     formato = _nome_formato_in_chiaro(script)
     if formato:
@@ -708,7 +783,7 @@ def testo_miniatura(titolo, massimo_parole=4):
 # ===========================================================================
 def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti,
                               aperture_recenti=(), giochi_recenti=(),
-                              notizie_gia_usate=()):
+                              notizie_gia_usate=(), schemi_recenti=()):
     meta = FORMATI_VIDEO[formato]
 
     blocco_notizie = "NESSUNA notizia fresca disponibile."
@@ -746,6 +821,15 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti,
             "le prime parole, non basta cambiare il gioco nominato:\n"
             + "\n".join(f"   - \"{a}...\"" for a in aperture_recenti)
         )
+    if schemi_recenti:
+        righe_ripetizioni.append(
+            "12. CAMBIA LA FORMA DELL'ATTACCO, non solo le parole. Gli ultimi "
+            "video hanno aperto con " + " e con ".join(schemi_recenti)
+            + ". Questo Short deve attaccare in un modo diverso: un numero "
+            "che stona, una scena raccontata a meta', un confronto fra due "
+            "cose che non c'entrano, una contraddizione secca. Una domanda "
+            "diversa resta una domanda: non basta."
+        )
     if giochi_recenti or notizie_gia_usate:
         vietati = []
         if giochi_recenti:
@@ -753,7 +837,7 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti,
         if notizie_gia_usate:
             vietati.append(f"notizie: {json.dumps(list(notizie_gia_usate), ensure_ascii=False)}")
         righe_ripetizioni.append(
-            "12. NIENTE DOPPIONI: questi sono gia' usciti, scegli altro.\n   "
+            "13. NIENTE DOPPIONI: questi sono gia' usciti, scegli altro.\n   "
             + "\n   ".join(vietati)
         )
     blocco_ripetizioni = "\n".join(righe_ripetizioni)
@@ -919,6 +1003,12 @@ def genera_script_samaritan(tema=None):
     impronte_aperture = {_impronta_apertura(e) for e in estratti}
     impronte_aperture.discard("")
 
+    # La forma dell'attacco si guarda su una finestra piu' corta delle parole:
+    # vedi MEMORIA_SCHEMI.
+    schemi_recenti = {_schema_apertura(e) for e in estratti[-MEMORIA_SCHEMI:]}
+    schemi_recenti.discard("")
+    schemi_recenti = sorted(schemi_recenti)
+
     notizie_gia_usate = sorted({r.get("fonte", "").strip() for r in recenti} - {""})
     fonti_recenti = {f.lower() for f in notizie_gia_usate}
 
@@ -935,7 +1025,8 @@ def genera_script_samaritan(tema=None):
 
     system_prompt = _costruisci_system_prompt(
         formato, notizie, ultimi_titoli, hook_vincenti,
-        aperture_da_mostrare, giochi_recenti, notizie_gia_usate
+        aperture_da_mostrare, giochi_recenti, notizie_gia_usate,
+        schemi_recenti
     )
     prompt_base = "Scrivi lo Short di oggi."
     if tema:
@@ -1018,7 +1109,8 @@ def genera_script_samaritan(tema=None):
                 except (TypeError, ValueError):
                     pass
 
-                ok, motivo = valida_script(titolo, script, impronte_aperture)
+                ok, motivo = valida_script(titolo, script, impronte_aperture,
+                                           schemi_recenti)
                 if ok:
                     ok, motivo = valida_titolo(titolo, gioco)
                 if ok and _cronaca_senza_fonte(script, fonte):

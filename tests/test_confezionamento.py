@@ -666,3 +666,130 @@ class TestNotiziaGiaUsata:
         monkeypatch.setattr(brain.requests, "get", self._rss([self.NOTIZIA]))
 
         assert brain.recupera_trend_gaming_online() == []
+
+
+class TestSchemaApertura:
+    """Quattro Short di fila aperti con una domanda retorica.
+
+    Il 20 settembre 2026 le ultime quattro aperture erano "Pensavi che...?",
+    "Scommetti che...?", "Hai mai creduto che...?", "Stai ancora credendo
+    che...?". Nessuna ripeteva le parole di un'altra, quindi il controllo
+    sulle tre parole iniziali le lasciava passare tutte. Da fuori pero' i
+    quattro video si somigliano lo stesso, ed e' la somiglianza che conta
+    per la monetizzazione.
+    """
+
+    APERTURE_VERE = (
+        "Pensavi che i Mondiali fossero solo in TV? EA FC 26 li porta sul campo.",
+        "Scommetti che non indovini il prezzo? Starfield cambia tutto.",
+        "Hai mai creduto che No Man's Sky fosse finito? Cosmos dice altro.",
+        "Stai ancora credendo che i Mondiali siano solo in TV? Guarda qui.",
+    )
+
+    def test_le_quattro_aperture_vere_hanno_lo_stesso_schema(self):
+        schemi = {brain._schema_apertura(a) for a in self.APERTURE_VERE}
+        assert schemi == {brain.SCHEMA_DOMANDA}
+
+    def test_il_controllo_sulle_parole_non_le_prendeva(self):
+        # Il motivo per cui serviva un controllo nuovo: quattro impronte
+        # diverse, quindi il vecchio confronto non scartava niente.
+        impronte = {brain._impronta_apertura(a) for a in self.APERTURE_VERE}
+        assert len(impronte) == 4
+
+    def test_conta_solo_la_prima_frase(self):
+        # Apre con un'affermazione: la domanda arriva dopo e non e' l'attacco.
+        assert brain._schema_apertura("Rockstar ha mentito. Ci credi?") == ""
+
+    def test_una_frase_normale_non_ha_schema(self):
+        # Senza questo non resterebbe nessuna apertura consentita.
+        assert brain._schema_apertura("Dieci anni dopo, arriva Cosmos.") == ""
+
+    def test_l_apertura_rivolta_allo_spettatore_senza_domanda(self):
+        assert brain._schema_apertura(
+            "Stai sbagliando tutto su Fortnite. Primo posto: la skin nuova."
+        ) == brain.SCHEMA_SECONDA_PERSONA
+
+    def test_le_parole_ambigue_non_fanno_falsi_positivi(self):
+        # "sei" e' anche il numero, "dai" anche la preposizione, "vi" anche
+        # il VI di GTA VI. Un falso positivo qui costa un tentativo.
+        assert brain._schema_apertura(
+            "GTA VI slitta al 2027. Sei mesi di attesa in piu'."
+        ) == ""
+        assert brain._schema_apertura(
+            "Dai primi giorni le navi di Starfield erano rotte."
+        ) == ""
+
+    def test_valida_script_scarta_lo_schema_gia_usato(self):
+        script = self.APERTURE_VERE[0] + " " + TestAperturaRipetutaDalVivo._CODA
+        ok, motivo = brain.valida_script(
+            "EA FC 26: i Mondiali arrivano", script,
+            schemi_recenti=[brain.SCHEMA_DOMANDA],
+        )
+        assert not ok
+        assert "una domanda" in motivo
+
+    def test_valida_script_lascia_passare_una_forma_diversa(self):
+        script = ("Dietro una parete che sembra decorazione c'e' altro. "
+                  + TestAperturaRipetutaDalVivo._CODA)
+        ok, motivo = brain.valida_script(
+            "Portal: la stanza che non apre nessuno", script,
+            schemi_recenti=[brain.SCHEMA_DOMANDA],
+        )
+        assert ok, motivo
+
+    def test_la_finestra_degli_schemi_e_piu_corta(self):
+        # Le forme riconoscibili sono poche: vietarne troppe in fila
+        # vorrebbe dire scartare script buoni.
+        assert 0 < brain.MEMORIA_SCHEMI < brain.MEMORIA_RIPETIZIONI
+
+    def test_il_prompt_chiede_di_cambiare_forma(self):
+        prompt = brain._costruisci_system_prompt(
+            "TIER_LIST_LAMPO", [], [], [],
+            schemi_recenti=[brain.SCHEMA_DOMANDA],
+        )
+        assert "FORMA DELL'ATTACCO" in prompt
+        assert brain.SCHEMA_DOMANDA in prompt
+
+    def test_senza_storico_il_prompt_non_dice_niente(self):
+        prompt = brain._costruisci_system_prompt("TIER_LIST_LAMPO", [], [], [])
+        assert "FORMA DELL'ATTACCO" not in prompt
+
+    def test_lo_script_che_riapre_con_una_domanda_viene_rifatto(self, monkeypatch):
+        import json as _json
+
+        ripetuto = ("Pensavi che il segreto fosse finito? "
+                    + TestAperturaRipetutaDalVivo._CODA)
+        nuovo = ("Dietro una parete che sembra decorazione c'e' altro. "
+                 + TestAperturaRipetutaDalVivo._CODA)
+
+        def risposta(script):
+            return _json.dumps({
+                "titolo": "Portal: la stanza che non apre nessuno",
+                "script": script, "gioco": "Portal",
+                "query_video": "portal gameplay",
+                "descrizione": "Un segreto.", "indice_notizia": -1,
+            })
+
+        # Le prime tre parole sono diverse da quelle in cronologia: se lo
+        # scarto avviene, avviene per la forma e non per le parole.
+        cronologia = [{
+            "titolo": "Starfield: il prezzo che non ti aspetti",
+            "estratto_script": "Scommetti che non indovini il prezzo? Starfield cambia tutto.",
+            "stile": "TIER_LIST_LAMPO", "gioco": "Starfield",
+            "fonte": "", "video_id": "hBMDcRhugbA",
+        }]
+
+        prompt_visti = []
+        finto = TestRigenerazioneInformata()._finto_client(
+            [risposta(ripetuto), risposta(nuovo)], prompt_visti
+        )
+        monkeypatch.setattr(brain, "client", finto)
+        monkeypatch.setattr(brain, "recupera_trend_gaming_online", lambda: [])
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: cronologia)
+        monkeypatch.setattr(brain, "salva_in_cronologia", lambda r: None)
+
+        risultato = brain.genera_script_samaritan()
+
+        assert len(prompt_visti) == 2, "il primo script doveva essere scartato"
+        assert "apre con una domanda" in prompt_visti[1]
+        assert risultato["script"] == nuovo
