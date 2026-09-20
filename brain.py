@@ -406,6 +406,11 @@ def _senza_accenti(testo):
     return "".join(c for c in scomposto if not unicodedata.combining(c))
 
 
+def _compatto(testo):
+    """Solo lettere e cifre: 'S.T.A.L.K.E.R. 2' -> 'stalker2'."""
+    return re.sub(r"[^0-9a-z]", "", _senza_accenti(testo or "").lower())
+
+
 def _gioco_nel_titolo(titolo, gioco):
     """True se il titolo nomina il gioco, anche con la sigla d'uso comune.
 
@@ -421,6 +426,16 @@ def _gioco_nel_titolo(titolo, gioco):
         return True
 
     if any(len(p) >= 3 and p in t for p in parole):
+        return True
+
+    # Nomi puntati. 'S.T.A.L.K.E.R. 2' non ha nessuna parola di tre lettere e
+    # nemmeno la sigla si trova, perche' i punti stanno in mezzo: il 20
+    # settembre 2026 il titolo lo scriveva per esteso e questo controllo lo
+    # scartava lo stesso, tre tentativi di fila, finche' il video e' saltato.
+    # Tolta la punteggiatura da entrambe le parti il confronto torna a dire
+    # la verita'.
+    compatto_gioco = _compatto(gioco)
+    if len(compatto_gioco) >= 3 and compatto_gioco in _compatto(titolo):
         return True
 
     # Sigla: 'Grand Theft Auto VI' -> 'gtavi', che copre anche 'GTA 6'
@@ -1039,8 +1054,16 @@ def genera_script_samaritan(tema=None):
 
     modelli = config.GROQ_MODELLI
 
-    for modello in modelli:
+    for n_modello, modello in enumerate(modelli):
         for tentativo in range(1, 3):       # 2 tentativi per modello
+            # Sull'ultimo tentativo le regole anti-ripetizione si spengono.
+            # Dicono che un video somiglia a quello di ieri, non che e'
+            # sbagliato, e un video che apre come quello di ieri vale
+            # comunque piu' di un buco nella pubblicazione. Il 20 settembre
+            # 2026 l'uscita delle 18:00 e' saltata proprio cosi': tre
+            # tentativi bruciati da un titolo che non passava, il quarto
+            # scartato per la forma dell'apertura.
+            ultima_spiaggia = (n_modello == len(modelli) - 1 and tentativo == 2)
             try:
                 # Primo tentativo con lo schema vincolato, secondo in testo
                 # libero ritagliando il JSON: cosi' anche un modello che non
@@ -1109,8 +1132,11 @@ def genera_script_samaritan(tema=None):
                 except (TypeError, ValueError):
                     pass
 
-                ok, motivo = valida_script(titolo, script, impronte_aperture,
-                                           schemi_recenti)
+                ok, motivo = valida_script(
+                    titolo, script,
+                    () if ultima_spiaggia else impronte_aperture,
+                    () if ultima_spiaggia else schemi_recenti,
+                )
                 if ok:
                     ok, motivo = valida_titolo(titolo, gioco)
                 if ok and _cronaca_senza_fonte(script, fonte):

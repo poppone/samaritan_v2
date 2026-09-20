@@ -793,3 +793,98 @@ class TestSchemaApertura:
         assert len(prompt_visti) == 2, "il primo script doveva essere scartato"
         assert "apre con una domanda" in prompt_visti[1]
         assert risultato["script"] == nuovo
+
+
+class TestGiocoPuntato:
+    """'S.T.A.L.K.E.R. 2' nel titolo veniva letto come assente.
+
+    Il 20 settembre 2026 l'uscita delle 18:00 e' saltata per questo: tre
+    tentativi su quattro scartati con "il titolo non nomina
+    'S.T.A.L.K.E.R. 2'" mentre il titolo lo scriveva per esteso. Nessuna
+    parola del nome arriva a tre lettere e la sigla non si trova, perche' i
+    punti stanno in mezzo.
+    """
+
+    def test_il_nome_puntato_per_esteso_conta(self):
+        assert brain._gioco_nel_titolo(
+            "S.T.A.L.K.E.R. 2: il bug che rompe il finale", "S.T.A.L.K.E.R. 2")
+
+    def test_anche_scritto_senza_punti(self):
+        assert brain._gioco_nel_titolo(
+            "Stalker 2: il bug che rompe il finale", "S.T.A.L.K.E.R. 2")
+
+    def test_il_trattino_non_e_un_ostacolo(self):
+        assert brain._gioco_nel_titolo(
+            "Counter Strike 2: la skin da mille euro", "Counter-Strike 2")
+
+    def test_un_gioco_diverso_resta_fuori(self):
+        # La riparazione non deve far passare tutto.
+        assert not brain._gioco_nel_titolo(
+            "Fortnite: la skin nuova di oggi", "Elden Ring")
+
+    def test_valida_titolo_accetta_il_nome_puntato(self):
+        ok, motivo = brain.valida_titolo(
+            "S.T.A.L.K.E.R. 2: il bug che rompe il finale", "S.T.A.L.K.E.R. 2")
+        assert ok, motivo
+
+
+class TestUltimaSpiaggia:
+    """All'ultimo tentativo le regole anti-ripetizione si spengono.
+
+    Dicono che un video somiglia a quello di ieri, non che e' sbagliato: un
+    video che apre come quello di ieri vale comunque piu' di un buco nella
+    pubblicazione.
+    """
+
+    _SCRIPT = ("Pensavi che il segreto fosse finito? "
+               + TestAperturaRipetutaDalVivo._CODA)
+
+    def _risposta(self):
+        import json as _json
+        return _json.dumps({
+            "titolo": "Portal: la stanza che non apre nessuno",
+            "script": self._SCRIPT, "gioco": "Portal",
+            "query_video": "portal gameplay",
+            "descrizione": "Un segreto.", "indice_notizia": -1,
+        })
+
+    def _cronologia(self):
+        return [{
+            "titolo": "Starfield: il prezzo che non ti aspetti",
+            "estratto_script": "Scommetti che non indovini il prezzo? Starfield cambia tutto.",
+            "stile": "TIER_LIST_LAMPO", "gioco": "Starfield",
+            "fonte": "", "video_id": "hBMDcRhugbA",
+        }]
+
+    def test_lo_stesso_script_passa_all_ultimo_tentativo(self, monkeypatch):
+        prompt_visti = []
+        finto = TestRigenerazioneInformata()._finto_client(
+            [self._risposta()] * 4, prompt_visti
+        )
+        monkeypatch.setattr(brain, "client", finto)
+        monkeypatch.setattr(brain, "recupera_trend_gaming_online", lambda: [])
+        monkeypatch.setattr(brain, "carica_cronologia", self._cronologia)
+        monkeypatch.setattr(brain, "salva_in_cronologia", lambda r: None)
+
+        risultato = brain.genera_script_samaritan()
+
+        # Scartato tre volte, accettato al quarto invece di far saltare il video.
+        assert len(prompt_visti) == 4
+        assert risultato["script"] == self._SCRIPT
+
+    def test_prima_dell_ultimo_tentativo_la_regola_vale(self, monkeypatch):
+        # Con un solo modello i tentativi sono due: il primo deve scartare.
+        prompt_visti = []
+        finto = TestRigenerazioneInformata()._finto_client(
+            [self._risposta()] * 2, prompt_visti
+        )
+        monkeypatch.setattr(brain, "client", finto)
+        monkeypatch.setattr(brain.config, "GROQ_MODELLI", ["openai/gpt-oss-120b"])
+        monkeypatch.setattr(brain, "recupera_trend_gaming_online", lambda: [])
+        monkeypatch.setattr(brain, "carica_cronologia", self._cronologia)
+        monkeypatch.setattr(brain, "salva_in_cronologia", lambda r: None)
+
+        brain.genera_script_samaritan()
+
+        assert len(prompt_visti) == 2
+        assert "apre con una domanda" in prompt_visti[1]
