@@ -175,14 +175,27 @@ Stampa i valori base64 da incollare in **Settings > Secrets and variables > Acti
 **Variables opzionali**
 `NOME_CANALE`, `VOCE_TTS`, `WHISPER_MODEL`
 
-Il workflow parte alle 12:00 e alle 18:00 UTC, oppure a mano dalla tab Actions
-(dove puoi anche scegliere tema e visibilita').
+**I video escono alle 14:00 e alle 18:00 italiane**, sempre, anche quando
+cambia l'ora legale.
 
-Attenzione al fuso: il cron di GitHub e' sempre in UTC e non conosce l'ora
-legale. Da fine marzo a fine ottobre sono le 14:00 e le 20:00 italiane, nel
-resto dell'anno diventano le 13:00 e le 19:00. Per tenere fissi gli orari
-italiani vanno spostate le ore in `.github/workflows/samaritan.yml` al cambio
-di stagione.
+L'orario NON viene dal cron. GitHub fa partire le run schedulate in ritardo, e
+il ritardo non si puo' prevedere: fra il 17 e il 19 settembre 2026 e' andato da
+un'ora e quaranta a tre ore e mezza. Quindi la pipeline parte con circa quattro
+ore e mezza di anticipo (`30 7` e `30 11` UTC), carica il video privato e
+chiede a YouTube di renderlo pubblico all'istante giusto: e' il campo
+`publishAt`, e vale al minuto.
+
+Per cambiare l'ora di uscita si cambia `ORARIO_USCITA` in
+`.github/workflows/samaritan.yml`, un valore per ciascun cron; i cron si
+toccano solo per allargare il margine. L'ora si calcola in ora italiana vera
+(`FUSO_USCITA`, default `Europe/Rome`), quindi al cambio di stagione non c'e'
+piu' niente da correggere a mano.
+
+Se la run arriva talmente in ritardo da superare l'ora di uscita, il video
+esce subito invece di aspettare il giorno dopo.
+
+Le run lanciate a mano dalla tab Actions (dove puoi anche scegliere tema e
+visibilita') non programmano niente: escono subito.
 
 ---
 

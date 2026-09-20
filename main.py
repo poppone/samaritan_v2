@@ -24,6 +24,7 @@ from brain import (
 from maker import assembla_video_finale
 from uploader import carica_short
 import notifier
+import orari
 
 def esegui_pipeline_samaritan(tema=None):
     print("=" * 62)
@@ -80,6 +81,9 @@ def esegui_pipeline_samaritan(tema=None):
     miniatura = (config.FILE_MINIATURA
                  if os.path.exists(config.FILE_MINIATURA) else None)
 
+    # L'ora a cui il video deve comparire sul canale. None = adesso.
+    uscita = orari.uscita_programmata()
+
     video_id = carica_short(
         filepath=video_path,
         titolo=dati["titolo"],
@@ -87,6 +91,7 @@ def esegui_pipeline_samaritan(tema=None):
         tag=costruisci_tag(dati),
         privacy=config.PRIVACY_STATUS,
         miniatura=miniatura,
+        pubblica_alle=uscita,
     )
 
     if video_id:
@@ -96,7 +101,10 @@ def esegui_pipeline_samaritan(tema=None):
     notifier.notifica_pubblicazione(dati, video_id, video_path)
 
     print("=" * 62)
-    if video_id:
+    if video_id and uscita:
+        print(f"PIPELINE COMPLETATA -> https://youtube.com/shorts/{video_id} "
+              f"(esce alle {uscita:%H:%M})")
+    elif video_id:
         print(f"PIPELINE COMPLETATA -> https://youtube.com/shorts/{video_id}")
     else:
         print("PIPELINE COMPLETATA MA UPLOAD FALLITO (il video e' in output_videos/)")

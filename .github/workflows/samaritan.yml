@@ -2,9 +2,14 @@ name: Samaritan Auto-Poster
 
 on:
   schedule:
-    # Orari di picco del pubblico gaming italiano (14:00 e 20:00 ora italiana)
-    - cron: '0 12 * * *'
-    - cron: '0 18 * * *'
+    # ATTENZIONE: queste NON sono le ore di pubblicazione. GitHub fa partire le
+    # run schedulate in ritardo, da un'ora a tre e mezza, e il ritardo non si
+    # puo' prevedere. Quindi la pipeline parte con molto anticipo e il video
+    # esce all'ora giusta perche' YouTube lo pubblica da solo (publishAt, vedi
+    # orari.py). Cambiando questi cron si sposta solo il margine; per cambiare
+    # l'ora di uscita si cambia ORARIO_USCITA piu' sotto.
+    - cron: '30 7 * * *'          # per l'uscita delle 14:00 italiane
+    - cron: '30 11 * * *'         # per l'uscita delle 18:00 italiane
   workflow_dispatch:
     inputs:
       tema:
@@ -79,6 +84,11 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           PRIVACY_STATUS: ${{ inputs.privacy || 'public' }}
+          # Un orario di uscita per ciascun cron. Le run lanciate a mano
+          # non programmano niente: escono subito, com'e' giusto per una
+          # prova.
+          ORARIO_USCITA: ${{ github.event_name == 'schedule' && (github.event.schedule == '30 11 * * *' && '18:00' || '14:00') || '' }}
+          FUSO_USCITA: 'Europe/Rome'
           NOME_CANALE: ${{ vars.NOME_CANALE || 'Poppone TV' }}
           VOCE_TTS: ${{ vars.VOCE_TTS || 'it-IT-DiegoNeural' }}
           ELEVENLABS_VOCE: ${{ vars.ELEVENLABS_VOCE }}
