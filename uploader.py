@@ -10,6 +10,7 @@ distribuzione. Ora e' impostato a True.
 import os
 import pickle
 import time
+from datetime import timezone
 
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
@@ -96,8 +97,14 @@ def imposta_miniatura(youtube, video_id, percorso):
 
 
 def carica_short(filepath, titolo, descrizione, tag=None, privacy=None,
-                 miniatura=None):
-    """Carica il video e ritorna l'ID YouTube (o None se fallisce)."""
+                 miniatura=None, pubblica_alle=None):
+    """Carica il video e ritorna l'ID YouTube (o None se fallisce).
+
+    Con `pubblica_alle` il video sale privato e YouTube lo rende pubblico da
+    solo a quell'istante: e' l'unico modo di avere un orario preciso, visto
+    che la run parte quando vuole GitHub. Vale solo per i video che dovevano
+    essere pubblici: una prova privata resta privata.
+    """
     privacy = privacy or config.PRIVACY_STATUS
     tag = tag or []
 
@@ -105,7 +112,23 @@ def carica_short(filepath, titolo, descrizione, tag=None, privacy=None,
         print(f"[Errore Upload] File non trovato: {filepath}")
         return None
 
-    print(f"\n[Samaritan Auto-Poster] Caricamento ({privacy}): {titolo}")
+    stato = {
+        "privacyStatus": privacy,
+        "selfDeclaredMadeForKids": False,
+        "containsSyntheticMedia": True,            # dichiarazione corretta
+    }
+    # YouTube accetta publishAt solo su un video privato: e' proprio cosi' che
+    # funziona la programmazione, il video resta privato fino all'istante
+    # indicato e poi diventa pubblico da solo.
+    if pubblica_alle is not None and privacy == "public":
+        stato["privacyStatus"] = "private"
+        stato["publishAt"] = pubblica_alle.astimezone(
+            timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        print(f"\n[Samaritan Auto-Poster] Caricamento programmato per le "
+              f"{pubblica_alle:%H:%M di %d/%m}: {titolo}")
+    else:
+        print(f"\n[Samaritan Auto-Poster] Caricamento ({privacy}): {titolo}")
+
     youtube = autentica_youtube()
 
     body = {
@@ -115,11 +138,7 @@ def carica_short(filepath, titolo, descrizione, tag=None, privacy=None,
             "tags": tag[:15],
             "categoryId": "20",                    # 20 = Gaming
         },
-        "status": {
-            "privacyStatus": privacy,
-            "selfDeclaredMadeForKids": False,
-            "containsSyntheticMedia": True,        # dichiarazione corretta
-        },
+        "status": stato,
     }
 
     media = MediaFileUpload(filepath, chunksize=1024 * 1024 * 4,

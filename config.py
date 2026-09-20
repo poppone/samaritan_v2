@@ -105,6 +105,15 @@ ZOOM_GAMEPLAY = float(_get("ZOOM_GAMEPLAY", "1.18"))
 # 'public' = pubblica subito | 'private' = attende la tua approvazione manuale
 PRIVACY_STATUS = _get("PRIVACY_STATUS", "public")
 
+# A che ora il video deve COMPARIRE sul canale, ora locale del fuso qui sotto.
+# Non e' l'ora in cui parte la pipeline: GitHub fa partire le run schedulate
+# con ritardi da un'ora a tre e mezza, quindi il video si carica in anticipo e
+# YouTube lo rende pubblico da solo all'istante esatto. Vuoto = subito, ed e'
+# il caso delle run lanciate a mano. Lo imposta il workflow, un orario per
+# ciascun cron. Vedi orari.py.
+ORARIO_USCITA = _get("ORARIO_USCITA", "")
+FUSO_USCITA = _get("FUSO_USCITA", "Europe/Rome")
+
 # ------------------------------------------------ Notifiche Telegram (opzionali)
 TELEGRAM_BOT_TOKEN = _get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = _get("TELEGRAM_CHAT_ID")
