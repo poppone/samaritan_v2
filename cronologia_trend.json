@@ -284,7 +284,8 @@
     "fonte": "Il Professor Layton su Nintendo Switch svelato in un nuovissimo trailer (sortiraparis.com)",
     "fonte_url": "https://news.google.com/rss/articles/CBMiiAJBVV95cUxOTzdnN2I3MWRVNWlIbzNDOHZ0bzg5bGpxeE41WnF6R1FZbUFqVkpQNUZDY0V0LWNKOWcwZU5xM1NfMzFVVk93S2wxUEVsZkNpRXRhUlFyZWNJWjF2dFpVSWJ0UXBMRkNuWEh5TXhNUEJIbjI3dFZ5TXhMcXI1SHVEWWtUb3F6MVlTUjVTWHFPTzNQU0g1YUFzNXI0T3NkZTRkVXNVYmJhOFdVeHZKOVhkRkUxWFhhQWVUY0ZSRWZtakw1TXFBSzJYaEJrMEJZREw0bzdraXFUTHo3SVBpR3lZbktybHpDNGpXTklGV3VoY3JfQlZYc1dWUkQxX1VQWEdtR0M3bU5pT1U?oc=5",
     "video_id": "EN_5Db7E5V0",
-    "veste": "pulito"
+    "veste": "pulito",
+    "slot": "14:00"
   },
   {
     "timestamp": 1790010750,
@@ -298,7 +299,8 @@
     "fonte": "The Alighieri Circle: Dante's Bloodline ha una data di uscita, arriverà anche su Nintendo Switch 2 (Multiplayer)",
     "fonte_url": "https://news.google.com/rss/articles/CBMiywFBVV95cUxPb2tOYnRrNk9ITmpWWXp5TlE1UkZCcE9kbFJaRmhlMGxPc0xuNVd6d0RGckR2dEJxZkNuSEl4Y3FEaVN5VWx4Y1hCaUNicENHcTNDbVF5d1BBMGhaS1dRazBNZHNMZmh2TjVoZVNTSlp6N0lNT3MtdldGT3JacXdlcjJLVlc1MDJ0S1kzXzFZOG5Hd0NBNC1XRkduN2xadXJUZ1NiRlBZclMxZUFpRngxaEVXRDkxMVlIMG9pME9kVUFQaHI0Z3R4TWM2SQ?oc=5",
     "video_id": "VcWzJ4-efkY",
-    "veste": "arena"
+    "veste": "arena",
+    "slot": "18:00"
   },
   {
     "timestamp": 1790016086,
@@ -313,19 +315,5 @@
     "fonte_url": "",
     "video_id": "XaU2hP-SWpM",
     "veste": "notte"
-  },
-  {
-    "timestamp": 1790016769,
-    "data": "2026-09-21",
-    "titolo": "GTA 6: 192 GB di file sparsi ovunque 😱",
-    "lingua": "it",
-    "estratto_script": "GTA 6 non è un mito, è un disco da 192 GB che gira in rete. Il leak ha svelato mappe, miss",
-    "stile": "DONT_DO_THIS",
-    "gioco": "GTA 6",
-    "query_video": "gta 6 leak gameplay",
-    "fonte": "GTA 6, 192GB di file leakati sul web: c'è di tutto (tomshw.it)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMiigJBVV95cUxQQzRDVFUzUEp1N2loWmZkSWg1NmNfZmpiTHNXdWZhM2h2NTZjejJkQVlST3paZ0tIa3VabjM4Q2dNMklkQjZQYUh3QzNpNGtzQXdsZmdITWE5SjNjMWdnVklRVHVWUmRScFNoMkk2TFFsQmpYdE1WZ1pYdFRNSEptS0JfNW5VdWlOVmpEa3ljamJSNDBWTnhWeWtQQjNGMzNWc2tXckYzQmk5MXVJY1VJTGtacmdPVGNVSHBLcDEwclBfd0Z0Z1JCMXB5cDhzRXVSRzZxRUV2ajFETkdCeFN3eGdLSThtUWp3UzVrTXFISjZ0RkZlZXRaUzNwdWwzOC1aOVdnM2VneVZqZw?oc=5",
-    "video_id": "AkDgsbNgjoc",
-    "veste": "ghiaccio"
   }
 ]
