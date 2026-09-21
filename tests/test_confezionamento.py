@@ -941,6 +941,52 @@ class TestNotiziaPiuGrossa:
         tre = brain._punteggio_notizia("Minecraft cambia tutto", apparizioni=3)
         assert tre == una + 2 * brain.PUNTI_RIPETIZIONE
 
+    def test_una_parola_che_il_pubblico_cerca_vale_di_piu(self):
+        """Il resto di questo punteggio e' un criterio scritto a mano; queste
+        parole vengono da YouTube Analytics e sono un fatto misurato."""
+        senza = brain._punteggio_notizia("Silksong riceve una patch")
+        con = brain._punteggio_notizia("Silksong riceve una patch",
+                                       cercate=frozenset({"silksong"}))
+        assert con == senza + brain.PUNTI_PAROLA_CERCATA
+
+    def test_le_parole_cercate_non_valgono_all_infinito(self):
+        """Toccarne tre non vuol dire valere il triplo: vuol dire solo essere
+        dello stesso mondo."""
+        cercate = frozenset({"silksong", "patch", "riceve", "una"})
+        con = brain._punteggio_notizia("Silksong riceve una patch",
+                                       cercate=cercate)
+        senza = brain._punteggio_notizia("Silksong riceve una patch")
+        assert con - senza == brain.MAX_PAROLE_CERCATE * brain.PUNTI_PAROLA_CERCATA
+
+    def test_il_confronto_e_su_parole_intere(self):
+        """'gta' dentro 'gtavicecity' non e' qualcuno che cerca GTA."""
+        assert brain._punteggio_notizia(
+            "Il sito gtavicecity chiude", cercate=frozenset({"gta"})
+        ) == brain._punteggio_notizia("Il sito gtavicecity chiude")
+
+    def test_senza_dati_di_ricerca_il_punteggio_resta_quello_di_prima(self):
+        """Token senza Analytics, o canale appena nato: il punteggio non deve
+        peggiorare, solo restare com'era."""
+        assert brain._punteggio_notizia("GTA 6 ha finalmente una data",
+                                        cercate=frozenset()) == \
+            brain._punteggio_notizia("GTA 6 ha finalmente una data")
+
+    def test_le_ricerche_del_pubblico_arrivano_al_punteggio(self, monkeypatch):
+        """Il collegamento vero: se analyst dice che il pubblico cerca una
+        cosa, la notizia che la nomina deve salire in cima."""
+        import analyst
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: [])
+        monkeypatch.setattr(analyst, "parole_cercate",
+                            lambda: frozenset({"silksong"}))
+        monkeypatch.setattr(brain.requests, "get", self._rss_per_ricerca({
+            "videogiochi": ["Un gestionale indie riceve una patch",
+                            "Silksong riceve una patch"],
+        }, []))
+
+        notizie = brain.recupera_trend_gaming_online()
+
+        assert notizie[0]["titolo"] == "Silksong riceve una patch"
+
     def test_interroga_tutte_le_ricerche(self, monkeypatch):
         viste = []
         monkeypatch.setattr(brain, "carica_cronologia", lambda: [])

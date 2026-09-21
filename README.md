@@ -39,6 +39,22 @@ scaricare gameplay di 'Grand Theft Auto IV', o 'Portal' quello di 'Portal 2'.
 I trailer Steam sono 16:9: vengono montati dentro il 9:16 con sfondo sfocato
 ricavato dal frame stesso, che e' il formato standard degli Shorts gaming.
 
+**La notizia si sceglie, non si sorteggia.** Quattro ricerche diverse su Google
+News per lingua, quindici voci ciascuna, e poi una classifica: pesa il gioco
+grosso, pesano le parole che dicono che la notizia e' viva (`esce`, `data`,
+`gratis`, `leak`, `crossover`) e pesa il comparire in piu' di una ricerca, che
+e' il segno che sta girando. La piu' alta arriva al modello per prima.
+
+**E pesano soprattutto le parole che il pubblico cerca davvero.** Da YouTube
+Analytics si legge cosa la gente ha scritto nella ricerca per finire su un
+video del canale (`insightTrafficSourceDetail` filtrato su `YT_SEARCH`); i
+termini si salvano in `performance.json` sotto `ricerche` e si scendono alle
+parole, perche' nessuna notizia ripetera' mai la frase intera che qualcuno ha
+digitato. Una notizia che tocca quelle parole sale. E' l'unico pezzo della
+classifica che non e' un'ipotesi scritta a mano: il resto dice cosa pensiamo
+interessi, questo dice cosa e' stato misurato. Quando il dato manca (token
+senza permesso Analytics, canale nuovo) il punteggio resta quello di prima.
+
 **Il materiale girato in casa.** In `clip_mie/<categoria>/` stanno gli spezzoni
 registrati da popponetv: sono l'unico pezzo dei video che non arriva da uno
 store, e sono anche la risposta piu' diretta alla regola YouTube sui contenuti
