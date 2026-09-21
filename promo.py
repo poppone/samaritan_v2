@@ -320,7 +320,7 @@ def crea_scheda_numeri(numeri, stile):
     img = Image.new("RGBA", (larghezza, altezza), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     draw.rounded_rectangle([0, 0, larghezza - 1, altezza - 1], radius=34,
-                           fill=(0, 0, 0, 190),
+                           fill=(0, 0, 0, 215),
                            outline=stile["colore_evidenza"], width=5)
 
     y = pad
