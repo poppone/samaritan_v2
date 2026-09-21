@@ -15,6 +15,7 @@ Se il token OAuth non ha ancora il permesso di lettura statistiche, il modulo
 degrada in silenzio (pesi neutri) senza mai bloccare la pipeline.
 """
 import os
+import re
 import json
 import datetime
 
@@ -23,6 +24,22 @@ import config
 GIORNI_ANALISI = 90
 MIN_VIDEO_PER_FORMATO = 2      # sotto questa soglia il dato non e' affidabile
 PESO_MIN, PESO_MAX = 0.35, 2.5
+
+# Quanti termini di ricerca tenere. Sono le parole che la gente ha davvero
+# scritto nella ricerca di YouTube per finire su un video del canale: l'unico
+# dato vero su cosa cerca questo pubblico, invece di quello che immaginiamo.
+MAX_TERMINI_RICERCA = 40
+# Sotto questa soglia un termine e' un caso isolato, non una domanda ricorrente.
+MIN_VIEWS_TERMINE = 2
+# Parole che compaiono nei termini ma non dicono di che argomento si tratta.
+# Il nome del canale si aggiunge da solo piu' sotto: chi cerca 'poppone tv'
+# cerca il canale, non un argomento.
+PAROLE_VUOTE_RICERCA = frozenset((
+    "shorts", "short", "video", "videos", "youtube", "ita", "italiano",
+    "gaming", "game", "games", "gioco", "giochi", "videogiochi", "canale",
+    "nuovo", "nuova", "come", "cosa", "quando", "dove", "perche", "with",
+    "that", "this", "from", "your", "what", "when", "best", "top",
+))
 
 
 # ===========================================================================
@@ -123,18 +140,115 @@ def _controlla_contro_il_canale(analytics, performance, inizio, fine):
               f"calcolati su una parte sola del canale.")
 
 
+def scarica_termini_di_ricerca():
+    """Cosa la gente ha scritto nella ricerca di YouTube per arrivare qui.
+
+    Ritorna [{"termine": ..., "views": N}] dal piu' visto al meno, o [] se il
+    dato non e' disponibile. E' l'unico segnale vero su cosa cerca questo
+    pubblico: tutto il resto di come Samaritan sceglie l'argomento e' un
+    criterio scritto a mano, quindi un'ipotesi.
+
+    Nota: YouTube non attribuisce tutte le visualizzazioni da ricerca a un
+    termine, e i termini rari li nasconde. La lista e' quindi una cima, non un
+    censimento, e va letta come "queste sono le domande che tornano".
+    """
+    try:
+        from googleapiclient.discovery import build
+        from uploader import ottieni_credenziali, ha_scope_analytics
+
+        credenziali = ottieni_credenziali()
+        if not ha_scope_analytics(credenziali):
+            return []
+
+        analytics = build("youtubeAnalytics", "v2", credentials=credenziali)
+        oggi = datetime.date.today()
+        inizio = oggi - datetime.timedelta(days=GIORNI_ANALISI)
+
+        risposta = analytics.reports().query(
+            ids="channel==MINE",
+            startDate=inizio.isoformat(),
+            endDate=oggi.isoformat(),
+            metrics="views",
+            dimensions="insightTrafficSourceDetail",
+            filters="insightTrafficSourceType==YT_SEARCH",
+            sort="-views",
+            maxResults=MAX_TERMINI_RICERCA,
+        ).execute()
+    except Exception as e:
+        print(f"[Samaritan Analyst] Termini di ricerca non disponibili ({e}).")
+        return []
+
+    termini = []
+    for riga in risposta.get("rows") or []:
+        if len(riga) < 2:
+            continue
+        termine = (riga[0] or "").strip()
+        views = riga[1] or 0
+        if termine and views >= MIN_VIEWS_TERMINE:
+            termini.append({"termine": termine, "views": views})
+
+    if termini:
+        cima = ", ".join(f"{t['termine']} ({t['views']})" for t in termini[:6])
+        print(f"[Samaritan Analyst] Il pubblico arriva cercando: {cima}.")
+    else:
+        print("[Samaritan Analyst] Nessun termine di ricerca con abbastanza "
+              "visualizzazioni: la scelta dell'argomento resta come prima.")
+    return termini
+
+
 def aggiorna_performance():
     """Scarica e salva su disco. Se la chiamata fallisce, mantiene il file vecchio."""
     performance = scarica_performance()
     if not performance:
         return _carica_performance_salvata()
 
+    # I termini di ricerca stanno nello stesso file delle metriche perche' e'
+    # uno dei due soli file che il workflow ricommitta: un file nuovo non
+    # sopravviverebbe alla fine della run.
+    termini = scarica_termini_di_ricerca() or termini_di_ricerca()
+
     with open(config.FILE_PERFORMANCE, "w", encoding="utf-8") as f:
         json.dump(
-            {"aggiornato": datetime.date.today().isoformat(), "video": performance},
+            {"aggiornato": datetime.date.today().isoformat(),
+             "video": performance,
+             "ricerche": termini},
             f, ensure_ascii=False, indent=2,
         )
     return performance
+
+
+def termini_di_ricerca():
+    """I termini salvati dall'ultima volta, dal piu' visto al meno."""
+    if not os.path.exists(config.FILE_PERFORMANCE):
+        return []
+    try:
+        with open(config.FILE_PERFORMANCE, "r", encoding="utf-8") as f:
+            salvati = json.load(f).get("ricerche") or []
+    except Exception:
+        return []
+    return [t for t in salvati if isinstance(t, dict) and t.get("termine")]
+
+
+def parole_cercate():
+    """Le parole che ricorrono nelle ricerche del pubblico.
+
+    Non i termini interi: chi cerca "gta 6 data uscita" e chi cerca "gta 6
+    leak" stanno chiedendo della stessa cosa, e una notizia non ripete mai la
+    frase intera. Quindi si scende alle parole e si buttano quelle che non
+    dicono di che argomento si parla.
+    """
+    vuote = set(PAROLE_VUOTE_RICERCA)
+    for pezzo in (config.NOME_CANALE or "").split():
+        vuote.add(pezzo.strip().lower())
+    vuote.add((config.HANDLE_CANALE or "").lstrip("@").lower())
+
+    parole = set()
+    for voce in termini_di_ricerca():
+        for parola in re.split(r"[^\w]+", (voce.get("termine") or "").lower()):
+            # Le sigle corte contano ("gta", "f1"), le paroline no.
+            if len(parola) >= 2 and parola not in vuote and not parola.isdigit():
+                parole.add(parola)
+    return frozenset(parole)
 
 
 def _carica_performance_salvata():
