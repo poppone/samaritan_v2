@@ -39,6 +39,16 @@ scaricare gameplay di 'Grand Theft Auto IV', o 'Portal' quello di 'Portal 2'.
 I trailer Steam sono 16:9: vengono montati dentro il 9:16 con sfondo sfocato
 ricavato dal frame stesso, che e' il formato standard degli Shorts gaming.
 
+**Il materiale girato in casa.** In `clip_mie/<categoria>/` stanno gli spezzoni
+registrati da popponetv: sono l'unico pezzo dei video che non arriva da uno
+store, e sono anche la risposta piu' diretta alla regola YouTube sui contenuti
+prodotti in serie. Si montano **solo nei video della loro categoria** — un
+volante dentro una notizia su GTA 6 toglie piu' di quanto aggiunga — e la
+categoria si ricava dal genere dichiarato da Steam o, quando il gioco su Steam
+non c'e', dal nome del gioco. Ruotano come i trailer, cosi' due Short sullo
+stesso gioco non aprono con la stessa clip. Istruzioni per aggiungerne in
+`clip_mie/README.md`.
+
 **Sullo stesso gioco non esce due volte lo stesso materiale.** Quanti Short
 sono gia' usciti su quel titolo (contati sulla cronologia) decide da che punto
 dell'elenco si comincia a pescare trailer e screenshot, e da che secondo del
@@ -277,6 +287,7 @@ Tutto si regola da `.env`, senza toccare il codice:
 | `USA_STEAM` | `0` per tornare allo stock generico invece del gameplay reale |
 | `ZOOM_GAMEPLAY` | quanto ingrandire il riquadro di gameplay (1.0 = larghezza piena) |
 | `STEAM_MAX_TRAILER` / `STEAM_MAX_SCREENSHOT` | quanto materiale scaricare per video |
+| `MAX_CLIP_MIE` | quante clip girate in casa entrano in uno Short (2) |
 
 I formati video si modificano nel dizionario `FORMATI_VIDEO` in `brain.py`.
 

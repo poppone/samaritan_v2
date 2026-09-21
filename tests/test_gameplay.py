@@ -4,6 +4,9 @@ E' la logica piu' delicata del progetto: se sbaglia, lo Short parla di un
 gioco e mostra il gameplay di un altro. Nessun test tocca la rete.
 """
 import json
+import os
+import sys
+import types
 
 import config
 import gameplay
@@ -264,3 +267,116 @@ class TestQualeFfmpeg:
         import sys as _sys
         monkeypatch.setitem(_sys.modules, "imageio_ffmpeg", None)
         assert gameplay._ffmpeg() == "ffmpeg"
+
+
+class TestCategoriaDelleClipMie:
+    """Le clip girate in casa si montano solo dove sono a tema: un volante
+    dentro una notizia su GTA 6 toglie piu' di quanto aggiunga."""
+
+    def test_il_genere_steam_decide(self):
+        dati = {"genres": [{"description": "Racing"}, {"description": "Sports"}]}
+        assert gameplay.categoria_clip_mie("Un Gioco Qualunque", dati) == "guida"
+
+    def test_il_genere_steam_vince_anche_scritto_in_minuscolo(self):
+        dati = {"genres": [{"description": "racing"}]}
+        assert gameplay.categoria_clip_mie("Un Gioco Qualunque", dati) == "guida"
+
+    def test_senza_steam_decide_il_nome(self):
+        # I giochi appena annunciati su Steam spesso non ci sono ancora, ed e'
+        # proprio di quelli che parlano le notizie.
+        assert gameplay.categoria_clip_mie("Assetto Corsa Evolution") == "guida"
+        assert gameplay.categoria_clip_mie("Forza Horizon 6") == "guida"
+        assert gameplay.categoria_clip_mie("EA SPORTS WRC") == "guida"
+
+    def test_la_punteggiatura_non_ferma_il_riconoscimento(self):
+        assert gameplay.categoria_clip_mie("F1® 26") == "guida"
+
+    def test_un_gioco_puo_essere_una_categoria_da_solo(self):
+        assert gameplay.categoria_clip_mie("Fortnite") == "fortnite"
+        assert gameplay.categoria_clip_mie("Fortnite x Kingdom Hearts") == "fortnite"
+
+    def test_un_gioco_qualunque_non_ha_categoria(self):
+        assert gameplay.categoria_clip_mie("Grand Theft Auto VI") is None
+        assert gameplay.categoria_clip_mie("Hades II") is None
+        assert gameplay.categoria_clip_mie("") is None
+        assert gameplay.categoria_clip_mie(None) is None
+
+    def test_un_genere_diverso_non_apre_la_cartella(self):
+        dati = {"genres": [{"description": "Action"}]}
+        assert gameplay.categoria_clip_mie("Doom", dati) is None
+
+
+class TestQualiClipMie:
+    def _cartella(self, monkeypatch, tmp_path, nomi):
+        radice = tmp_path / "clip_mie"
+        (radice / "guida").mkdir(parents=True)
+        for nome in nomi:
+            (radice / "guida" / nome).write_bytes(b"x")
+        monkeypatch.setattr(config, "DIR_CLIP_MIE", str(radice))
+        return radice
+
+    def test_senza_categoria_non_si_monta_niente(self, monkeypatch, tmp_path):
+        self._cartella(monkeypatch, tmp_path, ["a.mp4"])
+        assert gameplay.clip_mie(None) == []
+
+    def test_cartella_mancante_non_ferma_il_video(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(config, "DIR_CLIP_MIE", str(tmp_path / "niente"))
+        assert gameplay.clip_mie("guida") == []
+
+    def test_ne_prende_al_massimo_quante_ne_dice_il_config(self, monkeypatch, tmp_path):
+        self._cartella(monkeypatch, tmp_path, ["a.mp4", "b.mp4", "c.mp4"])
+        monkeypatch.setattr(config, "MAX_CLIP_MIE", 2)
+        assert len(gameplay.clip_mie("guida")) == 2
+
+    def test_due_video_di_fila_non_aprono_con_la_stessa_clip(self, monkeypatch, tmp_path):
+        self._cartella(monkeypatch, tmp_path, ["a.mp4", "b.mp4", "c.mp4"])
+        monkeypatch.setattr(config, "MAX_CLIP_MIE", 1)
+        primo = gameplay.clip_mie("guida", salto=0)
+        secondo = gameplay.clip_mie("guida", salto=1)
+        assert primo != secondo
+
+    def test_i_file_che_non_sono_video_restano_fuori(self, monkeypatch, tmp_path):
+        self._cartella(monkeypatch, tmp_path, ["a.mp4", "note.txt", "b.MOV"])
+        monkeypatch.setattr(config, "MAX_CLIP_MIE", 5)
+        presi = [os.path.basename(p) for p in gameplay.clip_mie("guida")]
+        assert presi == ["a.mp4", "b.MOV"]
+
+    def test_zero_clip_richieste(self, monkeypatch, tmp_path):
+        self._cartella(monkeypatch, tmp_path, ["a.mp4"])
+        assert gameplay.clip_mie("guida", quante=0) == []
+
+
+class TestLeClipMieNelMateriale:
+    """Si aggiungono al materiale del gioco, non lo sostituiscono."""
+
+    def _senza_steam(self, monkeypatch, tmp_path, nomi=("a.mp4", "b.mp4")):
+        radice = tmp_path / "clip_mie"
+        (radice / "guida").mkdir(parents=True)
+        for nome in nomi:
+            (radice / "guida" / nome).write_bytes(b"x")
+        monkeypatch.setattr(config, "DIR_CLIP_MIE", str(radice))
+        monkeypatch.setattr(config, "USA_STEAM", False)
+        monkeypatch.setattr(config, "MAX_CLIP_MIE", 2)
+        monkeypatch.setattr(config, "FILE_CRONOLOGIA", str(tmp_path / "niente.json"))
+        # Il ripiego su Pexels importa maker, che si porta dietro moviepy e
+        # numpy: qui non serve nessuno dei due, serve solo che non scarichi.
+        finto = types.ModuleType("maker")
+        finto.scarica_clip_sfondo = lambda query, quante=None: []
+        monkeypatch.setitem(sys.modules, "maker", finto)
+
+    def test_un_gioco_di_guida_le_prende(self, monkeypatch, tmp_path):
+        self._senza_steam(monkeypatch, tmp_path)
+        sorgenti, _ = gameplay.procura_materiale("Assetto Corsa Evolution")
+        assert sum(1 for s in sorgenti if s.get("mia")) == 2
+
+    def test_un_gioco_qualunque_non_le_prende(self, monkeypatch, tmp_path):
+        self._senza_steam(monkeypatch, tmp_path)
+        sorgenti, _ = gameplay.procura_materiale("Grand Theft Auto VI")
+        assert [s for s in sorgenti if s.get("mia")] == []
+
+    def test_non_sono_materiale_ufficiale_di_quel_gioco(self, monkeypatch, tmp_path):
+        # Il resoconto conta come 'ufficiali' le sorgenti col campo gioco: una
+        # clip del volante non e' materiale di Assetto Corsa Evolution.
+        self._senza_steam(monkeypatch, tmp_path)
+        sorgenti, _ = gameplay.procura_materiale("Forza Horizon 6")
+        assert all(s["gioco"] is None for s in sorgenti if s.get("mia"))
