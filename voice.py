@@ -249,8 +249,16 @@ async def _sintetizza_edge(testo, output_filename):
     await communicate.save(output_filename)
 
 
-def genera_voce_samaritan(testo, output_filename=None):
-    """Genera l'audio dello script. Ritorna il path del file o None."""
+def genera_voce_samaritan(testo, output_filename=None, permetti_elevenlabs=True):
+    """Genera l'audio dello script. Ritorna il path del file o None.
+
+    `permetti_elevenlabs=False` salta la voce a pagamento e parte dritto da
+    Edge-TTS. Lo usano i Reel promozionali di promo.py, per due motivi: il
+    credito ElevenLabs deve restare ai video del canale, che sono quelli che
+    portano soldi, e soprattutto la rotazione delle voci annota il proprio
+    turno sull'ultimo record della cronologia di YouTube. Un Reel che passa di
+    li' scriverebbe una voce addosso a un video che non l'ha mai usata.
+    """
     os.makedirs(config.DIR_TEMP, exist_ok=True)
     if output_filename is None:
         output_filename = os.path.join(config.DIR_TEMP, "audio.mp3")
@@ -261,7 +269,7 @@ def genera_voce_samaritan(testo, output_filename=None):
         return None
 
     # --- Tentativo 1: ElevenLabs (la voce piu' realistica) ---
-    if config.ELEVENLABS_API_KEY:
+    if config.ELEVENLABS_API_KEY and permetti_elevenlabs:
         try:
             print(f"[Samaritan Voice] Sintesi ElevenLabs "
                   f"({config.ELEVENLABS_MODELLO}, {len(testo_pulito)} caratteri)...")

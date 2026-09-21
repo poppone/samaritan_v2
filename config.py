@@ -133,6 +133,20 @@ TELEGRAM_BOT_TOKEN = _get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = _get("TELEGRAM_CHAT_ID")
 TELEGRAM_ATTIVO = bool(TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID)
 
+# ------------------------------------------- Instagram (i Reel promozionali)
+# Profilo SEPARATO da quello di gaming: qui Samaritan racconta se stesso e
+# vende l'installazione, non parla di videogiochi. Se queste variabili non ci
+# sono, promo.py produce il Reel su disco e non pubblica niente: nessun pezzo
+# della pipeline YouTube le legge.
+INSTAGRAM_TOKEN = _get("INSTAGRAM_TOKEN")
+INSTAGRAM_USER_ID = _get("INSTAGRAM_USER_ID")
+INSTAGRAM_ATTIVO = bool(INSTAGRAM_TOKEN and INSTAGRAM_USER_ID)
+INSTAGRAM_API = _get("INSTAGRAM_API", "v25.0")
+
+# Come si chiama Samaritan sul profilo Instagram e dove si compra.
+NOME_PROMO = _get("NOME_PROMO", "Samaritan")
+CONTATTO_PROMO = _get("CONTATTO_PROMO", "scrivimi in DM")
+
 # ---------------------------------------------------------------------- File
 # Percorsi ASSOLUTI ancorati alla cartella del progetto: il codice funziona
 # anche se lanciato da una directory di lavoro diversa (Task Scheduler, cron,

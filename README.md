@@ -315,6 +315,25 @@ I formati video si modificano nel dizionario `FORMATI_VIDEO` in `brain.py`.
 
 ---
 
+## I Reel che vendono Samaritan (Instagram)
+
+Il canale YouTube parla di videogiochi. Il profilo Instagram parla di
+Samaritan: un Reel al giorno con i suoi numeri veri, per far scrivere in DM
+chi vuole la stessa macchina sul proprio canale.
+
+    python promo.py            # scrive, monta e pubblica il Reel di oggi
+    python promo.py --prova    # monta il Reel ma non lo pubblica
+
+Su GitHub Actions gira da solo con il workflow `Samaritan Promo (Instagram)`.
+Le due chiavi di Instagram si ricavano una volta sola: la procedura passo
+passo e' in [GUIDA_INSTAGRAM.md](GUIDA_INSTAGRAM.md). Senza quelle chiavi la
+lavorazione gira lo stesso, monta il Reel e lo manda su Telegram senza
+pubblicarlo.
+
+Questa parte e' tenuta separata da quella del canale di proposito: workflow
+suo, memoria sua (`promo_cronologia.json`), e nessun modulo della pipeline di
+YouTube la importa. Se Instagram cambia le regole, il canale non se ne accorge.
+
 ## Note su policy e monetizzazione
 
 - I video sono dichiarati correttamente come contenuti sintetici
