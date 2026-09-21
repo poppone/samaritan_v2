@@ -188,6 +188,8 @@ def _video_valutati():
         valutati.append({
             "stile": voce.get("stile", ""),
             "titolo": voce.get("titolo", ""),
+            # Le voci vecchie non hanno la lingua scritta e sono italiane.
+            "lingua": (voce.get("lingua") or "it").lower(),
             "hook": voce.get("estratto_script", "").split(".")[0].strip(),
             "punteggio": _punteggio(performance[video_id]),
             "views": performance[video_id].get("views", 0),
@@ -231,8 +233,16 @@ def pesi_formati():
 
 
 def migliori_hook(n=3):
-    """Le prime frasi dei video andati meglio, da dare in pasto al prompt."""
-    valutati = [v for v in _video_valutati() if v["hook"]]
+    """Le prime frasi dei video andati meglio, da dare in pasto al prompt.
+
+    Solo quelli nella lingua in cui si sta scrivendo adesso: mostrare hook
+    italiani a un video inglese non insegna niente e sporca il prompt con
+    frasi che non c'entrano.
+    """
+    import config
+    lingua = (config.LINGUA or "it").lower()
+    valutati = [v for v in _video_valutati()
+                if v["hook"] and v.get("lingua", "it") == lingua]
     valutati.sort(key=lambda v: v["punteggio"], reverse=True)
     return [v["hook"] for v in valutati[:n]]
 

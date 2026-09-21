@@ -150,8 +150,18 @@ class TestWorkflowCollegato:
     def test_ogni_cron_ha_il_suo_orario_di_uscita(self):
         testo = self._workflow()
         assert "ORARIO_USCITA:" in testo
-        assert "'30 11 * * *'" in testo and "'30 7 * * *'" in testo
-        assert "'18:00'" in testo and "'14:00'" in testo
+        for cron in ("'30 7 * * *'", "'30 11 * * *'", "'30 14 * * *'"):
+            assert cron in testo, cron
+        for orario in ("'14:00'", "'18:00'", "'21:00'"):
+            assert orario in testo, orario
+
+    def test_il_video_delle_21_esce_in_inglese(self):
+        """Il terzo slot e' l'esperimento sull'inglese: se il workflow non
+        passa LINGUA, esce un altro video italiano e la prova non esiste."""
+        testo = self._workflow()
+        assert "LINGUA:" in testo
+        riga = [r for r in testo.splitlines() if r.strip().startswith("LINGUA:")][0]
+        assert "'30 14 * * *'" in riga and "'en'" in riga, riga
 
     def test_i_cron_partono_con_almeno_quattro_ore_di_margine(self):
         """Il ritardo peggiore misurato e' tre ore e mezza: se il cron non
@@ -161,7 +171,9 @@ class TestWorkflowCollegato:
         testo = self._workflow()
         cron = re.findall(r"cron: '(\d+) (\d+) \* \* \*'", testo)
         assert cron, "nessun cron trovato"
-        # 14:00 e 18:00 italiane d'estate sono le 12:00 e le 16:00 UTC.
-        for (minuto, ora), uscita_utc in zip(cron, (12, 16)):
+        # 14:00, 18:00 e 21:00 italiane d'estate sono le 12:00, 16:00 e
+        # 19:00 UTC.
+        assert len(cron) == 3, cron
+        for (minuto, ora), uscita_utc in zip(cron, (12, 16, 19)):
             partenza = int(ora) + int(minuto) / 60
             assert uscita_utc - partenza >= 4, (ora, minuto, uscita_utc)
