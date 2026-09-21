@@ -130,6 +130,14 @@ FILE_PERFORMANCE = os.path.join(DIR_PROGETTO, "performance.json")
 DIR_TEMP = os.path.join(DIR_PROGETTO, "temp_assets")
 DIR_OUTPUT = os.path.join(DIR_PROGETTO, "output_videos")
 
+# Le clip girate da popponetv: l'unico materiale originale del canale, tutto
+# il resto viene dagli store. Una sottocartella per categoria ('guida',
+# 'fortnite') e si montano solo nei video di quella categoria, altrimenti
+# stonano piu' di quanto aggiungano. MAX_CLIP_MIE dice quante ne entrano al
+# massimo in uno Short.
+DIR_CLIP_MIE = os.path.join(DIR_PROGETTO, "clip_mie")
+MAX_CLIP_MIE = int(_get("MAX_CLIP_MIE", "2"))
+
 # Miniatura personalizzata dello Short. Senza, YouTube estrae un fotogramma a
 # caso: nella griglia del canale si vede, e si vede male.
 FILE_MINIATURA = os.path.join(DIR_OUTPUT, "samaritan_miniatura.jpg")

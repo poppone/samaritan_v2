@@ -200,6 +200,73 @@ def ruota(elementi, salto):
     return elementi[inizio:] + elementi[:inizio]
 
 
+# ===========================================================================
+# LE CLIP GIRATE DA POPPONE
+# ===========================================================================
+# Sono l'unico materiale originale del canale: trailer e screenshot li
+# pubblica l'editore ed escono identici su mille altri canali, mentre due mani
+# vere su un volante vero non ce le ha nessun altro. Stanno in
+# 'clip_mie/<categoria>/' e si montano SOLO dove sono a tema: un volante
+# dentro una notizia su GTA 6 toglie piu' di quanto aggiunga. Una categoria
+# puo' essere un genere ('guida') o un gioco solo ('fortnite').
+GENERI_CLIP_MIE = {"racing": "guida"}
+
+PAROLE_CLIP_MIE = {
+    "fortnite": ("fortnite",),
+    "guida": (
+        "assetto corsa", "forza horizon", "forza motorsport", "gran turismo",
+        "need for speed", "formula 1", "f1 2", "f1 24", "f1 25", "f1 26",
+        "dirt rally", "wrc", "motogp", "nascar", "trackmania", "the crew",
+        "burnout", "rally", "mario kart", "ride 5", "automobilista",
+        "le mans ultimate", "iracing", "rfactor",
+    ),
+}
+
+ESTENSIONI_CLIP = (".mp4", ".mov", ".webm")
+
+
+def categoria_clip_mie(gioco, dati=None):
+    """A quale cartella di clip mie appartiene questo gioco, o None.
+
+    Prima il genere dichiarato da Steam, che e' il dato piu' affidabile;
+    poi il nome, perche' un gioco appena annunciato spesso su Steam non c'e'
+    ancora ed e' proprio quello di cui parlano le notizie.
+    """
+    for genere in (dati or {}).get("genres") or []:
+        etichetta = (genere.get("description") or "").strip().lower()
+        if etichetta in GENERI_CLIP_MIE:
+            return GENERI_CLIP_MIE[etichetta]
+
+    nome = _normalizza(gioco or "")
+    if not nome:
+        return None
+    for categoria, parole in PAROLE_CLIP_MIE.items():
+        if any(parola in nome for parola in parole):
+            return categoria
+    return None
+
+
+def clip_mie(categoria, salto=0, quante=None):
+    """I file di quella categoria, ruotati come trailer e screenshot.
+
+    La rotazione serve alla stessa cosa: due Short sullo stesso gioco non
+    devono aprire con la stessa identica clip.
+    """
+    if not categoria:
+        return []
+    quante = config.MAX_CLIP_MIE if quante is None else quante
+    if quante <= 0:
+        return []
+    cartella = os.path.join(config.DIR_CLIP_MIE, categoria)
+    try:
+        nomi = sorted(n for n in os.listdir(cartella)
+                      if n.lower().endswith(ESTENSIONI_CLIP))
+    except OSError:
+        return []
+    percorsi = [os.path.join(cartella, n) for n in nomi]
+    return ruota(percorsi, salto)[:quante]
+
+
 def cerca_gioco_steam(nome):
     """Ritorna (appid, nome_ufficiale) oppure (None, None)."""
     nome = ALIAS_GIOCHI.get(_normalizza(nome), nome)
@@ -413,15 +480,17 @@ def procura_materiale(gioco=None, query_pexels="gameplay", minimo=3):
     os.makedirs(config.DIR_TEMP, exist_ok=True)
     sorgenti = []
     nome_ufficiale = None
+    dati_gioco = None
+    salto = video_gia_fatti(gioco)
 
     if gioco and config.USA_STEAM:
         appid, nome_ufficiale = cerca_gioco_steam(gioco)
         if appid:
             dati = dettagli_gioco(appid)
+            dati_gioco = dati
             if dati:
                 # Quante volte abbiamo gia' parlato di questo gioco: decide da
                 # dove si pesca, cosi' il materiale non si ripete.
-                salto = video_gia_fatti(gioco)
                 if salto:
                     print(f"[Gameplay] Short numero {salto + 1} su "
                           f"'{nome_ufficiale}': cambio materiale.")
@@ -435,9 +504,20 @@ def procura_materiale(gioco=None, query_pexels="gameplay", minimo=3):
                     sorgenti.append({"tipo": "immagine", "path": percorso,
                                      "gioco": nome_ufficiale})
 
+    # Le clip girate in casa: non sostituiscono il materiale del gioco, ci si
+    # aggiungono. 'gioco' resta None perche' non sono di QUEL gioco, e il
+    # conteggio del materiale ufficiale nel resoconto deve restare onesto.
+    categoria = categoria_clip_mie(gioco, dati_gioco)
+    mie = clip_mie(categoria, salto)
+    for percorso in mie:
+        sorgenti.append({"tipo": "video", "path": percorso,
+                         "gioco": None, "mia": True})
+    if mie:
+        print(f"[Gameplay] {len(mie)} clip girate in casa ('{categoria}').")
+
     if len(sorgenti) >= minimo:
         print(f"[Gameplay] Materiale UFFICIALE di '{nome_ufficiale}': "
-              f"{len(sorgenti)} sorgenti.")
+              f"{len(sorgenti) - len(mie)} sorgenti.")
         return sorgenti, nome_ufficiale
 
     # ------------------------------------------------- Fallback su Pexels
