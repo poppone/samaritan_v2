@@ -173,15 +173,24 @@ Stampa i valori base64 da incollare in **Settings > Secrets and variables > Acti
 `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
 
 **Variables opzionali**
-`NOME_CANALE`, `VOCE_TTS`, `WHISPER_MODEL`
+`NOME_CANALE`, `VOCE_TTS`, `VOCE_TTS_EN`, `WHISPER_MODEL`
 
-**I video escono alle 14:00 e alle 18:00 italiane**, sempre, anche quando
-cambia l'ora legale.
+**I video escono alle 14:00, alle 18:00 e alle 21:00 italiane**, sempre, anche
+quando cambia l'ora legale. **Quello delle 21:00 e' in inglese**: stesso
+canale, pubblico diverso, per misurare se l'inglese rende piu' dell'italiano
+invece di deciderlo a naso. La lingua la passa il workflow con `LINGUA`, e una
+run lanciata a mano la sceglie dal menu.
+
+Le regole anti-ripetizione (apertura, gioco, notizia gia' usata) valgono
+**dentro una lingua sola**: il video inglese deve poter raccontare la stessa
+notizia grossa di quello italiano, perche' parla ad altra gente. Ogni voce di
+`cronologia_trend.json` porta scritta la sua lingua; quelle vecchie, che non ce
+l'hanno, contano come italiane.
 
 L'orario NON viene dal cron. GitHub fa partire le run schedulate in ritardo, e
 il ritardo non si puo' prevedere: fra il 17 e il 19 settembre 2026 e' andato da
 un'ora e quaranta a tre ore e mezza. Quindi la pipeline parte con circa quattro
-ore e mezza di anticipo (`30 7` e `30 11` UTC), carica il video privato e
+ore e mezza di anticipo (`30 7`, `30 11` e `30 14` UTC), carica il video privato e
 chiede a YouTube di renderlo pubblico all'istante giusto: e' il campo
 `publishAt`, e vale al minuto.
 

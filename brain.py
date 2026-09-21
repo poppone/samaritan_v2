@@ -126,13 +126,6 @@ SECONDA_PERSONA = frozenset((
 # Kingdom Hearts. Piu' reti in acqua, e poi si sceglie (vedi
 # _punteggio_notizia): l'argomento e' l'unica variabile che separa i video
 # andati bene da quelli morti.
-RICERCHE_NOTIZIE = (
-    "videogiochi",
-    "videogiochi quando esce aggiornamento",
-    'GTA 6 OR Fortnite OR "Call of Duty" OR Minecraft OR Roblox',
-    "videogioco annuncio OR uscita OR gratis OR leak",
-)
-
 # Quante voci leggere da ogni ricerca prima di filtrare.
 VOCI_PER_RICERCA = 15
 
@@ -154,12 +147,87 @@ GIOCHI_GROSSI = (
 # Parole che dicono "questa notizia la gente la sta gia' cercando". Non sono
 # parole a effetto da mettere nel titolo: servono solo a mettere in ordine le
 # notizie in entrata.
-PAROLE_CALDE = (
-    "esce", "uscita", "data", "annuncio", "annunciato", "svelato",
-    "confermato", "gratis", "gratuito", "leak", "trapelato", "rinviato",
-    "cancellato", "chiude", "record", "remake", "remaster", "trailer",
-    "nuovo capitolo", "sequel", "crossover",
-)
+# Tutto quello che cambia quando il video non e' in italiano. Sta qui in un
+# posto solo apposta: aggiungere una lingua deve voler dire aggiungere una
+# voce a questo dizionario, non andare a caccia di stringhe italiane sparse
+# per il file.
+LINGUE = {
+    "it": {
+        "nome": "italiano",
+        "aperture_vietate": APERTURE_VIETATE,
+        "seconda_persona": SECONDA_PERSONA,
+        "rss": "hl=it&gl=IT&ceid=IT:it",
+        "ricerche": (
+            "videogiochi",
+            "videogiochi quando esce aggiornamento",
+            'GTA 6 OR Fortnite OR "Call of Duty" OR Minecraft OR Roblox',
+            "videogioco annuncio OR uscita OR gratis OR leak",
+        ),
+        "parole_calde": (
+            "esce", "uscita", "data", "annuncio", "annunciato", "svelato",
+            "confermato", "gratis", "gratuito", "leak", "trapelato",
+            "rinviato", "cancellato", "chiude", "record", "remake",
+            "remaster", "trailer", "nuovo capitolo", "sequel", "crossover",
+        ),
+    },
+    "en": {
+        "nome": "English",
+        # Gli stessi saluti che uccidono la retention, in inglese.
+        "aperture_vietate": (
+            "hi ", "hey", "hello", "yo ", "welcome", "what's up", "whats up",
+            "in this video", "today we", "today i", "guys,", "let's talk",
+            "lets talk",
+        ),
+        # In inglese la seconda persona e' una parola sola e non si confonde
+        # con nient'altro: niente elenco lungo come in italiano.
+        "seconda_persona": frozenset((
+            "you", "your", "youre", "youve", "yours", "yourself",
+        )),
+        "rss": "hl=en-US&gl=US&ceid=US:en",
+        "ricerche": (
+            "video games",
+            "video game release date OR free OR leak",
+            'GTA 6 OR Fortnite OR "Call of Duty" OR Minecraft OR Roblox',
+            "gaming news announcement OR update",
+        ),
+        "parole_calde": (
+            "release", "releases", "launch", "date", "announced",
+            "announcement", "revealed", "confirmed", "free", "leak",
+            "leaked", "delayed", "cancelled", "canceled", "shutting down",
+            "record", "remake", "remaster", "trailer", "sequel", "crossover",
+        ),
+    },
+}
+
+
+def _lingua():
+    """Le regole della lingua in cui esce questo video.
+
+    Si legge da config a ogni chiamata e non una volta all'avvio: la lingua
+    cambia da una run all'altra (il video delle 21:00 e' in inglese) e i
+    test la cambiano sotto i piedi.
+    """
+    return LINGUE.get((config.LINGUA or "it").lower(), LINGUE["it"])
+
+
+def _lingua_di(voce):
+    """La lingua di una voce di cronologia. Le voci vecchie non ce l'hanno
+    scritta e sono tutte italiane."""
+    return (voce.get("lingua") or "it").lower()
+
+
+def _stessa_lingua(voci):
+    """Solo i video usciti nella lingua di adesso.
+
+    Le regole anti-ripetizione valgono dentro una lingua, non fra lingue: il
+    video inglese delle 21:00 puo' e deve poter raccontare la stessa notizia
+    grossa di quello italiano delle 14:00, perche' parla a gente diversa.
+    Mescolare le due memorie vorrebbe dire lasciare all'inglese solo gli
+    argomenti che l'italiano ha scartato.
+    """
+    attuale = (config.LINGUA or "it").lower()
+    return [v for v in voci if _lingua_di(v) == attuale]
+
 
 PUNTI_GIOCO_GROSSO = 4
 PUNTI_PAROLA_CALDA = 1
@@ -263,6 +331,7 @@ def salva_in_cronologia(dati):
         "timestamp": int(time.time()),
         "data": time.strftime("%Y-%m-%d"),
         "titolo": dati["titolo"],
+        "lingua": (config.LINGUA or "it").lower(),
         "estratto_script": dati["script"][:90],
         "stile": dati["stile"],
         "gioco": dati.get("gioco", ""),
@@ -326,7 +395,7 @@ def _punteggio_notizia(titolo, apparizioni=1):
     punti = 0
     if any(g in testo for g in GIOCHI_GROSSI):
         punti += PUNTI_GIOCO_GROSSO
-    calde = sum(1 for parola in PAROLE_CALDE if parola in testo)
+    calde = sum(1 for parola in _lingua()["parole_calde"] if parola in testo)
     punti += min(calde, MAX_PAROLE_CALDE) * PUNTI_PAROLA_CALDA
     # Trovata da piu' di una ricerca: non e' un giudizio nostro, e' il segno
     # che la notizia sta girando.
@@ -338,7 +407,7 @@ def _voci_rss(ricerca):
     """Le voci grezze di una ricerca su Google News: (titolo, fonte, link)."""
     url = ("https://news.google.com/rss/search?q="
            + quote(ricerca)
-           + "&hl=it&gl=IT&ceid=IT:it")
+           + "&" + _lingua()["rss"])
     risposta = requests.get(url, timeout=8)
     risposta.raise_for_status()
     radice = ET.fromstring(risposta.content)
@@ -369,7 +438,7 @@ def recupera_trend_gaming_online(max_notizie=8):
     print("[Samaritan Search] Ricerca trend gaming reali...")
 
     cronologia = carica_cronologia()
-    voci = [_normalizza(i) for i in cronologia]
+    voci = _stessa_lingua([_normalizza(i) for i in cronologia])
     # Solo gli ultimi titoli: vedi MEMORIA_PAROLE_TITOLI.
     titoli_passati = " ".join(
         v.get("titolo", "") for v in voci[-MEMORIA_PAROLE_TITOLI:]
@@ -387,7 +456,7 @@ def recupera_trend_gaming_online(max_notizie=8):
     # punteggio. Chiave: l'impronta della notizia, non il titolo, perche'
     # testate diverse la scrivono con parole appena diverse.
     trovate = {}
-    for ricerca in RICERCHE_NOTIZIE:
+    for ricerca in _lingua()["ricerche"]:
         try:
             voci_rss = _voci_rss(ricerca)
         except Exception as e:
@@ -665,7 +734,7 @@ def _schema_apertura(script):
     if frase.endswith("?"):
         return SCHEMA_DOMANDA
     parole = set(re.split(r"[^0-9a-zA-Z]+", _senza_accenti(frase).lower()))
-    if parole & SECONDA_PERSONA:
+    if parole & _lingua()["seconda_persona"]:
         return SCHEMA_SECONDA_PERSONA
     return ""
 
@@ -718,7 +787,7 @@ def valida_script(titolo, script, aperture_recenti=(), schemi_recenti=()):
         return False, "titolo o script vuoti"
 
     inizio = script.lower().lstrip(" \"'-–—")
-    for vietata in APERTURE_VIETATE:
+    for vietata in _lingua()["aperture_vietate"]:
         if inizio.startswith(vietata):
             return False, f"apertura debole vietata: '{vietata}'"
 
@@ -967,6 +1036,10 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti,
         f"Sei il Lead Social Media Manager di '{config.NOME_CANALE}', canale YouTube "
         "Gaming italiano. Scrivi uno script per uno Short ad ALTISSIMA RETENTION "
         "(24-30 secondi, quindi 55-85 parole).\n\n"
+        f"LINGUA DELL'OUTPUT: {_lingua()['nome']}. Titolo, script e "
+        f"descrizione vanno scritti INTERAMENTE in {_lingua()['nome']}. "
+        "Le regole qui sotto sono scritte in italiano perche' parlano a te, "
+        "ma dicono come scrivere, non in che lingua.\n\n"
         f"FORMATO RICHIESTO: {formato} - {meta['descrizione']}\n"
         "(quella sigla e' un'etichetta interna: non deve comparire ne' nel "
         "titolo ne' nello script)\n\n"
@@ -1114,8 +1187,8 @@ def genera_script_samaritan(tema=None):
     notizie = recupera_trend_gaming_online()
     formato = scegli_formato(notizie)
 
-    cronologia = carica_cronologia()
-    ultimi_titoli = [_normalizza(i).get("titolo", "") for i in cronologia[-12:]]
+    cronologia = _stessa_lingua([_normalizza(i) for i in carica_cronologia()])
+    ultimi_titoli = [v.get("titolo", "") for v in cronologia[-12:]]
 
     # Due liste dalla stessa fonte: al modello servono aperture leggibili da
     # evitare, alla validazione serve l'impronta di tre parole da confrontare.

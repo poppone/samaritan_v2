@@ -10,6 +10,7 @@ on:
     # l'ora di uscita si cambia ORARIO_USCITA piu' sotto.
     - cron: '30 7 * * *'          # per l'uscita delle 14:00 italiane
     - cron: '30 11 * * *'         # per l'uscita delle 18:00 italiane
+    - cron: '30 14 * * *'         # per l'uscita delle 21:00, in inglese
   workflow_dispatch:
     inputs:
       tema:
@@ -22,6 +23,12 @@ on:
         default: 'public'
         type: choice
         options: [public, private, unlisted]
+      lingua:
+        description: 'Lingua del video'
+        required: false
+        default: 'it'
+        type: choice
+        options: [it, en]
 
 permissions:
   contents: write
@@ -87,10 +94,16 @@ jobs:
           # Un orario di uscita per ciascun cron. Le run lanciate a mano
           # non programmano niente: escono subito, com'e' giusto per una
           # prova.
-          ORARIO_USCITA: ${{ github.event_name == 'schedule' && (github.event.schedule == '30 11 * * *' && '18:00' || '14:00') || '' }}
+          ORARIO_USCITA: ${{ github.event_name == 'schedule' && (github.event.schedule == '30 14 * * *' && '21:00' || (github.event.schedule == '30 11 * * *' && '18:00' || '14:00')) || '' }}
           FUSO_USCITA: 'Europe/Rome'
+          # Il video delle 21:00 e' in inglese: stesso canale, pubblico
+          # diverso. Le run lanciate a mano scelgono dal menu.
+          LINGUA: ${{ github.event_name == 'schedule' && (github.event.schedule == '30 14 * * *' && 'en' || 'it') || inputs.lingua || 'it' }}
           NOME_CANALE: ${{ vars.NOME_CANALE || 'Poppone TV' }}
-          VOCE_TTS: ${{ vars.VOCE_TTS || 'it-IT-DiegoNeural' }}
+          # Le parentesi contano: in GitHub Actions && lega piu' di ||,
+          # e senza di quelle l'espressione restituisce 'true' invece del
+          # nome della voce.
+          VOCE_TTS: ${{ ((github.event_name == 'schedule' && github.event.schedule == '30 14 * * *') || (inputs.lingua == 'en')) && (vars.VOCE_TTS_EN || 'en-US-AndrewNeural') || (vars.VOCE_TTS || 'it-IT-DiegoNeural') }}
           ELEVENLABS_VOCE: ${{ vars.ELEVENLABS_VOCE }}
           ELEVENLABS_MODELLO: ${{ vars.ELEVENLABS_MODELLO }}
           WHISPER_MODEL: ${{ vars.WHISPER_MODEL || 'base' }}

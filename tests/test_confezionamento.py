@@ -949,7 +949,7 @@ class TestNotiziaPiuGrossa:
 
         brain.recupera_trend_gaming_online()
 
-        assert len(viste) == len(brain.RICERCHE_NOTIZIE)
+        assert len(viste) == len(brain._lingua()["ricerche"])
 
     def test_la_notizia_piu_grossa_arriva_per_prima(self, monkeypatch):
         grossa = "GTA 6 ha finalmente una data di uscita"
@@ -979,7 +979,7 @@ class TestNotiziaPiuGrossa:
 
         assert len(notizie) == 1
         # Trovata da tutte le ricerche: il conto delle apparizioni lo dice.
-        assert notizie[0]["apparizioni"] == len(brain.RICERCHE_NOTIZIE)
+        assert notizie[0]["apparizioni"] == len(brain._lingua()["ricerche"])
 
     def test_una_cronologia_lunga_non_prosciuga_le_notizie(self, monkeypatch):
         """Il filtro sulle PAROLE guardava tutta la cronologia.
@@ -1010,3 +1010,110 @@ class TestNotiziaPiuGrossa:
             [], [],
         )
         assert "IN ORDINE DI IMPORTANZA" in prompt
+
+
+class TestLinguaInglese:
+    """Il video delle 21:00 esce in inglese sullo stesso canale.
+
+    Non e' una traduzione: e' un secondo pubblico. Quindi tutto quello che
+    in `brain.py` era scritto in italiano (saluti vietati, seconda persona,
+    ricerche, feed, parole calde) deve avere la sua versione inglese, e le
+    regole anti-ripetizione devono valere dentro una lingua sola.
+    """
+
+    def _in_inglese(self, monkeypatch):
+        monkeypatch.setattr(brain.config, "LINGUA", "en")
+
+    def test_in_inglese_cambiano_le_regole(self, monkeypatch):
+        self._in_inglese(monkeypatch)
+        assert brain._lingua()["nome"] == "English"
+        assert "en-US" in brain._lingua()["rss"]
+
+    def test_una_lingua_sconosciuta_torna_all_italiano(self, monkeypatch):
+        monkeypatch.setattr(brain.config, "LINGUA", "klingon")
+        assert brain._lingua()["nome"] == "italiano"
+
+    def test_il_saluto_inglese_viene_scartato(self, monkeypatch):
+        self._in_inglese(monkeypatch)
+        script = ("Hey guys, welcome back to the channel. "
+                  + TestAperturaRipetutaDalVivo._CODA)
+        ok, motivo = brain.valida_script("Portal: the room nobody opens", script)
+        assert not ok
+        assert "apertura debole vietata" in motivo
+
+    def test_il_saluto_inglese_non_blocca_un_video_italiano(self):
+        # "hello" dentro uno script italiano non e' un saluto in apertura.
+        assert not any(
+            "Dietro una parete che sembra decorazione c'e' altro.".lower()
+            .startswith(v) for v in brain.LINGUE["it"]["aperture_vietate"])
+
+    def test_you_e_la_seconda_persona_in_inglese(self, monkeypatch):
+        self._in_inglese(monkeypatch)
+        assert brain._schema_apertura(
+            "You are playing it wrong. Here is why."
+        ) == brain.SCHEMA_SECONDA_PERSONA
+
+    def test_le_parole_calde_inglesi_contano(self, monkeypatch):
+        self._in_inglese(monkeypatch)
+        grossa = brain._punteggio_notizia("GTA 6 finally has a release date")
+        piccola = brain._punteggio_notizia("A small indie sim gets a patch")
+        assert grossa > piccola
+
+    def test_il_prompt_chiede_di_scrivere_in_inglese(self, monkeypatch):
+        self._in_inglese(monkeypatch)
+        prompt = brain._costruisci_system_prompt("TIER_LIST_LAMPO", [], [], [])
+        assert "LINGUA DELL'OUTPUT: English" in prompt
+
+    def test_cerca_sul_feed_inglese(self, monkeypatch):
+        self._in_inglese(monkeypatch)
+        viste = []
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: [])
+        monkeypatch.setattr(
+            brain.requests, "get",
+            TestNotiziaPiuGrossa()._rss_per_ricerca({}, viste),
+        )
+
+        brain.recupera_trend_gaming_online()
+
+        assert viste and all("hl=en-US" in u for u in viste)
+
+    def test_la_lingua_finisce_in_cronologia(self, monkeypatch, tmp_path):
+        self._in_inglese(monkeypatch)
+        percorso = tmp_path / "cronologia.json"
+        monkeypatch.setattr(brain.config, "FILE_CRONOLOGIA", str(percorso))
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: [])
+
+        brain.salva_in_cronologia({
+            "titolo": "Portal: the room nobody opens", "script": "A script.",
+            "stile": "TIER_LIST_LAMPO", "gioco": "Portal",
+            "query_video": "portal gameplay",
+        })
+
+        import json as _json
+        salvato = _json.loads(percorso.read_text(encoding="utf-8"))
+        assert salvato[-1]["lingua"] == "en"
+
+    def test_la_notizia_usata_in_italiano_resta_libera_in_inglese(self, monkeypatch):
+        """Il punto dell'esperimento.
+
+        Se le due lingue condividessero la memoria delle notizie, al video
+        inglese resterebbero solo gli argomenti scartati da quello italiano,
+        cioe' i piu' deboli: la prova nascerebbe truccata contro l'inglese.
+        """
+        notizia = "GTA 6 finally has a release date"
+        cronologia = [{
+            "titolo": "GTA 6: la data e' ufficiale", "lingua": "it",
+            "estratto_script": "", "stile": "", "gioco": "GTA 6",
+            "fonte": f"{notizia} (IGN)", "video_id": "abc",
+        }]
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: cronologia)
+        monkeypatch.setattr(
+            brain.requests, "get",
+            TestNotiziaPiuGrossa()._rss_per_ricerca({"": [notizia]}, []),
+        )
+
+        monkeypatch.setattr(brain.config, "LINGUA", "it")
+        assert notizia not in [n["titolo"] for n in brain.recupera_trend_gaming_online()]
+
+        monkeypatch.setattr(brain.config, "LINGUA", "en")
+        assert notizia in [n["titolo"] for n in brain.recupera_trend_gaming_online()]

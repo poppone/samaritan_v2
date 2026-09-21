@@ -298,7 +298,10 @@ def genera_voce_samaritan(testo, output_filename=None):
     try:
         from gtts import gTTS
 
-        tts = gTTS(text=testo_pulito, lang=config.LINGUA, tld="it", slow=False)
+        # Il dominio decide l'accento: quello italiano su un testo inglese
+        # suona sbagliato.
+        dominio = "it" if (config.LINGUA or "it").lower() == "it" else "com"
+        tts = gTTS(text=testo_pulito, lang=config.LINGUA, tld=dominio, slow=False)
         tts.save(output_filename)
         print(f"[Samaritan Voice] Audio di fallback salvato: {output_filename}")
         return output_filename
