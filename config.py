@@ -72,6 +72,20 @@ NOME_CANALE = _get("NOME_CANALE", "Poppone TV")
 HANDLE_CANALE = _get("HANDLE_CANALE", "@PopponeTV")
 LINGUA = _get("LINGUA", "it")
 
+# Quale delle uscite giornaliere sta coprendo questa run ('14:00', '18:00',
+# '21:00'), oppure vuoto per le run lanciate a mano. Non e' l'ora di
+# pubblicazione, che e' ORARIO_USCITA piu' sotto: SLOT serve solo a non
+# pubblicare due volte lo stesso video quando una run arriva in ritardo e
+# un'altra l'ha gia' fatto. Di norma i due valori coincidono; la run di
+# recupero invece ha SLOT pieno e ORARIO_USCITA vuoto, perche' recupera
+# un'uscita saltata e la pubblica subito.
+SLOT = _get("SLOT", "")
+# La run di recupero non sa in partenza quale uscita le tocchera': lo decide
+# leggendo la cronologia, e con esso sceglie lingua e voce fra queste due.
+RECUPERO = _get("RECUPERO", "") not in ("", "0", "false", "False")
+VOCE_TTS_IT = _get("VOCE_TTS_IT", "it-IT-DiegoNeural")
+VOCE_TTS_EN = _get("VOCE_TTS_EN", "en-US-AndrewNeural")
+
 # ------------------------------------------------------------------ Voce (TTS)
 # Voce neurale Microsoft Edge. Voci italiane disponibili:
 #   it-IT-DiegoNeural     (maschile, energico  -> consigliata per il gaming)
