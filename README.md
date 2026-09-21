@@ -213,6 +213,28 @@ piu' niente da correggere a mano.
 Se la run arriva talmente in ritardo da superare l'ora di uscita, il video
 esce subito invece di aspettare il giorno dopo.
 
+### La riserva di fine giornata
+
+Il 21 settembre 2026 GitHub ha fatto partire una run con sette ore di ritardo e
+un'altra non l'ha fatta partire affatto: il video delle 21:00 non e' mai
+uscito. Il codice non c'entrava, ma il canale un video l'ha perso lo stesso.
+
+Da qui un quarto cron (`30 20` UTC, verso le 22:30 italiane) che non produce un
+video suo. Guarda quali delle tre uscite di oggi sono rimaste scoperte e rifa'
+la piu' vecchia, una sola, pubblicandola subito; se sono tutte a posto termina
+in pochi secondi senza fare niente. Si puo' lanciare anche a mano, dalla tab
+Actions, spuntando `recupero`.
+
+Perche' questo non produca doppioni ogni lavorazione dichiara quale uscita sta
+coprendo (`SLOT`, che finisce in `cronologia_trend.json`) e si ferma se quella
+uscita ha gia' il suo video. Un video conta come pubblicato solo quando ha un
+`video_id`: una lavorazione morta prima del caricamento lascia l'uscita
+scoperta, che e' esattamente il caso in cui la riserva deve intervenire.
+
+L'elenco delle uscite sta in `orari.py` (`SLOT_GIORNALIERI`) e nei cron del
+workflow: sono due copie della stessa cosa, e un test controlla che dicano lo
+stesso.
+
 Le run lanciate a mano dalla tab Actions (dove puoi anche scegliere tema e
 visibilita') non programmano niente: escono subito.
 

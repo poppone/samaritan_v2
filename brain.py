@@ -332,6 +332,11 @@ def salva_in_cronologia(dati):
         "data": time.strftime("%Y-%m-%d"),
         "titolo": dati["titolo"],
         "lingua": (config.LINGUA or "it").lower(),
+        # Quale uscita della giornata sta coprendo questo video ('14:00',
+        # '18:00', '21:00'). Vuoto per le prove lanciate a mano, che non
+        # coprono niente. Serve a orari.gia_pubblicato() per non far uscire
+        # due video sulla stessa uscita quando una run arriva in ritardo.
+        "slot": (config.SLOT or "").strip(),
         "estratto_script": dati["script"][:90],
         "stile": dati["stile"],
         "gioco": dati.get("gioco", ""),
