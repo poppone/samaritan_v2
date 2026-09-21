@@ -17,6 +17,7 @@ import re
 import html
 import unicodedata
 import xml.etree.ElementTree as ET
+from urllib.parse import quote
 
 import requests
 from groq import Groq
@@ -117,6 +118,61 @@ SECONDA_PERSONA = frozenset((
     "dovevi", "facevi", "dicevi", "giocavi",
     "immagina", "dimmi", "fidati", "preparati", "smettila",
 ))
+
+# Dove cercare le notizie. Prima ce n'era una sola, e per giunta stretta
+# ("quando esce aggiornamento"), quindi il pescato era fatto soprattutto di
+# aggiornamenti minori. I video che su questo canale hanno fatto numeri erano
+# invece notizie enormi del giorno: GTA 6, Sora in Fortnite, Fortnite x
+# Kingdom Hearts. Piu' reti in acqua, e poi si sceglie (vedi
+# _punteggio_notizia): l'argomento e' l'unica variabile che separa i video
+# andati bene da quelli morti.
+RICERCHE_NOTIZIE = (
+    "videogiochi",
+    "videogiochi quando esce aggiornamento",
+    'GTA 6 OR Fortnite OR "Call of Duty" OR Minecraft OR Roblox',
+    "videogioco annuncio OR uscita OR gratis OR leak",
+)
+
+# Quante voci leggere da ogni ricerca prima di filtrare.
+VOCI_PER_RICERCA = 15
+
+# I giochi e le piattaforme che muovono pubblico da soli. E' una lista scritta
+# a mano e va tenuta aggiornata: non esiste un modo di dedurla dai feed, e
+# sbagliarla per difetto costa poco (la notizia resta in lista, solo piu' in
+# basso) mentre un elenco automatico sbagliato per eccesso spingerebbe in cima
+# la roba sbagliata.
+GIOCHI_GROSSI = (
+    "gta", "grand theft auto", "rockstar", "fortnite", "call of duty",
+    "warzone", "minecraft", "roblox", "ea fc", "fifa", "elden ring",
+    "zelda", "mario", "pokemon", "the last of us", "god of war",
+    "cyberpunk", "assassin", "red dead", "valorant", "league of legends",
+    "counter-strike", "counter strike", "overwatch", "apex legends",
+    "battlefield", "silksong", "hollow knight", "steam", "playstation",
+    "xbox", "nintendo switch", "game pass",
+)
+
+# Parole che dicono "questa notizia la gente la sta gia' cercando". Non sono
+# parole a effetto da mettere nel titolo: servono solo a mettere in ordine le
+# notizie in entrata.
+PAROLE_CALDE = (
+    "esce", "uscita", "data", "annuncio", "annunciato", "svelato",
+    "confermato", "gratis", "gratuito", "leak", "trapelato", "rinviato",
+    "cancellato", "chiude", "record", "remake", "remaster", "trailer",
+    "nuovo capitolo", "sequel", "crossover",
+)
+
+PUNTI_GIOCO_GROSSO = 4
+PUNTI_PAROLA_CALDA = 1
+MAX_PAROLE_CALDE = 3      # oltre, e' un titolo acchiappaclic, non una notizia
+PUNTI_RIPETIZIONE = 2     # la stessa notizia trovata da piu' di una ricerca
+
+# Con quante voci di cronologia confrontare le PAROLE di una notizia. E' un
+# confronto sfumato, quindi la finestra deve restare corta: `titoli_passati`
+# prendeva tutta la cronologia, e con cento titoli dentro quasi ogni parola
+# gaming risultava "gia' usata", cosi' il filtro si stringeva da solo fino a
+# scartare tutto. Il confronto esatto sulla notizia (MEMORIA_NOTIZIE) continua
+# a guardare tutto: quello non puo' sbagliare bersaglio.
+MEMORIA_PAROLE_TITOLI = 10
 
 MIN_PAROLE_SCRIPT = 45
 MAX_PAROLE_SCRIPT = 95
@@ -259,6 +315,51 @@ def _notizia_di_una_voce(fonte):
     return _impronta_notizia(testo)
 
 
+def _punteggio_notizia(titolo, apparizioni=1):
+    """Quanto vale una notizia in entrata. Piu' alto = piu' gente la cerca.
+
+    Non giudica come e' scritta la notizia, giudica di cosa parla. Sui video
+    veri di questo canale l'argomento e' l'unica cosa che separa i video
+    andati bene da quelli morti, e finora l'argomento veniva scelto a caso.
+    """
+    testo = _senza_accenti(titolo or "").lower()
+    punti = 0
+    if any(g in testo for g in GIOCHI_GROSSI):
+        punti += PUNTI_GIOCO_GROSSO
+    calde = sum(1 for parola in PAROLE_CALDE if parola in testo)
+    punti += min(calde, MAX_PAROLE_CALDE) * PUNTI_PAROLA_CALDA
+    # Trovata da piu' di una ricerca: non e' un giudizio nostro, e' il segno
+    # che la notizia sta girando.
+    punti += (apparizioni - 1) * PUNTI_RIPETIZIONE
+    return punti
+
+
+def _voci_rss(ricerca):
+    """Le voci grezze di una ricerca su Google News: (titolo, fonte, link)."""
+    url = ("https://news.google.com/rss/search?q="
+           + quote(ricerca)
+           + "&hl=it&gl=IT&ceid=IT:it")
+    risposta = requests.get(url, timeout=8)
+    risposta.raise_for_status()
+    radice = ET.fromstring(risposta.content)
+
+    voci = []
+    for item in radice.findall("./channel/item")[:VOCI_PER_RICERCA]:
+        nodo_titolo = item.find("title")
+        if nodo_titolo is None or not nodo_titolo.text:
+            continue
+        titolo_completo = html.unescape(nodo_titolo.text)
+        # Google News formatta come "Titolo - Testata"
+        if " - " in titolo_completo:
+            titolo, fonte = titolo_completo.rsplit(" - ", 1)
+        else:
+            titolo, fonte = titolo_completo, "Google News"
+        nodo_link = item.find("link")
+        voci.append((titolo.strip(), fonte.strip(),
+                     nodo_link.text if nodo_link is not None else ""))
+    return voci
+
+
 def recupera_trend_gaming_online(max_notizie=8):
     """Scarica notizie gaming fresche e scarta quelle gia' sfruttate.
 
@@ -266,12 +367,13 @@ def recupera_trend_gaming_online(max_notizie=8):
     perche' lo script deve poter citare la fonte reale.
     """
     print("[Samaritan Search] Ricerca trend gaming reali...")
-    url = ("https://news.google.com/rss/search"
-           "?q=videogiochi+gaming+quando+esce+aggiornamento&hl=it&gl=IT&ceid=IT:it")
 
     cronologia = carica_cronologia()
     voci = [_normalizza(i) for i in cronologia]
-    titoli_passati = " ".join(v.get("titolo", "") for v in voci).lower()
+    # Solo gli ultimi titoli: vedi MEMORIA_PAROLE_TITOLI.
+    titoli_passati = " ".join(
+        v.get("titolo", "") for v in voci[-MEMORIA_PAROLE_TITOLI:]
+    ).lower()
     # Le notizie gia' sfruttate, confrontate per intero e non per parole: il
     # filtro sulle parole qui sotto guarda i TITOLI dei video, che sono
     # riscritti dal modello e possono non somigliare alla notizia da cui
@@ -280,50 +382,52 @@ def recupera_trend_gaming_online(max_notizie=8):
     notizie_passate = {_notizia_di_una_voce(v.get("fonte", "")) for v in da_guardare}
     notizie_passate.discard("")
 
-    notizie = []
-    try:
-        response = requests.get(url, timeout=8)
-        response.raise_for_status()
-        root = ET.fromstring(response.content)
+    # Le ricerche si sovrappongono apposta: la stessa notizia trovata da piu'
+    # di una e' una notizia che sta girando, e quel conto finisce nel
+    # punteggio. Chiave: l'impronta della notizia, non il titolo, perche'
+    # testate diverse la scrivono con parole appena diverse.
+    trovate = {}
+    for ricerca in RICERCHE_NOTIZIE:
+        try:
+            voci_rss = _voci_rss(ricerca)
+        except Exception as e:
+            print(f"[Warning Search] Ricerca '{ricerca}' non riuscita ({e}).")
+            continue
 
-        for item in root.findall("./channel/item")[:25]:
-            nodo_titolo = item.find("title")
-            if nodo_titolo is None or not nodo_titolo.text:
+        for titolo, fonte, link in voci_rss:
+            impronta = _impronta_notizia(titolo)
+            if not impronta:
                 continue
-
-            titolo_completo = html.unescape(nodo_titolo.text)
-            # Google News formatta come "Titolo - Testata"
-            if " - " in titolo_completo:
-                titolo, fonte = titolo_completo.rsplit(" - ", 1)
-            else:
-                titolo, fonte = titolo_completo, "Google News"
+            if impronta in trovate:
+                trovate[impronta]["apparizioni"] += 1
+                continue
 
             # Questa notizia e' gia' diventata un video: saltala.
-            if _impronta_notizia(titolo) in notizie_passate:
+            if impronta in notizie_passate:
                 continue
 
-            # Salta le notizie troppo simili a quelle gia' usate
+            # Salta le notizie troppo simili a quelle gia' usate di recente.
             parole = [w.lower() for w in titolo.split() if len(w) > 4]
             gia_usate = [w for w in parole if w in titoli_passati]
             if parole and len(gia_usate) / len(parole) >= 0.3:
                 continue
 
-            nodo_link = item.find("link")
-            notizie.append({
-                "titolo": titolo.strip(),
-                "fonte": fonte.strip(),
-                "link": nodo_link.text if nodo_link is not None else "",
-            })
+            trovate[impronta] = {
+                "titolo": titolo, "fonte": fonte, "link": link,
+                "apparizioni": 1,
+            }
 
-            if len(notizie) >= max_notizie:
-                break
+    for voce in trovate.values():
+        voce["punteggio"] = _punteggio_notizia(voce["titolo"], voce["apparizioni"])
 
-    except Exception as e:
-        print(f"[Warning Search] RSS non raggiungibile ({e}).")
+    # In ordine di importanza, non a caso: la piu' grossa arriva al modello
+    # per prima. A parita' di punteggio l'ordine e' quello di arrivo.
+    notizie = sorted(trovate.values(), key=lambda v: -v["punteggio"])[:max_notizie]
 
     if notizie:
-        random.shuffle(notizie)
-        print(f"[Samaritan Search] {len(notizie)} notizie fresche non ancora usate.")
+        print(f"[Samaritan Search] {len(notizie)} notizie fresche non ancora "
+              f"usate, la piu' grossa vale {notizie[0]['punteggio']} punti: "
+              f"{notizie[0]['titolo']}")
     else:
         print("[Samaritan Search] Nessuna notizia nuova: uso un formato evergreen.")
 
@@ -866,7 +970,10 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti,
         f"FORMATO RICHIESTO: {formato} - {meta['descrizione']}\n"
         "(quella sigla e' un'etichetta interna: non deve comparire ne' nel "
         "titolo ne' nello script)\n\n"
-        f"NOTIZIE GAMING REALI DI OGGI:\n{blocco_notizie}\n\n"
+        f"NOTIZIE GAMING REALI DI OGGI, IN ORDINE DI IMPORTANZA "
+        f"(la [0] e' quella che piu' gente sta cercando in questo momento: "
+        f"scegli quella, e passa a una successiva solo se con la [0] non si "
+        f"riesce a scrivere niente di sensato):\n{blocco_notizie}\n\n"
         f"{vincolo_fatti}"
         f"{blocco_hook}\n"
         "REGOLE TASSATIVE:\n"

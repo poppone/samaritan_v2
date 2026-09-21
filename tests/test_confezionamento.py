@@ -888,3 +888,125 @@ class TestUltimaSpiaggia:
 
         assert len(prompt_visti) == 2
         assert "apre con una domanda" in prompt_visti[1]
+
+
+class TestNotiziaPiuGrossa:
+    """L'argomento veniva scelto a caso.
+
+    `recupera_trend_gaming_online()` pescava da una sola ricerca e poi faceva
+    `random.shuffle`. Ma sui video veri di questo canale l'argomento e' l'unica
+    cosa che separa quelli andati bene (GTA 6, Sora in Fortnite) da quelli
+    morti: era l'unica variabile che conta, lasciata al dado.
+    """
+
+    def _rss_per_ricerca(self, per_ricerca, viste):
+        """Finto Google News che risponde diversamente a ogni ricerca."""
+        def get(url, **kw):
+            viste.append(url)
+            titoli = []
+            for marcatore, elenco in per_ricerca.items():
+                if marcatore in url:
+                    titoli = elenco
+                    break
+            voci = "".join(
+                f"<item><title>{t} - Testata</title>"
+                f"<link>https://example.com/{i}</link></item>"
+                for i, t in enumerate(titoli)
+            )
+            corpo = f"<rss><channel>{voci}</channel></rss>".encode()
+
+            class Risposta:
+                content = corpo
+
+                def raise_for_status(self):
+                    return None
+
+            return Risposta()
+        return get
+
+    def test_un_gioco_grosso_vale_piu_di_uno_sconosciuto(self):
+        grossa = brain._punteggio_notizia("GTA 6 ha finalmente una data")
+        piccola = brain._punteggio_notizia(
+            "Un gestionale indie riceve una patch di stabilita'")
+        assert grossa > piccola
+
+    def test_le_parole_calde_contano_ma_non_all_infinito(self):
+        # Un titolo acchiappaclic non deve superare una notizia vera.
+        acchiappa = brain._punteggio_notizia(
+            "esce uscita data annuncio gratis leak record remake trailer")
+        assert acchiappa <= brain.MAX_PAROLE_CALDE * brain.PUNTI_PAROLA_CALDA
+
+    def test_trovata_da_piu_ricerche_vale_di_piu(self):
+        una = brain._punteggio_notizia("Minecraft cambia tutto", apparizioni=1)
+        tre = brain._punteggio_notizia("Minecraft cambia tutto", apparizioni=3)
+        assert tre == una + 2 * brain.PUNTI_RIPETIZIONE
+
+    def test_interroga_tutte_le_ricerche(self, monkeypatch):
+        viste = []
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: [])
+        monkeypatch.setattr(brain.requests, "get",
+                            self._rss_per_ricerca({}, viste))
+
+        brain.recupera_trend_gaming_online()
+
+        assert len(viste) == len(brain.RICERCHE_NOTIZIE)
+
+    def test_la_notizia_piu_grossa_arriva_per_prima(self, monkeypatch):
+        grossa = "GTA 6 ha finalmente una data di uscita"
+        piccola = "Un gestionale indie riceve una patch di stabilita'"
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: [])
+        # La piccola sta davanti in tutti i feed: se l'ordine non cambia,
+        # vuol dire che il punteggio non viene applicato.
+        monkeypatch.setattr(
+            brain.requests, "get",
+            self._rss_per_ricerca({"videogiochi": [piccola, grossa]}, []),
+        )
+
+        notizie = brain.recupera_trend_gaming_online()
+
+        assert notizie[0]["titolo"] == grossa
+        assert notizie[0]["punteggio"] > notizie[-1]["punteggio"]
+
+    def test_la_stessa_notizia_da_due_ricerche_non_si_sdoppia(self, monkeypatch):
+        titolo = "Minecraft annuncia un nuovo aggiornamento"
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: [])
+        monkeypatch.setattr(
+            brain.requests, "get",
+            self._rss_per_ricerca({"": [titolo]}, []),
+        )
+
+        notizie = brain.recupera_trend_gaming_online()
+
+        assert len(notizie) == 1
+        # Trovata da tutte le ricerche: il conto delle apparizioni lo dice.
+        assert notizie[0]["apparizioni"] == len(brain.RICERCHE_NOTIZIE)
+
+    def test_una_cronologia_lunga_non_prosciuga_le_notizie(self, monkeypatch):
+        """Il filtro sulle PAROLE guardava tutta la cronologia.
+
+        Con cento titoli dentro quasi ogni parola gaming risultava "gia'
+        usata" e il filtro si stringeva da solo fino a scartare tutto.
+        """
+        nuova = "Fortnite Capitolo Sette arriva davvero adesso"
+        vecchi = [{"titolo": "Fortnite Capitolo Sei arriva oggi",
+                   "estratto_script": "", "stile": "", "gioco": "",
+                   "fonte": "", "video_id": None} for _ in range(5)]
+        recenti = [{"titolo": f"Starfield: la stazione numero {n}",
+                    "estratto_script": "", "stile": "", "gioco": "",
+                    "fonte": "", "video_id": None} for n in range(20)]
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: vecchi + recenti)
+        monkeypatch.setattr(
+            brain.requests, "get",
+            self._rss_per_ricerca({"": [nuova]}, []),
+        )
+
+        titoli = [n["titolo"] for n in brain.recupera_trend_gaming_online()]
+        assert nuova in titoli
+
+    def test_il_prompt_dice_che_sono_in_ordine(self):
+        prompt = brain._costruisci_system_prompt(
+            "VIRAL_HOOK_NEWS",
+            [{"titolo": "GTA 6 ha una data", "fonte": "IGN", "link": ""}],
+            [], [],
+        )
+        assert "IN ORDINE DI IMPORTANZA" in prompt
