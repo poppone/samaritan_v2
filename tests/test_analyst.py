@@ -352,3 +352,74 @@ class TestSalvataggioDeiTermini:
 
         salvato = json.loads(file_finto.read_text(encoding="utf-8"))
         assert salvato["ricerche"] == [{"termine": "gta 6", "views": 50}]
+
+
+class TestSorgentiDiTraffico:
+    """Da dove arriva davvero il pubblico.
+
+    Il 21 settembre 2026 la lista dei termini di ricerca e' tornata vuota e la
+    prima spiegazione che viene in mente e' "su un canale di Short nessuno
+    cerca". Puo' darsi, ma e' un'ipotesi: questa ripartizione la trasforma in
+    un numero.
+    """
+
+    def test_restituisce_le_sorgenti_con_le_visualizzazioni(self, monkeypatch):
+        _prepara_analytics(monkeypatch, [["SHORTS", 11000], ["YT_SEARCH", 120]])
+        assert analyst.scarica_sorgenti_di_traffico() == [
+            {"sorgente": "SHORTS", "views": 11000},
+            {"sorgente": "YT_SEARCH", "views": 120},
+        ]
+
+    def test_non_chiede_un_numero_massimo_di_righe(self, monkeypatch):
+        """Le sorgenti sono un elenco chiuso e corto: chiedere maxResults su
+        questi rapporti e' il modo di farsi rispondere 500."""
+        finto = _prepara_analytics(monkeypatch, [["SHORTS", 10]])
+        analyst.scarica_sorgenti_di_traffico()
+        assert "maxResults" not in finto.chiamate[0]
+
+    def test_dice_in_italiano_da_dove_arriva_il_pubblico(self, monkeypatch, capsys):
+        _prepara_analytics(monkeypatch, [["SHORTS", 900], ["YT_SEARCH", 100]])
+        analyst.scarica_sorgenti_di_traffico()
+        uscita = capsys.readouterr().out
+        assert "feed Shorts 90%" in uscita
+        assert "ricerca YouTube 10%" in uscita
+
+    def test_una_sigla_sconosciuta_non_fa_sparire_la_riga(self, monkeypatch, capsys):
+        _prepara_analytics(monkeypatch, [["SIGLA_NUOVA", 10]])
+        analyst.scarica_sorgenti_di_traffico()
+        assert "SIGLA_NUOVA" in capsys.readouterr().out
+
+    def test_un_errore_non_ferma_la_pipeline(self, monkeypatch, capsys):
+        import uploader
+        monkeypatch.setattr(uploader, "ottieni_credenziali",
+                            lambda: (_ for _ in ()).throw(RuntimeError("500")))
+        assert analyst.scarica_sorgenti_di_traffico() == []
+        assert "non disponibili" in capsys.readouterr().out
+
+    def test_finiscono_nel_file_delle_metriche(self, monkeypatch, tmp_path):
+        file_finto = tmp_path / "performance.json"
+        monkeypatch.setattr(config, "FILE_PERFORMANCE", str(file_finto))
+        monkeypatch.setattr(analyst, "scarica_performance",
+                            lambda: {"video1": {"views": 10}})
+        monkeypatch.setattr(analyst, "scarica_termini_di_ricerca", lambda: [])
+        monkeypatch.setattr(analyst, "scarica_sorgenti_di_traffico",
+                            lambda: [{"sorgente": "SHORTS", "views": 10}])
+
+        analyst.aggiorna_performance()
+
+        salvato = json.loads(file_finto.read_text(encoding="utf-8"))
+        assert salvato["sorgenti"] == [{"sorgente": "SHORTS", "views": 10}]
+
+
+class TestIlLimiteDelleRighe:
+
+    def test_i_termini_di_ricerca_non_superano_il_massimo_dell_api(self):
+        """Il 21 settembre 2026 la richiesta chiedeva 40 righe e l'API ha
+        risposto 500 con FIELD_UNKNOWN_VALUE su max-results: non e' tornato
+        nessun termine, e sembrava che nessuno cercasse."""
+        assert analyst.MAX_TERMINI_RICERCA <= 25
+
+    def test_il_massimo_finisce_davvero_nella_richiesta(self, monkeypatch):
+        finto = _prepara_analytics(monkeypatch, [["gta 6", 10]])
+        analyst.scarica_termini_di_ricerca()
+        assert finto.chiamate[0]["maxResults"] == analyst.MAX_TERMINI_RICERCA
