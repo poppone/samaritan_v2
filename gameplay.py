@@ -43,7 +43,10 @@ STEAM_DETAILS = "https://store.steampowered.com/api/appdetails"
 # Servono ffmpeg e il parsing del manifest per estrarre un mp4 utilizzabile.
 RISOLUZIONE_PREFERITA = 1080
 SALTA_INTRO_SEC = 10        # i primi secondi dei trailer sono loghi degli studi
-DURATA_SCARICO_SEC = 45     # abbastanza materiale per ricavarne spezzoni vari
+# Quanti secondi si prendono da ogni trailer: config.SECONDI_TRAILER, che vale
+# 45 per uno Short e 240 per il video lungo. Otto minuti di montaggio chiedono
+# il trailer intero, non uno spezzone: con 45 secondi a testa le stesse
+# inquadrature tornerebbero sei o sette volte nello stesso video.
 
 # Sotto questa somiglianza il risultato Steam viene rifiutato: meglio stock
 # generico che gameplay di un gioco diverso da quello di cui parla lo Short.
@@ -352,19 +355,23 @@ def _scegli_variante_hls(url_master):
     return scelta[1]
 
 
-def _estrai_mp4(url_stream, destinazione, salta=SALTA_INTRO_SEC):
+def _estrai_mp4(url_stream, destinazione, salta=SALTA_INTRO_SEC, durata=None):
     """Usa ffmpeg per trasformare lo stream HLS in un mp4 locale SENZA AUDIO."""
+    durata = config.SECONDI_TRAILER if durata is None else durata
     comando = [
         _ffmpeg(), "-y", "-loglevel", "error",
         "-ss", str(salta),
         "-i", url_stream,
-        "-t", str(DURATA_SCARICO_SEC),
+        "-t", str(durata),
         "-an",                       # audio scartato: azzera il rischio Content ID
         "-c:v", "copy",
         destinazione,
     ]
+    # I tempi massimi seguono la durata richiesta: con 45 secondi bastavano
+    # fissi, ma un trailer intero da quattro minuti si scarica in piu' tempo e
+    # un limite fisso lo farebbe fallire sempre.
     try:
-        subprocess.run(comando, check=True, timeout=180,
+        subprocess.run(comando, check=True, timeout=max(180, durata * 3),
                        stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
     except Exception as e:
         print(f"[Gameplay] Remux fallito ({e}), riprovo con ricodifica...")
@@ -372,7 +379,7 @@ def _estrai_mp4(url_stream, destinazione, salta=SALTA_INTRO_SEC):
         comando.insert(-1, "-preset")
         comando.insert(-1, "veryfast")
         try:
-            subprocess.run(comando, check=True, timeout=300,
+            subprocess.run(comando, check=True, timeout=max(300, durata * 5),
                            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
         except Exception as e2:
             print(f"[Gameplay] Anche la ricodifica e' fallita: {e2}")

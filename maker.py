@@ -6,8 +6,14 @@ La qualita' visiva nasce dall'EDITING, non da riprese fatte a mano:
   1. Materiale UFFICIALE del gioco (trailer + screenshot Steam) via gameplay.py
   2. Stacco ogni 2-3 secondi: l'occhio non ha tempo di annoiarsi
   3. Zoom lento (Ken Burns) su ogni stacco: movimento costante
-  4. Sorgenti 16:9 inserite nel 9:16 con sfondo sfocato e scurito
-  5. Progress bar, banner del titolo, sottotitoli parola-per-parola
+  4. Sorgenti di proporzioni diverse dall'uscita inserite su sfondo sfocato
+  5. Progress bar, banner del titolo, sottotitoli
+
+Lo stesso montaggio produce due formati, e le misure le legge da config:
+lo Short 9:16 da mezzo minuto (sottotitoli una parola per volta, enormi, al
+centro) e il video lungo 16:9 da otto minuti (sottotitoli a frase, in basso).
+Su otto minuti la forma dello Short vorrebbe oltre mille clip sovrapposti,
+uno per parola, e non e' solo una questione di gusto.
 
 La VESTE (colori, altezze, barra, banner, verso dello zoom, ritmo degli
 stacchi) non e' fissa: la sceglie `veste.py` e cambia a ogni video, cosi' due
@@ -75,16 +81,27 @@ def _carica_font(dimensione):
 # ===========================================================================
 # PEXELS (fallback quando il gioco non e' identificabile)
 # ===========================================================================
+def _orizzontale():
+    """Il video che stiamo montando e' piu' largo che alto?"""
+    return config.VIDEO_W >= config.VIDEO_H
+
+
 def _cerca_clip_pexels(query, gia_scaricati):
     headers = {"Authorization": config.PEXELS_API_KEY}
     query_pulita = re.sub(r"\b(vertical|short|shorts)\b", "", query,
                           flags=re.IGNORECASE).strip()
 
+    # Chiedere a Pexels clip gia' del verso giusto evita di montare un video
+    # verticale dentro una cornice orizzontale, dove resterebbe una striscia
+    # stretta in mezzo a due bande sfocate.
+    orizzontale = _orizzontale()
+    verso = "landscape" if orizzontale else "portrait"
+
     try:
         r = requests.get(
             "https://api.pexels.com/videos/search",
             headers=headers,
-            params={"query": query_pulita, "orientation": "portrait", "per_page": 15},
+            params={"query": query_pulita, "orientation": verso, "per_page": 15},
             timeout=12,
         )
         r.raise_for_status()
@@ -97,13 +114,16 @@ def _cerca_clip_pexels(query, gia_scaricati):
     for video in video_trovati:
         if video["id"] in gia_scaricati:
             continue
-        file_verticali = [
-            f for f in video.get("video_files", [])
-            if f.get("height", 0) >= f.get("width", 1)
-        ] or video.get("video_files", [])
-        if not file_verticali:
+        if orizzontale:
+            adatti = [f for f in video.get("video_files", [])
+                      if f.get("width", 0) >= f.get("height", 1)]
+        else:
+            adatti = [f for f in video.get("video_files", [])
+                      if f.get("height", 0) >= f.get("width", 1)]
+        adatti = adatti or video.get("video_files", [])
+        if not adatti:
             continue
-        migliore = min(file_verticali,
+        migliore = min(adatti,
                        key=lambda f: abs(f.get("height", 0) - config.VIDEO_H))
         risultati.append((video["id"], migliore["link"]))
     return risultati
@@ -143,14 +163,22 @@ def scarica_clip_sfondo(query, quante=None):
 # ADATTAMENTO AL FORMATO VERTICALE
 # ===========================================================================
 def _sfondo_sfocato(frame, durata, luminosita=0.42):
-    """Sfondo 9:16 ricavato dal frame stesso: sfocato e scurito.
+    """Sfondo a tutto schermo ricavato dal frame stesso: sfocato e scurito.
 
     La sfocatura viene fatta in miniatura e poi ingrandita: e' ~50 volte piu'
     veloce che sfocare a piena risoluzione e il risultato e' identico,
     visto che l'immagine e' comunque fuori fuoco.
+
+    La miniatura tiene le proporzioni dell'uscita, non un 9:16 fisso: con le
+    proporzioni sbagliate il ritaglio prende la parte sbagliata del fotogramma
+    e lo sfondo del video lungo esce stirato.
     """
     W, H = config.VIDEO_W, config.VIDEO_H
-    piccolo_w, piccolo_h = 108, 192
+    lato = 192
+    if W >= H:
+        piccolo_w, piccolo_h = lato, max(round(lato * H / W), 1)
+    else:
+        piccolo_w, piccolo_h = max(round(lato * W / H), 1), lato
 
     img = Image.fromarray(frame)
     fattore = max(piccolo_w / img.width, piccolo_h / img.height)
@@ -168,31 +196,57 @@ def _sfondo_sfocato(frame, durata, luminosita=0.42):
     return ImageClip(np.array(img)).with_duration(durata)
 
 
-def _adatta_a_verticale(clip, durata, stile=None):
-    """Porta qualunque sorgente a 1080x1920.
+# Quanto le proporzioni della sorgente possono discostarsi da quelle
+# dell'uscita prima di rinunciare al pieno schermo. Dentro questa forbice il
+# ritaglio toglie un bordo e non si nota; fuori toglierebbe meta' scena.
+TOLLERANZA_PIENO_SCHERMO = (0.72, 1.30)
 
-    - Sorgenti gia' verticali  -> scale-to-cover + crop centrale (schermo pieno)
-    - Sorgenti 16:9 (Steam)    -> riquadro centrale su sfondo sfocato
+
+def _adatta_al_formato(clip, durata, stile=None):
+    """Porta qualunque sorgente alle misure dell'uscita (9:16 o 16:9).
+
+    - Sorgenti con le proporzioni dell'uscita -> scale-to-cover + ritaglio
+      centrale, cioe' schermo pieno. E' il caso dei trailer Steam nel video
+      lungo, che sono 16:9 come lui, e delle clip verticali nello Short.
+    - Tutte le altre -> riquadro centrale su sfondo sfocato ricavato dal
+      fotogramma stesso. E' il caso dei trailer 16:9 dentro uno Short, e delle
+      clip girate col telefono dentro il video lungo.
     """
     W, H = config.VIDEO_W, config.VIDEO_H
     stile = stile or STILE_BASE
 
-    # --- Caso verticale: riempie tutto lo schermo ---
-    if clip.h / max(clip.w, 1) >= 1.4:
+    proporzione_uscita = W / max(H, 1)
+    proporzione_clip = clip.w / max(clip.h, 1)
+    minimo, massimo = TOLLERANZA_PIENO_SCHERMO
+
+    # --- Stesse proporzioni: riempie tutto lo schermo ---
+    if minimo <= proporzione_clip / proporzione_uscita <= massimo:
         fattore = max(W / clip.w, H / clip.h)
         scalato = clip.resized((round(clip.w * fattore), round(clip.h * fattore)))
         return scalato.cropped(width=W, height=H,
                                x_center=scalato.w / 2, y_center=scalato.h / 2)
 
-    # --- Caso orizzontale: riquadro + sfondo sfocato ---
-    larghezza_fg = int(W * config.ZOOM_GAMEPLAY)
-    altezza_fg = round(larghezza_fg * clip.h / clip.w)
-
-    # Se la sorgente e' quasi quadrata il riquadro diventa troppo alto: lo limito
-    altezza_max = int(H * 0.62)
-    if altezza_fg > altezza_max:
-        altezza_fg = altezza_max
-        larghezza_fg = round(altezza_fg * clip.w / clip.h)
+    # --- Proporzioni diverse: riquadro + sfondo sfocato ---
+    if W >= H:
+        # Uscita orizzontale: e' l'altezza a fare da vincolo, e il riquadro
+        # sta al centro. Qui dentro finiscono le clip verticali di popponetv,
+        # girate col telefono, che nel 16:9 non possono riempire lo schermo.
+        altezza_fg = int(H * 0.94)
+        larghezza_fg = max(round(altezza_fg * clip.w / max(clip.h, 1)), 2)
+        if larghezza_fg > W * 0.94:
+            larghezza_fg = int(W * 0.94)
+            altezza_fg = max(round(larghezza_fg * clip.h / max(clip.w, 1)), 2)
+        posizione = ("center", "center")
+    else:
+        # Uscita verticale: e' la larghezza a fare da vincolo, e l'altezza del
+        # riquadro la decide la veste.
+        larghezza_fg = int(W * config.ZOOM_GAMEPLAY)
+        altezza_fg = max(round(larghezza_fg * clip.h / max(clip.w, 1)), 2)
+        altezza_max = int(H * 0.62)
+        if altezza_fg > altezza_max:
+            altezza_fg = altezza_max
+            larghezza_fg = max(round(altezza_fg * clip.w / max(clip.h, 1)), 2)
+        posizione = ("center", int(H * stile["y_gameplay"]))
 
     primo_piano = clip.resized((larghezza_fg, altezza_fg))
 
@@ -205,10 +259,13 @@ def _adatta_a_verticale(clip, durata, stile=None):
         sfondo = ColorClip(size=(W, H), color=(0, 0, 0)).with_duration(durata)
 
     return CompositeVideoClip(
-        [sfondo, primo_piano.with_position(("center",
-                                           int(H * stile["y_gameplay"])))],
+        [sfondo, primo_piano.with_position(posizione)],
         size=(W, H),
     ).with_duration(durata)
+
+
+# Il nome di prima, quando Samaritan faceva solo Short verticali.
+_adatta_a_verticale = _adatta_al_formato
 
 
 def _applica_zoom(clip, durata, intensita=0.08, verso="dentro"):
@@ -252,7 +309,7 @@ def _prepara_segmento(sorgente, durata, stile=None, verso="dentro"):
     if sorgente["tipo"] == "immagine":
         base = ImageClip(sorgente["path"]).with_duration(durata)
         # Sugli screenshot lo zoom e' piu' marcato: senza, sembrerebbero fermi
-        return _applica_zoom(_adatta_a_verticale(base, durata, stile), durata,
+        return _applica_zoom(_adatta_al_formato(base, durata, stile), durata,
                              intensita=intensita * 2, verso=verso)
 
     video = _apri_video(sorgente["path"])
@@ -263,7 +320,7 @@ def _prepara_segmento(sorgente, durata, stile=None, verso="dentro"):
         inizio = random.uniform(0, video.duration - durata)
         pezzo = video.subclipped(inizio, inizio + durata)
 
-    return _applica_zoom(_adatta_a_verticale(pezzo, durata, stile), durata,
+    return _applica_zoom(_adatta_al_formato(pezzo, durata, stile), durata,
                          intensita=intensita, verso=verso)
 
 
@@ -469,6 +526,59 @@ def crea_progress_bar(durata, passi=60, altezza=12, colore=(255, 230, 0)):
 # ===========================================================================
 # SOTTOTITOLI
 # ===========================================================================
+def crea_immagine_frase(testo, font_size=52, colore="white",
+                        larghezza_max=None):
+    """Una riga (o due) di sottotitolo, su fascia scura semitrasparente.
+
+    E' il sottotitolo del video lungo. Quello dello Short e' un'altra cosa:
+    una parola per volta, enorme, al centro. Su otto minuti quella forma
+    diventa insopportabile, e soprattutto costerebbe un clip di montaggio per
+    ogni parola, cioe' oltre mille clip sovrapposti in un video solo.
+    """
+    larghezza_max = larghezza_max or int(config.VIDEO_W * 0.80)
+    font = _carica_font(font_size)
+    misura = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+    righe = _manda_a_capo(misura, testo, font, larghezza_max - 60)[:2]
+
+    altezza_riga = font_size + 16
+    img = Image.new("RGBA",
+                    (larghezza_max, altezza_riga * len(righe) + 32),
+                    (0, 0, 0, 150))
+    draw = ImageDraw.Draw(img)
+    for i, riga in enumerate(righe):
+        w = draw.textlength(riga, font=font)
+        draw.text(((larghezza_max - w) / 2, 16 + i * altezza_riga),
+                  riga, font=font, fill=colore,
+                  stroke_width=3, stroke_fill="black")
+    return np.array(img)
+
+
+def _sottotitoli_a_frase(risultato, stile):
+    """I sottotitoli del video lungo: una frase per volta, in basso."""
+    clips = []
+    y = int(config.VIDEO_H * 0.80)
+    corpo = max(int(config.VIDEO_H * 0.048), 30)
+
+    for segmento in risultato.get("segments", []):
+        testo = (segmento.get("text") or "").strip()
+        if not testo:
+            continue
+        inizio = segmento.get("start", 0)
+        durata = max(segmento.get("end", inizio) - inizio, 0.4)
+        try:
+            clips.append(
+                ImageClip(crea_immagine_frase(testo, font_size=corpo,
+                                              colore=stile["colore_testo"]))
+                .with_start(inizio).with_duration(durata)
+                .with_position(("center", y))
+            )
+        except Exception as e:
+            print(f"[Warning Maker] Sottotitolo saltato: {e}")
+
+    print(f"[Samaritan Subtitles] {len(clips)} frasi sincronizzate.")
+    return clips
+
+
 def genera_sottotitoli_clips(audio_path, titolo="", gioco="", stile=None):
     import whisper
 
@@ -477,7 +587,10 @@ def genera_sottotitoli_clips(audio_path, titolo="", gioco="", stile=None):
     print(f"[Samaritan Subtitles] Trascrizione con modello '{config.WHISPER_MODEL}'...")
     modello = whisper.load_model(config.WHISPER_MODEL)
     risultato = modello.transcribe(audio_path, language=config.LINGUA,
-                                   word_timestamps=True)
+                                   word_timestamps=not config.VIDEO_LUNGO)
+
+    if config.VIDEO_LUNGO:
+        return _sottotitoli_a_frase(risultato, stile)
 
     parole_chiave = {w.upper() for w in re.findall(r"\b[A-Za-z]{4,}\b",
                                                    f"{titolo} {gioco}")}
@@ -518,7 +631,14 @@ def genera_sottotitoli_clips(audio_path, titolo="", gioco="", stile=None):
 # ===========================================================================
 def assembla_video_finale(testo_per_audio=None, query_video="gameplay",
                           titolo="", gioco="", tema="Gaming",
-                          resoconto=None):
+                          resoconto=None, audio_pronto=None):
+    """Monta il video e lo scrive su disco. Ritorna il percorso, o None.
+
+    `audio_pronto` e' il percorso di un audio gia' sintetizzato: lo passa il
+    video lungo, che la voce la genera una sezione per volta per sapere dove
+    cade ogni capitolo. Senza, la voce la si genera qui da `testo_per_audio`,
+    come ha sempre fatto lo Short.
+    """
     os.makedirs(config.DIR_OUTPUT, exist_ok=True)
     print("\n--- SAMARITAN MAKER: PRODUZIONE VIDEO ---")
 
@@ -534,7 +654,7 @@ def assembla_video_finale(testo_per_audio=None, query_video="gameplay",
         titolo = dati["titolo"]
         gioco = dati.get("gioco", "")
 
-    audio_path = genera_voce_samaritan(testo_per_audio)
+    audio_path = audio_pronto or genera_voce_samaritan(testo_per_audio)
     if not audio_path:
         print("[Errore Maker] Audio non generato: interrompo.")
         return None
@@ -603,11 +723,14 @@ def assembla_video_finale(testo_per_audio=None, query_video="gameplay",
                                 size=(config.VIDEO_W, config.VIDEO_H)
                                 ).with_duration(durata)
 
-    output_file = os.path.join(config.DIR_OUTPUT, "samaritan_short_subbed.mp4")
+    nome_file = ("samaritan_video_lungo.mp4" if config.VIDEO_LUNGO
+                 else "samaritan_short_subbed.mp4")
+    output_file = os.path.join(config.DIR_OUTPUT, nome_file)
     print(f"[Samaritan Maker] Rendering {config.VIDEO_W}x{config.VIDEO_H} "
-          f"@{config.FPS}fps ({durata:.1f}s)...")
+          f"@{config.FPS}fps ({durata:.1f}s, preset {config.PRESET_RENDER})...")
     finale.write_videofile(output_file, fps=config.FPS, codec="libx264",
-                           audio_codec="aac", preset="medium", threads=4)
+                           audio_codec="aac", preset=config.PRESET_RENDER,
+                           threads=4)
 
     # La miniatura si ricava dallo sfondo, non dal composito: sul composito ci
     # sono gia' banner e sottotitoli, e sovrapporci altro testo e' illeggibile.

@@ -229,6 +229,25 @@ def _stessa_lingua(voci):
     return [v for v in voci if _lingua_di(v) == attuale]
 
 
+def _formato_di(voce):
+    """Il formato di una voce di cronologia. Le voci scritte prima del 22
+    settembre 2026 non ce l'hanno e sono tutte Short."""
+    return (voce.get("formato") or "short").lower()
+
+
+def _stesso_formato(voci):
+    """Solo i video usciti nello stesso formato di adesso.
+
+    Stesso ragionamento di _stessa_lingua: le regole anti-ripetizione valgono
+    dentro un formato. Un video lungo da otto minuti su un gioco non deve
+    impedire allo Short della sera di parlarne, sono due cose diverse per due
+    modi diversi di guardare; e l'apertura di una sezione di otto minuti non
+    dice niente su come deve attaccare uno Short.
+    """
+    attuale = "lungo" if config.VIDEO_LUNGO else "short"
+    return [v for v in voci if _formato_di(v) == attuale]
+
+
 PUNTI_GIOCO_GROSSO = 4
 PUNTI_PAROLA_CALDA = 1
 MAX_PAROLE_CALDE = 3      # oltre, e' un titolo acchiappaclic, non una notizia
@@ -294,6 +313,7 @@ _PAROLE_DEBOLI = {
 # Tema in hashtag per ogni formato: il primo hashtag della descrizione e'
 # l'unico che YouTube mostra sopra al titolo, quindi non va sprecato.
 TEMA_PER_FORMATO = {
+    "VIDEO_LUNGO": "gamingita",
     "VIRAL_HOOK_NEWS": "newsgaming",
     "MYTH_BUSTING_VIRAL": "rumor",
     "EASTER_EGG_SECRET": "easteregg",
@@ -307,6 +327,9 @@ TEMA_PER_FORMATO = {
 # IDENTICI su ogni upload sono una delle impronte che fanno riconoscere un
 # canale automatizzato: per questo costruisci_tag() ne aggiunge di variabili.
 TAG_FISSI = ["gaming ita", "videogiochi", "shorts ita", "curiosita gaming"]
+# Sul video lungo 'shorts ita' e' un tag sbagliato, e i due che lo
+# sostituiscono dicono a YouTube di che tipo di video si tratta.
+TAG_FISSI_LUNGO = ["gaming ita", "videogiochi", "recensione", "guida gaming"]
 
 
 # ===========================================================================
@@ -346,6 +369,10 @@ def salva_in_cronologia(dati):
         # coprono niente. Serve a orari.gia_pubblicato() per non far uscire
         # due video sulla stessa uscita quando una run arriva in ritardo.
         "slot": (config.SLOT or "").strip(),
+        # 'short' oppure 'lungo'. Serve alla lavorazione di recupero, che deve
+        # sapere che formato rifare, e ai conti sulle performance, dove un
+        # video da otto minuti e uno da trenta secondi non si sommano.
+        "formato": "lungo" if config.VIDEO_LUNGO else "short",
         "estratto_script": dati["script"][:90],
         "stile": dati["stile"],
         "gioco": dati.get("gioco", ""),
@@ -899,7 +926,7 @@ def costruisci_tag(dati, massimo=15, max_caratteri=450):
     YouTube accetta 500 caratteri di tag in totale e oltre quella soglia
     rifiuta l'upload intero, non i tag in eccesso: qui si taglia a 450.
     """
-    tag = list(TAG_FISSI)
+    tag = list(TAG_FISSI_LUNGO if config.VIDEO_LUNGO else TAG_FISSI)
     if config.NOME_CANALE:
         tag.append(config.NOME_CANALE.lower())
 
@@ -958,7 +985,7 @@ def _riga_materiale(dati, materiale):
             "ufficiale dei rispettivi editori.")
 
 
-def costruisci_descrizione(dati, materiale=None):
+def costruisci_descrizione(dati, materiale=None, capitoli=""):
     """Descrizione del video.
 
     Prima solo le prime due righe cambiavano da un video all'altro e tutto il
@@ -970,6 +997,13 @@ def costruisci_descrizione(dati, materiale=None):
     l'indirizzo della testata. Funziona, ma nella descrizione si legge male.
     """
     parti = [dati.get("descrizione") or dati.get("titolo", "")]
+
+    # I capitoli vanno IN ALTO, subito sotto le prime righe: YouTube li legge
+    # ovunque siano nella descrizione, ma chi guarda li cerca li'. Li ha solo
+    # il video lungo, dove sono la ragione principale per cui uno spettatore
+    # resta invece di chiudere al primo minuto.
+    if capitoli:
+        parti.append("\nCapitoli:\n" + capitoli)
 
     fonte_url = (dati.get("fonte_url") or "").strip()
     if fonte_url:
@@ -985,8 +1019,9 @@ def costruisci_descrizione(dati, materiale=None):
         "\nVideo realizzato con voce sintetica e montaggio automatico, "
         "su fatti e notizie verificabili."
     )
+    cosa = "Altri video" if config.VIDEO_LUNGO else "Altri Shorts"
     parti.append(
-        f"\nAltri Shorts gaming ogni giorno su {config.NOME_CANALE}: "
+        f"\n{cosa} gaming ogni giorno su {config.NOME_CANALE}: "
         f"youtube.com/{config.HANDLE_CANALE}"
     )
     parti.append("\n" + " ".join(costruisci_hashtag(dati)))
@@ -1264,7 +1299,9 @@ def genera_script_samaritan(tema=None):
     notizie = recupera_trend_gaming_online()
     formato = scegli_formato(notizie)
 
-    cronologia = _stessa_lingua([_normalizza(i) for i in carica_cronologia()])
+    cronologia = _stesso_formato(
+        _stessa_lingua([_normalizza(i) for i in carica_cronologia()])
+    )
     ultimi_titoli = [v.get("titolo", "") for v in cronologia[-12:]]
 
     # Due liste dalla stessa fonte: al modello servono aperture leggibili da

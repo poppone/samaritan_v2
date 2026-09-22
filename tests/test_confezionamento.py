@@ -476,7 +476,7 @@ class TestRigaMateriale:
             maker_py = f.read()
 
         assert "resoconto=materiale" in main_py
-        assert "costruisci_descrizione(dati, materiale)" in main_py
+        assert "costruisci_descrizione(dati, materiale, capitoli)" in main_py
         assert 'resoconto["sorgenti_ufficiali"]' in maker_py
 
 

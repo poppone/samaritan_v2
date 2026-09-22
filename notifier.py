@@ -108,7 +108,11 @@ def notifica_pubblicazione(dati, video_id, percorso_video):
     if not config.TELEGRAM_ATTIVO:
         return
 
-    url = f"https://youtube.com/shorts/{video_id}" if video_id else "(upload fallito)"
+    if video_id:
+        url = (f"https://youtu.be/{video_id}" if config.VIDEO_LUNGO
+               else f"https://youtube.com/shorts/{video_id}")
+    else:
+        url = "(upload fallito)"
     stato = "PUBBLICATO" if config.PRIVACY_STATUS == "public" else "IN ATTESA DI APPROVAZIONE"
 
     testo = (
@@ -122,8 +126,10 @@ def notifica_pubblicazione(dati, video_id, percorso_video):
     if not invia_video(percorso_video, testo):
         invia_messaggio(testo)
 
-    # Il file e' gia' pronto per TikTok: gli manca solo la didascalia.
-    invia_didascalia_tiktok(dati)
+    # Il file e' gia' pronto per TikTok: gli manca solo la didascalia. Vale
+    # solo per gli Short: su TikTok un 16:9 da otto minuti non si pubblica.
+    if not config.VIDEO_LUNGO:
+        invia_didascalia_tiktok(dati)
 
 
 def notifica_errore(messaggio):
