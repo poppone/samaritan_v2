@@ -30,7 +30,36 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Il repository e' privato e i minuti di lavorazione su GitHub sono contati:
+  # il solo video lungo del canale ne mangia gia' quasi tutti. Montare un Reel
+  # ogni sera senza avere ancora le chiavi di Instagram vorrebbe dire bruciare
+  # mezz'ora al giorno per un video che nessuno vedra'. Questo controllo dura
+  # pochi secondi e ferma tutto prima che parta.
+  #
+  # Vale solo per le uscite automatiche: il pulsante "Run workflow" monta il
+  # Reel comunque, che e' come si fa la prova prima di collegare Instagram.
+  controllo:
+    runs-on: ubuntu-latest
+    outputs:
+      procedi: ${{ steps.esito.outputs.procedi }}
+    steps:
+      - name: Instagram e' collegato?
+        id: esito
+        env:
+          INSTAGRAM_TOKEN: ${{ secrets.INSTAGRAM_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ] && [ -z "$INSTAGRAM_TOKEN" ]; then
+            echo "Instagram non e' ancora collegato (manca il secret"
+            echo "INSTAGRAM_TOKEN): salto il Reel di oggi invece di montarlo"
+            echo "per niente. Vedi GUIDA_INSTAGRAM.md."
+            echo "procedi=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "procedi=si" >> "$GITHUB_OUTPUT"
+          fi
+
   reel-promozionale:
+    needs: controllo
+    if: needs.controllo.outputs.procedi == 'si'
     runs-on: ubuntu-latest
     timeout-minutes: 45
 

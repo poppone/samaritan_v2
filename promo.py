@@ -419,7 +419,8 @@ def monta_reel(dati, numeri):
     print(f"[Promo] Rendering {config.VIDEO_W}x{config.VIDEO_H} "
           f"@{config.FPS}fps ({durata:.1f}s)...")
     finale.write_videofile(FILE_REEL, fps=config.FPS, codec="libx264",
-                           audio_codec="aac", preset="medium", threads=4)
+                           audio_codec="aac", preset=config.PRESET_RENDER,
+                           threads=4)
 
     finale.close()
     audio_clip.close()
