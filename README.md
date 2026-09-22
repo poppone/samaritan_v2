@@ -72,6 +72,19 @@ classifica che non e' un'ipotesi scritta a mano: il resto dice cosa pensiamo
 interessi, questo dice cosa e' stato misurato. Quando il dato manca (token
 senza permesso Analytics, canale nuovo) il punteggio resta quello di prima.
 
+> Su questo rapporto `maxResults` **non puo' superare 25**. Chiedendone di piu'
+> l'API non restituisce meno righe: fallisce tutta la richiesta con un 500 e
+> `FIELD_UNKNOWN_VALUE` su `max-results`, che non somiglia per niente a un
+> limite superato. E' costato una giornata di termini mancanti.
+
+Insieme ai termini si legge anche **da dove arrivano le visualizzazioni**
+(`insightTrafficSourceType`: feed Shorts, ricerca, suggeriti, home e
+iscrizioni), salvato in `performance.json` sotto `sorgenti` e stampato nel log
+in percentuale. Serve a sapere se lavorare sulla ricerca abbia senso: su un
+canale di soli Short il pubblico puo' arrivare quasi tutto dal feed, e in quel
+caso le parole cercate non sono il segnale da inseguire. E' una domanda a cui
+si risponde coi numeri, non a intuito.
+
 **Il materiale girato in casa.** In `clip_mie/<categoria>/` stanno gli spezzoni
 registrati da popponetv: sono l'unico pezzo dei video che non arriva da uno
 store, e sono anche la risposta piu' diretta alla regola YouTube sui contenuti

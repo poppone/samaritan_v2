@@ -28,7 +28,11 @@ PESO_MIN, PESO_MAX = 0.35, 2.5
 # Quanti termini di ricerca tenere. Sono le parole che la gente ha davvero
 # scritto nella ricerca di YouTube per finire su un video del canale: l'unico
 # dato vero su cosa cerca questo pubblico, invece di quello che immaginiamo.
-MAX_TERMINI_RICERCA = 40
+# VENTICINQUE E' IL MASSIMO CHE L'API ACCETTA per questo rapporto, e chiederne
+# di piu' non fa arrivare meno righe: fa fallire tutta la richiesta con un 500
+# e 'FIELD_UNKNOWN_VALUE' su max-results, che non sembra affatto un limite
+# superato. Con 40 il 21 settembre 2026 non e' tornato niente.
+MAX_TERMINI_RICERCA = 25
 # Sotto questa soglia un termine e' un caso isolato, non una domanda ricorrente.
 MIN_VIEWS_TERMINE = 2
 # Parole che compaiono nei termini ma non dicono di che argomento si tratta.
@@ -196,6 +200,81 @@ def scarica_termini_di_ricerca():
     return termini
 
 
+# Come si chiamano in italiano le sorgenti di traffico che YouTube restituisce
+# in sigla. Quelle che mancano si stampano com'e': meglio una sigla che una
+# riga persa.
+NOMI_SORGENTI = {
+    "SHORTS": "feed Shorts",
+    "YT_SEARCH": "ricerca YouTube",
+    "RELATED_VIDEO": "video suggeriti",
+    "SUBSCRIBER": "home e iscrizioni",
+    "NOTIFICATION": "notifiche",
+    "EXT_URL": "siti esterni",
+    "PLAYLIST": "playlist",
+    "YT_CHANNEL": "pagina del canale",
+    "NO_LINK_EMBEDDED": "player incorporato",
+    "NO_LINK_OTHER": "sorgente non dichiarata",
+    "ADVERTISING": "pubblicita'",
+    "CAMPAIGN_CARD": "schede e campagne",
+    "END_SCREEN": "schermata finale",
+    "ANNOTATION": "annotazioni",
+    "SOUND_PAGE": "pagina dell'audio",
+    "HASHTAGS": "hashtag",
+}
+
+
+def scarica_sorgenti_di_traffico():
+    """Da dove arrivano davvero le visualizzazioni.
+
+    Ritorna [{"sorgente": ..., "views": N}] dal piu' grosso al piu' piccolo.
+    Serve a sapere se ha senso lavorare sulla ricerca: su un canale di soli
+    Short il pubblico puo' arrivare quasi tutto dal feed, e in quel caso le
+    parole cercate non sono il segnale da inseguire. E' una domanda a cui si
+    risponde coi numeri, non a intuito.
+    """
+    try:
+        from googleapiclient.discovery import build
+        from uploader import ottieni_credenziali, ha_scope_analytics
+
+        credenziali = ottieni_credenziali()
+        if not ha_scope_analytics(credenziali):
+            return []
+
+        analytics = build("youtubeAnalytics", "v2", credentials=credenziali)
+        oggi = datetime.date.today()
+        inizio = oggi - datetime.timedelta(days=GIORNI_ANALISI)
+
+        risposta = analytics.reports().query(
+            ids="channel==MINE",
+            startDate=inizio.isoformat(),
+            endDate=oggi.isoformat(),
+            metrics="views",
+            dimensions="insightTrafficSourceType",
+            sort="-views",
+        ).execute()
+    except Exception as e:
+        print(f"[Samaritan Analyst] Sorgenti di traffico non disponibili ({e}).")
+        return []
+
+    sorgenti = []
+    for riga in risposta.get("rows") or []:
+        if len(riga) < 2:
+            continue
+        sigla = (riga[0] or "").strip()
+        if sigla:
+            sorgenti.append({"sorgente": sigla, "views": riga[1] or 0})
+
+    totale = sum(s["views"] for s in sorgenti)
+    if totale:
+        cima = ", ".join(
+            f"{NOMI_SORGENTI.get(s['sorgente'], s['sorgente'])} "
+            f"{s['views'] / totale:.0%}"
+            for s in sorgenti[:5]
+        )
+        print(f"[Samaritan Analyst] Il pubblico arriva da: {cima}.")
+    return sorgenti
+
+
 def aggiorna_performance():
     """Scarica e salva su disco. Se la chiamata fallisce, mantiene il file vecchio."""
     performance = scarica_performance()
@@ -206,12 +285,14 @@ def aggiorna_performance():
     # uno dei due soli file che il workflow ricommitta: un file nuovo non
     # sopravviverebbe alla fine della run.
     termini = scarica_termini_di_ricerca() or termini_di_ricerca()
+    sorgenti = scarica_sorgenti_di_traffico() or sorgenti_di_traffico()
 
     with open(config.FILE_PERFORMANCE, "w", encoding="utf-8") as f:
         json.dump(
             {"aggiornato": datetime.date.today().isoformat(),
              "video": performance,
-             "ricerche": termini},
+             "ricerche": termini,
+             "sorgenti": sorgenti},
             f, ensure_ascii=False, indent=2,
         )
     return performance
@@ -227,6 +308,18 @@ def termini_di_ricerca():
     except Exception:
         return []
     return [t for t in salvati if isinstance(t, dict) and t.get("termine")]
+
+
+def sorgenti_di_traffico():
+    """La ripartizione salvata dall'ultima volta, dalla piu' grossa in giu'."""
+    if not os.path.exists(config.FILE_PERFORMANCE):
+        return []
+    try:
+        with open(config.FILE_PERFORMANCE, "r", encoding="utf-8") as f:
+            salvate = json.load(f).get("sorgenti") or []
+    except Exception:
+        return []
+    return [s for s in salvate if isinstance(s, dict) and s.get("sorgente")]
 
 
 def parole_cercate():
