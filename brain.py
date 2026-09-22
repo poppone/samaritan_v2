@@ -993,6 +993,39 @@ def costruisci_descrizione(dati, materiale=None):
     return "\n".join(parti)
 
 
+# Il 'for you' di TikTok, lingua per lingua: il video delle 21:00 esce in
+# inglese e '#perte' la' non lo cerca nessuno.
+HASHTAG_PER_TE = {"it": "#perte", "en": "#fyp"}
+
+
+def costruisci_didascalia_tiktok(dati, massimo_hashtag=4):
+    """La didascalia pronta da incollare su TikTok.
+
+    Non e' la descrizione di YouTube e non deve diventarlo: li' servono la
+    fonte, il credito al materiale e il link al canale, qui no. Su TikTok i
+    link non sono cliccabili e le prime due righe sono le uniche che si
+    leggono prima di 'altro', quindi resta il titolo, un rigo di contenuto e
+    gli hashtag.
+    """
+    titolo = (dati.get("titolo") or "").strip()
+
+    # Della descrizione tengo solo la prima riga: la seconda e' la domanda
+    # finale, che nel video la voce la dice gia'.
+    descrizione = (dati.get("descrizione") or "").strip()
+    prima_riga = descrizione.splitlines()[0].strip() if descrizione else ""
+
+    hashtag = costruisci_hashtag(dati, massimo=massimo_hashtag)
+    # L'hashtag del 'per te' e' una convenzione di TikTok e cambia con la
+    # lingua del video: su YouTube sarebbe solo rumore, per questo sta qui e
+    # non in costruisci_hashtag.
+    per_te = HASHTAG_PER_TE.get((config.LINGUA or "it").lower(), "#perte")
+    if len(hashtag) < massimo_hashtag and per_te not in hashtag:
+        hashtag.append(per_te)
+
+    parti = [p for p in (titolo, prima_riga, " ".join(hashtag)) if p]
+    return "\n\n".join(parti)
+
+
 def testo_miniatura(titolo, massimo_parole=4):
     """Le poche parole da stampare grandi sulla miniatura.
 
