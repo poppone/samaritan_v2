@@ -52,6 +52,10 @@ _API_ELEVENLABS = "https://api.elevenlabs.io/v1"
 # L'id della voce si risolve una volta sola per processo: e' una chiamata di
 # rete in piu' e il nome non cambia a meta' esecuzione.
 _voce_risolta = None
+# Nome della voce che la rotazione ha scelto per questo video. Si annota solo
+# se ElevenLabs produce davvero l'audio: un record che dice 'Davide' mentre il
+# video parla Microsoft e' peggio di nessun record.
+_nome_scelto = None
 
 
 def _elenco_voci(chiave):
@@ -172,13 +176,14 @@ def _risolvi_voce(chiave):
         partenza = (richieste.index(precedente) + 1) % len(richieste)
     ordinate = richieste[partenza:] + richieste[:partenza]
 
+    global _nome_scelto
     for nome in ordinate:
         trovata = _cerca_voce(voci, nome)
         if trovata:
             if len(richieste) > 1:
                 print(f"[Samaritan Voice] {len(richieste)} voci a rotazione, "
                       f"questo video usa '{nome}'.")
-                _segna_voce_usata(nome)
+            _nome_scelto = nome
             _voce_risolta = trovata
             return _voce_risolta
         print(f"[Warning Voice] Voce '{nome}' non e' nell'account, provo la successiva.")
@@ -215,6 +220,15 @@ def _sintetizza_elevenlabs(testo, output_filename):
     )
     if risposta.status_code == 401:
         raise RuntimeError("chiave ElevenLabs non valida")
+    if risposta.status_code == 402:
+        # ElevenLabs risponde 402 sia quando il credito e' finito sia quando la
+        # voce richiesta e' riservata ai piani a pagamento: dal codice non si
+        # distingue, e la differenza si vede solo dal pannello dell'account.
+        raise RuntimeError(
+            "ElevenLabs ha rifiutato per pagamento (402): credito del mese "
+            "finito, oppure questa voce e' riservata a un piano a pagamento. "
+            "Si controlla su elevenlabs.io, in Usage e in Subscription"
+        )
     if risposta.status_code == 429:
         raise RuntimeError("credito ElevenLabs esaurito o troppe richieste")
     risposta.raise_for_status()
@@ -255,6 +269,10 @@ def genera_voce_samaritan(testo, output_filename=None):
 
             if os.path.exists(output_filename) and os.path.getsize(output_filename) > 1024:
                 print(f"[Samaritan Voice] Audio ElevenLabs salvato: {output_filename}")
+                # Ora il video parla con questa voce: la rotazione puo' segnare
+                # il turno come speso e passare alla prossima.
+                if _nome_scelto:
+                    _segna_voce_usata(_nome_scelto)
                 return output_filename
             raise RuntimeError("ElevenLabs ha prodotto un file vuoto")
 
@@ -280,7 +298,10 @@ def genera_voce_samaritan(testo, output_filename=None):
     try:
         from gtts import gTTS
 
-        tts = gTTS(text=testo_pulito, lang=config.LINGUA, tld="it", slow=False)
+        # Il dominio decide l'accento: quello italiano su un testo inglese
+        # suona sbagliato.
+        dominio = "it" if (config.LINGUA or "it").lower() == "it" else "com"
+        tts = gTTS(text=testo_pulito, lang=config.LINGUA, tld=dominio, slow=False)
         tts.save(output_filename)
         print(f"[Samaritan Voice] Audio di fallback salvato: {output_filename}")
         return output_filename

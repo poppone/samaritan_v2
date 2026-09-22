@@ -15,6 +15,7 @@ Se il token OAuth non ha ancora il permesso di lettura statistiche, il modulo
 degrada in silenzio (pesi neutri) senza mai bloccare la pipeline.
 """
 import os
+import re
 import json
 import datetime
 
@@ -23,6 +24,22 @@ import config
 GIORNI_ANALISI = 90
 MIN_VIDEO_PER_FORMATO = 2      # sotto questa soglia il dato non e' affidabile
 PESO_MIN, PESO_MAX = 0.35, 2.5
+
+# Quanti termini di ricerca tenere. Sono le parole che la gente ha davvero
+# scritto nella ricerca di YouTube per finire su un video del canale: l'unico
+# dato vero su cosa cerca questo pubblico, invece di quello che immaginiamo.
+MAX_TERMINI_RICERCA = 40
+# Sotto questa soglia un termine e' un caso isolato, non una domanda ricorrente.
+MIN_VIEWS_TERMINE = 2
+# Parole che compaiono nei termini ma non dicono di che argomento si tratta.
+# Il nome del canale si aggiunge da solo piu' sotto: chi cerca 'poppone tv'
+# cerca il canale, non un argomento.
+PAROLE_VUOTE_RICERCA = frozenset((
+    "shorts", "short", "video", "videos", "youtube", "ita", "italiano",
+    "gaming", "game", "games", "gioco", "giochi", "videogiochi", "canale",
+    "nuovo", "nuova", "come", "cosa", "quando", "dove", "perche", "with",
+    "that", "this", "from", "your", "what", "when", "best", "top",
+))
 
 
 # ===========================================================================
@@ -71,7 +88,112 @@ def scarica_performance():
             performance[video_id] = record
 
     print(f"[Samaritan Analyst] Metriche raccolte per {len(performance)} video.")
+    _controlla_contro_il_canale(analytics, performance, inizio, oggi)
     return performance
+
+
+def _views_del_canale(analytics, inizio, fine):
+    """Visualizzazioni totali del canale nel periodo, SENZA dimensione video.
+
+    E' la stessa cifra che YouTube Studio mostra nella scheda Visualizzazioni,
+    quindi serve da metro per capire se il dettaglio per video la rispecchia.
+    """
+    risposta = analytics.reports().query(
+        ids="channel==MINE",
+        startDate=inizio.isoformat(),
+        endDate=fine.isoformat(),
+        metrics="views",
+    ).execute()
+    righe = risposta.get("rows") or []
+    if not righe or not righe[0]:
+        return 0
+    return righe[0][0]
+
+
+def _controlla_contro_il_canale(analytics, performance, inizio, fine):
+    """Confronta la somma per video col totale di canale e lo dice nel log.
+
+    Il 19 settembre 2026 YouTube Studio segnava 9.843 visualizzazioni in sette
+    giorni mentre la somma di questo file ne contava 4.488 in novanta: una delle
+    due cifre e' sbagliata, e su quella sbagliata pesi_formati() decide cosa far
+    produrre. Finche' non si sa quale, queste righe servono a saperlo dal log
+    della prossima run invece che a indovinare.
+    """
+    somma = sum(m.get("views", 0) for m in performance.values())
+    try:
+        totale = _views_del_canale(analytics, inizio, fine)
+        ieri = fine - datetime.timedelta(days=1)
+        ultimi_sette = _views_del_canale(
+            analytics, fine - datetime.timedelta(days=7), ieri)
+    except Exception as e:
+        print(f"[Samaritan Analyst] Confronto col totale di canale non riuscito ({e}).")
+        return
+
+    print(f"[Samaritan Analyst] Canale: {totale} views in {GIORNI_ANALISI} giorni, "
+          f"{ultimi_sette} negli ultimi 7 (fino a ieri). "
+          f"Somma per video: {somma}.")
+    if totale and somma < totale * 0.9:
+        mancanti = totale - somma
+        print(f"[Warning Analyst] Il dettaglio per video copre solo il "
+              f"{somma / totale:.0%} del totale: {mancanti} visualizzazioni non "
+              f"sono attribuite a nessun video, quindi i pesi dei formati sono "
+              f"calcolati su una parte sola del canale.")
+
+
+def scarica_termini_di_ricerca():
+    """Cosa la gente ha scritto nella ricerca di YouTube per arrivare qui.
+
+    Ritorna [{"termine": ..., "views": N}] dal piu' visto al meno, o [] se il
+    dato non e' disponibile. E' l'unico segnale vero su cosa cerca questo
+    pubblico: tutto il resto di come Samaritan sceglie l'argomento e' un
+    criterio scritto a mano, quindi un'ipotesi.
+
+    Nota: YouTube non attribuisce tutte le visualizzazioni da ricerca a un
+    termine, e i termini rari li nasconde. La lista e' quindi una cima, non un
+    censimento, e va letta come "queste sono le domande che tornano".
+    """
+    try:
+        from googleapiclient.discovery import build
+        from uploader import ottieni_credenziali, ha_scope_analytics
+
+        credenziali = ottieni_credenziali()
+        if not ha_scope_analytics(credenziali):
+            return []
+
+        analytics = build("youtubeAnalytics", "v2", credentials=credenziali)
+        oggi = datetime.date.today()
+        inizio = oggi - datetime.timedelta(days=GIORNI_ANALISI)
+
+        risposta = analytics.reports().query(
+            ids="channel==MINE",
+            startDate=inizio.isoformat(),
+            endDate=oggi.isoformat(),
+            metrics="views",
+            dimensions="insightTrafficSourceDetail",
+            filters="insightTrafficSourceType==YT_SEARCH",
+            sort="-views",
+            maxResults=MAX_TERMINI_RICERCA,
+        ).execute()
+    except Exception as e:
+        print(f"[Samaritan Analyst] Termini di ricerca non disponibili ({e}).")
+        return []
+
+    termini = []
+    for riga in risposta.get("rows") or []:
+        if len(riga) < 2:
+            continue
+        termine = (riga[0] or "").strip()
+        views = riga[1] or 0
+        if termine and views >= MIN_VIEWS_TERMINE:
+            termini.append({"termine": termine, "views": views})
+
+    if termini:
+        cima = ", ".join(f"{t['termine']} ({t['views']})" for t in termini[:6])
+        print(f"[Samaritan Analyst] Il pubblico arriva cercando: {cima}.")
+    else:
+        print("[Samaritan Analyst] Nessun termine di ricerca con abbastanza "
+              "visualizzazioni: la scelta dell'argomento resta come prima.")
+    return termini
 
 
 def aggiorna_performance():
@@ -80,12 +202,53 @@ def aggiorna_performance():
     if not performance:
         return _carica_performance_salvata()
 
+    # I termini di ricerca stanno nello stesso file delle metriche perche' e'
+    # uno dei due soli file che il workflow ricommitta: un file nuovo non
+    # sopravviverebbe alla fine della run.
+    termini = scarica_termini_di_ricerca() or termini_di_ricerca()
+
     with open(config.FILE_PERFORMANCE, "w", encoding="utf-8") as f:
         json.dump(
-            {"aggiornato": datetime.date.today().isoformat(), "video": performance},
+            {"aggiornato": datetime.date.today().isoformat(),
+             "video": performance,
+             "ricerche": termini},
             f, ensure_ascii=False, indent=2,
         )
     return performance
+
+
+def termini_di_ricerca():
+    """I termini salvati dall'ultima volta, dal piu' visto al meno."""
+    if not os.path.exists(config.FILE_PERFORMANCE):
+        return []
+    try:
+        with open(config.FILE_PERFORMANCE, "r", encoding="utf-8") as f:
+            salvati = json.load(f).get("ricerche") or []
+    except Exception:
+        return []
+    return [t for t in salvati if isinstance(t, dict) and t.get("termine")]
+
+
+def parole_cercate():
+    """Le parole che ricorrono nelle ricerche del pubblico.
+
+    Non i termini interi: chi cerca "gta 6 data uscita" e chi cerca "gta 6
+    leak" stanno chiedendo della stessa cosa, e una notizia non ripete mai la
+    frase intera. Quindi si scende alle parole e si buttano quelle che non
+    dicono di che argomento si parla.
+    """
+    vuote = set(PAROLE_VUOTE_RICERCA)
+    for pezzo in (config.NOME_CANALE or "").split():
+        vuote.add(pezzo.strip().lower())
+    vuote.add((config.HANDLE_CANALE or "").lstrip("@").lower())
+
+    parole = set()
+    for voce in termini_di_ricerca():
+        for parola in re.split(r"[^\w]+", (voce.get("termine") or "").lower()):
+            # Le sigle corte contano ("gta", "f1"), le paroline no.
+            if len(parola) >= 2 and parola not in vuote and not parola.isdigit():
+                parole.add(parola)
+    return frozenset(parole)
 
 
 def _carica_performance_salvata():
@@ -139,6 +302,8 @@ def _video_valutati():
         valutati.append({
             "stile": voce.get("stile", ""),
             "titolo": voce.get("titolo", ""),
+            # Le voci vecchie non hanno la lingua scritta e sono italiane.
+            "lingua": (voce.get("lingua") or "it").lower(),
             "hook": voce.get("estratto_script", "").split(".")[0].strip(),
             "punteggio": _punteggio(performance[video_id]),
             "views": performance[video_id].get("views", 0),
@@ -182,8 +347,16 @@ def pesi_formati():
 
 
 def migliori_hook(n=3):
-    """Le prime frasi dei video andati meglio, da dare in pasto al prompt."""
-    valutati = [v for v in _video_valutati() if v["hook"]]
+    """Le prime frasi dei video andati meglio, da dare in pasto al prompt.
+
+    Solo quelli nella lingua in cui si sta scrivendo adesso: mostrare hook
+    italiani a un video inglese non insegna niente e sporca il prompt con
+    frasi che non c'entrano.
+    """
+    import config
+    lingua = (config.LINGUA or "it").lower()
+    valutati = [v for v in _video_valutati()
+                if v["hook"] and v.get("lingua", "it") == lingua]
     valutati.sort(key=lambda v: v["punteggio"], reverse=True)
     return [v["hook"] for v in valutati[:n]]
 

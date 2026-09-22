@@ -17,6 +17,7 @@ import re
 import html
 import unicodedata
 import xml.etree.ElementTree as ET
+from urllib.parse import quote
 
 import requests
 from groq import Groq
@@ -68,8 +69,196 @@ APERTURE_VIETATE = (
     "come state", "raga,", "ragazzi,",
 )
 
+# Quante voci di cronologia guardare per decidere se qualcosa si sta ripetendo.
+# Due video al giorno: tre voci coprono circa un giorno e mezzo, cioe' la
+# finestra in cui lo stesso spettatore puo' vedere passare due Short di fila.
+MEMORIA_RIPETIZIONI = 3
+
+# Le notizie invece si ricordano per tutta la cronologia. Il 19 settembre
+# 2026 lo stesso update Cosmos di No Man's Sky e' diventato due Short a un
+# giorno di distanza: la notizia era sette voci indietro, fuori dalla
+# finestra qui sopra. Ricordarle tutte non costa niente e non puo' far
+# saltare una pubblicazione, perche' scarta una notizia prima di sceglierla
+# invece di scartare uno script gia' scritto.
+MEMORIA_NOTIZIE = 0          # 0 = tutta la cronologia
+
+# Quante parole iniziali confrontare per dire "questo attacco l'abbiamo gia'
+# usato". Tre bastano: gli Short scartati si somigliavano proprio li'
+# ("Stai sbagliando tutto su X", "Nessuno ti ha detto che Y").
+PAROLE_APERTURA = 3
+
+# Quante voci guardare per la FORMA dell'attacco (non le parole: la forma).
+# Il 20 settembre 2026 quattro Short di fila hanno aperto con una domanda
+# retorica: "Pensavi che...?", "Scommetti che...?", "Hai mai creduto che...?",
+# "Stai ancora credendo che...?". Nessuna ripeteva le parole dell'altra,
+# quindi il controllo sulle tre parole iniziali le lasciava passare tutte,
+# ma da fuori i quattro video si somigliano lo stesso ed e' esattamente la
+# somiglianza che YouTube guarda. La finestra qui e' piu' corta di
+# MEMORIA_RIPETIZIONI perche' le forme riconoscibili sono poche: vietarne
+# troppe in fila vorrebbe dire scartare script buoni, e ogni scarto costa
+# uno dei quattro tentativi.
+MEMORIA_SCHEMI = 2
+
+SCHEMA_DOMANDA = "una domanda"
+SCHEMA_SECONDA_PERSONA = "una frase rivolta allo spettatore"
+
+# Parole che rivelano che la frase parla in faccia a chi guarda. E' un elenco
+# corto e scelto a mano invece di una regola sulle desinenze: in italiano la
+# seconda persona finisce in -i come mezza lingua ("giochi", "ricordi",
+# "aspetti" sono anche sostantivi) e un falso positivo qui costa un
+# tentativo di generazione, mentre una parola che manca non costa niente.
+# Fuori di proposito: "sei" (anche il numero), "dai" (anche la preposizione)
+# e "vi" (anche il VI di 'GTA VI'). Le aperture in seconda persona piu'
+# comuni sono comunque domande, e quelle le prende il punto interrogativo.
+SECONDA_PERSONA = frozenset((
+    "tu", "ti", "te", "tuo", "tua", "tuoi", "tue", "vostro", "vostra",
+    "hai", "stai", "vai", "fai", "sai", "puoi", "vuoi", "devi",
+    "credi", "pensi", "scommetti", "smetti", "senti", "provi", "conosci",
+    "eri", "avevi", "stavi", "pensavi", "credevi", "sapevi", "volevi",
+    "dovevi", "facevi", "dicevi", "giocavi",
+    "immagina", "dimmi", "fidati", "preparati", "smettila",
+))
+
+# Dove cercare le notizie. Prima ce n'era una sola, e per giunta stretta
+# ("quando esce aggiornamento"), quindi il pescato era fatto soprattutto di
+# aggiornamenti minori. I video che su questo canale hanno fatto numeri erano
+# invece notizie enormi del giorno: GTA 6, Sora in Fortnite, Fortnite x
+# Kingdom Hearts. Piu' reti in acqua, e poi si sceglie (vedi
+# _punteggio_notizia): l'argomento e' l'unica variabile che separa i video
+# andati bene da quelli morti.
+# Quante voci leggere da ogni ricerca prima di filtrare.
+VOCI_PER_RICERCA = 15
+
+# I giochi e le piattaforme che muovono pubblico da soli. E' una lista scritta
+# a mano e va tenuta aggiornata: non esiste un modo di dedurla dai feed, e
+# sbagliarla per difetto costa poco (la notizia resta in lista, solo piu' in
+# basso) mentre un elenco automatico sbagliato per eccesso spingerebbe in cima
+# la roba sbagliata.
+GIOCHI_GROSSI = (
+    "gta", "grand theft auto", "rockstar", "fortnite", "call of duty",
+    "warzone", "minecraft", "roblox", "ea fc", "fifa", "elden ring",
+    "zelda", "mario", "pokemon", "the last of us", "god of war",
+    "cyberpunk", "assassin", "red dead", "valorant", "league of legends",
+    "counter-strike", "counter strike", "overwatch", "apex legends",
+    "battlefield", "silksong", "hollow knight", "steam", "playstation",
+    "xbox", "nintendo switch", "game pass",
+)
+
+# Parole che dicono "questa notizia la gente la sta gia' cercando". Non sono
+# parole a effetto da mettere nel titolo: servono solo a mettere in ordine le
+# notizie in entrata.
+# Tutto quello che cambia quando il video non e' in italiano. Sta qui in un
+# posto solo apposta: aggiungere una lingua deve voler dire aggiungere una
+# voce a questo dizionario, non andare a caccia di stringhe italiane sparse
+# per il file.
+LINGUE = {
+    "it": {
+        "nome": "italiano",
+        "aperture_vietate": APERTURE_VIETATE,
+        "seconda_persona": SECONDA_PERSONA,
+        "rss": "hl=it&gl=IT&ceid=IT:it",
+        "ricerche": (
+            "videogiochi",
+            "videogiochi quando esce aggiornamento",
+            'GTA 6 OR Fortnite OR "Call of Duty" OR Minecraft OR Roblox',
+            "videogioco annuncio OR uscita OR gratis OR leak",
+        ),
+        "parole_calde": (
+            "esce", "uscita", "data", "annuncio", "annunciato", "svelato",
+            "confermato", "gratis", "gratuito", "leak", "trapelato",
+            "rinviato", "cancellato", "chiude", "record", "remake",
+            "remaster", "trailer", "nuovo capitolo", "sequel", "crossover",
+        ),
+    },
+    "en": {
+        "nome": "English",
+        # Gli stessi saluti che uccidono la retention, in inglese.
+        "aperture_vietate": (
+            "hi ", "hey", "hello", "yo ", "welcome", "what's up", "whats up",
+            "in this video", "today we", "today i", "guys,", "let's talk",
+            "lets talk",
+        ),
+        # In inglese la seconda persona e' una parola sola e non si confonde
+        # con nient'altro: niente elenco lungo come in italiano.
+        "seconda_persona": frozenset((
+            "you", "your", "youre", "youve", "yours", "yourself",
+        )),
+        "rss": "hl=en-US&gl=US&ceid=US:en",
+        "ricerche": (
+            "video games",
+            "video game release date OR free OR leak",
+            'GTA 6 OR Fortnite OR "Call of Duty" OR Minecraft OR Roblox',
+            "gaming news announcement OR update",
+        ),
+        "parole_calde": (
+            "release", "releases", "launch", "date", "announced",
+            "announcement", "revealed", "confirmed", "free", "leak",
+            "leaked", "delayed", "cancelled", "canceled", "shutting down",
+            "record", "remake", "remaster", "trailer", "sequel", "crossover",
+        ),
+    },
+}
+
+
+def _lingua():
+    """Le regole della lingua in cui esce questo video.
+
+    Si legge da config a ogni chiamata e non una volta all'avvio: la lingua
+    cambia da una run all'altra (il video delle 21:00 e' in inglese) e i
+    test la cambiano sotto i piedi.
+    """
+    return LINGUE.get((config.LINGUA or "it").lower(), LINGUE["it"])
+
+
+def _lingua_di(voce):
+    """La lingua di una voce di cronologia. Le voci vecchie non ce l'hanno
+    scritta e sono tutte italiane."""
+    return (voce.get("lingua") or "it").lower()
+
+
+def _stessa_lingua(voci):
+    """Solo i video usciti nella lingua di adesso.
+
+    Le regole anti-ripetizione valgono dentro una lingua, non fra lingue: il
+    video inglese delle 21:00 puo' e deve poter raccontare la stessa notizia
+    grossa di quello italiano delle 14:00, perche' parla a gente diversa.
+    Mescolare le due memorie vorrebbe dire lasciare all'inglese solo gli
+    argomenti che l'italiano ha scartato.
+    """
+    attuale = (config.LINGUA or "it").lower()
+    return [v for v in voci if _lingua_di(v) == attuale]
+
+
+PUNTI_GIOCO_GROSSO = 4
+PUNTI_PAROLA_CALDA = 1
+MAX_PAROLE_CALDE = 3      # oltre, e' un titolo acchiappaclic, non una notizia
+PUNTI_RIPETIZIONE = 2     # la stessa notizia trovata da piu' di una ricerca
+
+# Le parole che il pubblico di QUESTO canale scrive davvero nella ricerca di
+# YouTube, prese da Analytics (analyst.parole_cercate). Pesano piu' di tutto il
+# resto messo qui a mano: GIOCHI_GROSSI e le parole calde sono una mia ipotesi
+# su cosa interessa, queste sono un fatto misurato. Il tetto serve perche' una
+# notizia che tocca tre parole cercate non vale il triplo di una che ne tocca
+# una: vuol dire solo che e' dello stesso mondo.
+PUNTI_PAROLA_CERCATA = 3
+MAX_PAROLE_CERCATE = 2
+
+# Con quante voci di cronologia confrontare le PAROLE di una notizia. E' un
+# confronto sfumato, quindi la finestra deve restare corta: `titoli_passati`
+# prendeva tutta la cronologia, e con cento titoli dentro quasi ogni parola
+# gaming risultava "gia' usata", cosi' il filtro si stringeva da solo fino a
+# scartare tutto. Il confronto esatto sulla notizia (MEMORIA_NOTIZIE) continua
+# a guardare tutto: quello non puo' sbagliare bersaglio.
+MEMORIA_PAROLE_TITOLI = 10
+
 MIN_PAROLE_SCRIPT = 45
 MAX_PAROLE_SCRIPT = 95
+
+# Con cosa puo' finire uno script per essere considerato finito. Il tetto
+# di token copre anche il ragionamento del modello, quindi ogni tanto la
+# risposta si interrompe a meta' parola: nel video si sente, perche' la
+# voce legge la chiusura e poi aggiunge una parola a vuoto.
+PUNTEGGIATURA_FINALE = ".!?\u2026"
 
 # Oltre i 60 caratteri il titolo viene troncato nel feed Shorts da telefono,
 # e la parte tagliata e' sempre la fine, cioe' dove sta l'informazione utile.
@@ -151,6 +340,12 @@ def salva_in_cronologia(dati):
         "timestamp": int(time.time()),
         "data": time.strftime("%Y-%m-%d"),
         "titolo": dati["titolo"],
+        "lingua": (config.LINGUA or "it").lower(),
+        # Quale uscita della giornata sta coprendo questo video ('14:00',
+        # '18:00', '21:00'). Vuoto per le prove lanciate a mano, che non
+        # coprono niente. Serve a orari.gia_pubblicato() per non far uscire
+        # due video sulla stessa uscita quando una run arriva in ritardo.
+        "slot": (config.SLOT or "").strip(),
         "estratto_script": dati["script"][:90],
         "stile": dati["stile"],
         "gioco": dati.get("gioco", ""),
@@ -179,6 +374,87 @@ def aggiorna_ultimo_video_id(video_id):
 # ===========================================================================
 # RICERCA NOTIZIE REALI
 # ===========================================================================
+def _impronta_notizia(titolo):
+    """Forma confrontabile del titolo di una notizia.
+
+    Accenti, maiuscole e punteggiatura non contano: la stessa notizia
+    ripresa due giorni dopo puo' avere un apostrofo diverso e resta la
+    stessa notizia.
+    """
+    parole = [p for p in re.split(r"[^0-9a-zA-Z]+", _senza_accenti(titolo or "").lower()) if p]
+    return " ".join(parole)
+
+
+def _notizia_di_una_voce(fonte):
+    """L'impronta della notizia usata da un video gia' pubblicato.
+
+    In cronologia la fonte e' scritta come "Titolo della notizia (Testata)",
+    mentre l'RSS da' il titolo da solo: la testata in coda va tolta prima di
+    confrontare.
+    """
+    testo = (fonte or "").strip()
+    if testo.endswith(")") and "(" in testo:
+        testo = testo[:testo.rfind("(")]
+    return _impronta_notizia(testo)
+
+
+def _punteggio_notizia(titolo, apparizioni=1, cercate=frozenset()):
+    """Quanto vale una notizia in entrata. Piu' alto = piu' gente la cerca.
+
+    Non giudica come e' scritta la notizia, giudica di cosa parla. Sui video
+    veri di questo canale l'argomento e' l'unica cosa che separa i video
+    andati bene da quelli morti, e finora l'argomento veniva scelto a caso.
+
+    'cercate' sono le parole che il pubblico scrive nella ricerca di YouTube
+    per arrivare su questo canale: l'unico pezzo di questo punteggio che non
+    e' un'ipotesi. Quando mancano (token senza Analytics, canale nuovo) il
+    punteggio resta quello di prima, non peggiore.
+    """
+    testo = _senza_accenti(titolo or "").lower()
+    punti = 0
+    if any(g in testo for g in GIOCHI_GROSSI):
+        punti += PUNTI_GIOCO_GROSSO
+    calde = sum(1 for parola in _lingua()["parole_calde"] if parola in testo)
+    punti += min(calde, MAX_PAROLE_CALDE) * PUNTI_PAROLA_CALDA
+    # Trovata da piu' di una ricerca: non e' un giudizio nostro, e' il segno
+    # che la notizia sta girando.
+    punti += (apparizioni - 1) * PUNTI_RIPETIZIONE
+    # Le parole si confrontano intere: 'gta' non deve accendersi dentro
+    # 'gtavicecity', e soprattutto una sigla di due lettere non deve
+    # accendersi dentro mezzo vocabolario.
+    if cercate:
+        parole_titolo = set(re.split(r"[^\w]+", testo))
+        trovate = len(parole_titolo & cercate)
+        punti += min(trovate, MAX_PAROLE_CERCATE) * PUNTI_PAROLA_CERCATA
+    return punti
+
+
+def _voci_rss(ricerca):
+    """Le voci grezze di una ricerca su Google News: (titolo, fonte, link)."""
+    url = ("https://news.google.com/rss/search?q="
+           + quote(ricerca)
+           + "&" + _lingua()["rss"])
+    risposta = requests.get(url, timeout=8)
+    risposta.raise_for_status()
+    radice = ET.fromstring(risposta.content)
+
+    voci = []
+    for item in radice.findall("./channel/item")[:VOCI_PER_RICERCA]:
+        nodo_titolo = item.find("title")
+        if nodo_titolo is None or not nodo_titolo.text:
+            continue
+        titolo_completo = html.unescape(nodo_titolo.text)
+        # Google News formatta come "Titolo - Testata"
+        if " - " in titolo_completo:
+            titolo, fonte = titolo_completo.rsplit(" - ", 1)
+        else:
+            titolo, fonte = titolo_completo, "Google News"
+        nodo_link = item.find("link")
+        voci.append((titolo.strip(), fonte.strip(),
+                     nodo_link.text if nodo_link is not None else ""))
+    return voci
+
+
 def recupera_trend_gaming_online(max_notizie=8):
     """Scarica notizie gaming fresche e scarta quelle gia' sfruttate.
 
@@ -186,54 +462,85 @@ def recupera_trend_gaming_online(max_notizie=8):
     perche' lo script deve poter citare la fonte reale.
     """
     print("[Samaritan Search] Ricerca trend gaming reali...")
-    url = ("https://news.google.com/rss/search"
-           "?q=videogiochi+gaming+quando+esce+aggiornamento&hl=it&gl=IT&ceid=IT:it")
+
+    # Cosa cerca davvero il pubblico di questo canale. Importato qui dentro e
+    # non in cima al file: analyst importa brain, e in cima si avviterebbero.
+    try:
+        from analyst import parole_cercate
+        cercate = parole_cercate()
+    except Exception as e:
+        print(f"[Samaritan Search] Ricerche del pubblico non leggibili ({e}).")
+        cercate = frozenset()
 
     cronologia = carica_cronologia()
+    voci = _stessa_lingua([_normalizza(i) for i in cronologia])
+    # Solo gli ultimi titoli: vedi MEMORIA_PAROLE_TITOLI.
     titoli_passati = " ".join(
-        _normalizza(i).get("titolo", "") for i in cronologia
+        v.get("titolo", "") for v in voci[-MEMORIA_PAROLE_TITOLI:]
     ).lower()
+    # Le notizie gia' sfruttate, confrontate per intero e non per parole: il
+    # filtro sulle parole qui sotto guarda i TITOLI dei video, che sono
+    # riscritti dal modello e possono non somigliare alla notizia da cui
+    # nascono.
+    da_guardare = voci[-MEMORIA_NOTIZIE:] if MEMORIA_NOTIZIE else voci
+    notizie_passate = {_notizia_di_una_voce(v.get("fonte", "")) for v in da_guardare}
+    notizie_passate.discard("")
 
-    notizie = []
-    try:
-        response = requests.get(url, timeout=8)
-        response.raise_for_status()
-        root = ET.fromstring(response.content)
+    # Le ricerche si sovrappongono apposta: la stessa notizia trovata da piu'
+    # di una e' una notizia che sta girando, e quel conto finisce nel
+    # punteggio. Chiave: l'impronta della notizia, non il titolo, perche'
+    # testate diverse la scrivono con parole appena diverse.
+    trovate = {}
+    for ricerca in _lingua()["ricerche"]:
+        try:
+            voci_rss = _voci_rss(ricerca)
+        except Exception as e:
+            print(f"[Warning Search] Ricerca '{ricerca}' non riuscita ({e}).")
+            continue
 
-        for item in root.findall("./channel/item")[:25]:
-            nodo_titolo = item.find("title")
-            if nodo_titolo is None or not nodo_titolo.text:
+        for titolo, fonte, link in voci_rss:
+            impronta = _impronta_notizia(titolo)
+            if not impronta:
+                continue
+            if impronta in trovate:
+                trovate[impronta]["apparizioni"] += 1
                 continue
 
-            titolo_completo = html.unescape(nodo_titolo.text)
-            # Google News formatta come "Titolo - Testata"
-            if " - " in titolo_completo:
-                titolo, fonte = titolo_completo.rsplit(" - ", 1)
-            else:
-                titolo, fonte = titolo_completo, "Google News"
+            # Questa notizia e' gia' diventata un video: saltala.
+            if impronta in notizie_passate:
+                continue
 
-            # Salta le notizie troppo simili a quelle gia' usate
+            # Salta le notizie troppo simili a quelle gia' usate di recente.
             parole = [w.lower() for w in titolo.split() if len(w) > 4]
             gia_usate = [w for w in parole if w in titoli_passati]
             if parole and len(gia_usate) / len(parole) >= 0.3:
                 continue
 
-            nodo_link = item.find("link")
-            notizie.append({
-                "titolo": titolo.strip(),
-                "fonte": fonte.strip(),
-                "link": nodo_link.text if nodo_link is not None else "",
-            })
+            trovate[impronta] = {
+                "titolo": titolo, "fonte": fonte, "link": link,
+                "apparizioni": 1,
+            }
 
-            if len(notizie) >= max_notizie:
-                break
+    for voce in trovate.values():
+        voce["punteggio"] = _punteggio_notizia(
+            voce["titolo"], voce["apparizioni"], cercate
+        )
 
-    except Exception as e:
-        print(f"[Warning Search] RSS non raggiungibile ({e}).")
+    # In ordine di importanza, non a caso: la piu' grossa arriva al modello
+    # per prima. A parita' di punteggio l'ordine e' quello di arrivo.
+    notizie = sorted(trovate.values(), key=lambda v: -v["punteggio"])[:max_notizie]
 
     if notizie:
-        random.shuffle(notizie)
-        print(f"[Samaritan Search] {len(notizie)} notizie fresche non ancora usate.")
+        print(f"[Samaritan Search] {len(notizie)} notizie fresche non ancora "
+              f"usate, la piu' grossa vale {notizie[0]['punteggio']} punti: "
+              f"{notizie[0]['titolo']}")
+        if cercate:
+            testo = _senza_accenti(notizie[0]["titolo"]).lower()
+            toccate = sorted(set(re.split(r"[^\w]+", testo)) & cercate)
+            if toccate:
+                print(f"[Samaritan Search] Parole che il pubblico cerca "
+                      f"davvero e che questa notizia tocca: "
+                      f"{', '.join(toccate)}.")
     else:
         print("[Samaritan Search] Nessuna notizia nuova: uso un formato evergreen.")
 
@@ -316,6 +623,11 @@ def _senza_accenti(testo):
     return "".join(c for c in scomposto if not unicodedata.combining(c))
 
 
+def _compatto(testo):
+    """Solo lettere e cifre: 'S.T.A.L.K.E.R. 2' -> 'stalker2'."""
+    return re.sub(r"[^0-9a-z]", "", _senza_accenti(testo or "").lower())
+
+
 def _gioco_nel_titolo(titolo, gioco):
     """True se il titolo nomina il gioco, anche con la sigla d'uso comune.
 
@@ -331,6 +643,16 @@ def _gioco_nel_titolo(titolo, gioco):
         return True
 
     if any(len(p) >= 3 and p in t for p in parole):
+        return True
+
+    # Nomi puntati. 'S.T.A.L.K.E.R. 2' non ha nessuna parola di tre lettere e
+    # nemmeno la sigla si trova, perche' i punti stanno in mezzo: il 20
+    # settembre 2026 il titolo lo scriveva per esteso e questo controllo lo
+    # scartava lo stesso, tre tentativi di fila, finche' il video e' saltato.
+    # Tolta la punteggiatura da entrambe le parti il confronto torna a dire
+    # la verita'.
+    compatto_gioco = _compatto(gioco)
+    if len(compatto_gioco) >= 3 and compatto_gioco in _compatto(titolo):
         return True
 
     # Sigla: 'Grand Theft Auto VI' -> 'gtavi', che copre anche 'GTA 6'
@@ -367,6 +689,10 @@ def valida_titolo(titolo, gioco=""):
     if not _gioco_nel_titolo(titolo, gioco):
         return False, f"il titolo non nomina '{gioco}': invisibile nella ricerca"
 
+    formato = _nome_formato_in_chiaro(titolo)
+    if formato:
+        return False, f"il titolo contiene il nome interno del formato ({formato})"
+
     return True, ""
 
 
@@ -387,21 +713,154 @@ def _pulisci_nome_gioco(gioco):
     return g
 
 
-def valida_script(titolo, script):
+def _nome_formato_in_chiaro(testo):
+    """Ritorna il nome interno del formato se e' finito nel testo.
+
+    Visto dal vivo nella prova del 19 settembre 2026: il modello ha scritto
+    "Stalker 2: DONT_DO_THIS - non spendere energia sbagliata". Il prompt dice
+    "FORMATO RICHIESTO: DONT_DO_THIS" e ogni tanto quella riga viene copiata
+    di peso. Su un canale che chiedera' la monetizzazione un titolo con dentro
+    una costante di codice e' il segnale piu' chiaro possibile che il video
+    l'ha sputato fuori una macchina senza che nessuno lo guardasse.
+
+    Confronta solo la forma esatta con gli underscore: 'TIER LIST LAMPO' con
+    gli spazi e' un titolo italiano legittimo, gia' pubblicato, e scartarlo
+    sarebbe un falso positivo.
+    """
+    maiuscolo = (testo or "").upper()
+    for nome in FORMATI_VIDEO:
+        if nome in maiuscolo:
+            return nome
+    return ""
+
+
+def _impronta_apertura(script, n_parole=PAROLE_APERTURA):
+    """Le prime parole dello script, ridotte a una forma confrontabile.
+
+    Serve solo a rispondere a "questo attacco l'abbiamo gia' usato?": accenti,
+    maiuscole e punteggiatura non contano, contano le parole. Il gioco
+    nominato di solito arriva dopo la terza parola, quindi due aperture
+    identiche su giochi diversi hanno la stessa impronta, che e' il caso da
+    prendere.
+    """
+    parole = [p for p in re.split(r"[^0-9a-zA-Z]+", _senza_accenti(script or "").lower()) if p]
+    return " ".join(parole[:n_parole])
+
+
+def _prima_frase(script):
+    """Solo l'attacco: il testo fino alla prima punteggiatura di fine frase.
+
+    Il resto dello script non c'entra. "Rockstar ha mentito. Ci credi?" apre
+    con un'affermazione, non con una domanda, e va contato per quello.
+    """
+    testo = (script or "").strip()
+    fine = min((i for i, c in enumerate(testo) if c in PUNTEGGIATURA_FINALE),
+               default=-1)
+    return testo if fine < 0 else testo[:fine + 1]
+
+
+def _schema_apertura(script):
+    """Che FORMA ha l'attacco, indipendentemente dalle parole usate.
+
+    Ritorna stringa vuota quando l'attacco e' una frase normale: quella non
+    si blocca mai, altrimenti non resterebbe nessuna apertura consentita.
+    Si riconoscono solo le due forme che si ripetevano davvero.
+
+    Lavora anche sull'estratto di 90 caratteri salvato in cronologia. Se il
+    taglio cade prima del punto interrogativo la domanda non viene vista e
+    il video passa: e' il verso giusto in cui sbagliare, perche' un mancato
+    riconoscimento non costa niente e un riconoscimento sbagliato costa un
+    tentativo.
+    """
+    frase = _prima_frase(script)
+    if not frase:
+        return ""
+    if frase.endswith("?"):
+        return SCHEMA_DOMANDA
+    parole = set(re.split(r"[^0-9a-zA-Z]+", _senza_accenti(frase).lower()))
+    if parole & _lingua()["seconda_persona"]:
+        return SCHEMA_SECONDA_PERSONA
+    return ""
+
+
+def _ultima_chiusura(script):
+    """L'indice dell'ultima punteggiatura di fine frase, -1 se non ce n'e'."""
+    return max(script.rfind(segno) for segno in PUNTEGGIATURA_FINALE)
+
+
+def _senza_decorazioni_finali(script):
+    """Lo script senza emoji, virgolette e parentesi in coda.
+
+    Servono a capire dove finisce davvero la frase: un '!' seguito da un
+    emoji e' una frase chiusa, una parola seguita da un emoji no.
+    """
+    nudo = (script or "").rstrip()
+    while nudo and nudo[-1] not in PUNTEGGIATURA_FINALE and not nudo[-1].isalnum():
+        nudo = nudo[:-1].rstrip()
+    return nudo
+
+
+def _senza_coda_troncata(script):
+    """Toglie l'ultima frase quando si interrompe a meta'.
+
+    Si ripara invece di scartare apposta: rigenerare costerebbe uno dei
+    quattro tentativi e puo' far saltare la pubblicazione, mentre la coda
+    tronca arriva sempre dopo la chiusura vera, quindi togliendola lo script
+    resta completo. Se non c'e' nessuna frase chiusa lo script torna intatto e
+    a scartarlo ci pensa valida_script().
+    """
+    testo = (script or "").strip()
+    nudo = _senza_decorazioni_finali(testo)
+    if not nudo or nudo[-1] in PUNTEGGIATURA_FINALE:
+        return testo
+    fine = _ultima_chiusura(nudo)
+    if fine < 0:
+        return testo
+    return nudo[:fine + 1].rstrip()
+
+
+def _script_troncato(script):
+    """True se lo script finisce a meta' frase."""
+    nudo = _senza_decorazioni_finali(script)
+    return not nudo or nudo[-1] not in PUNTEGGIATURA_FINALE
+
+
+def valida_script(titolo, script, aperture_recenti=(), schemi_recenti=()):
     """Ritorna (True, "") se lo script e' pubblicabile, altrimenti (False, motivo)."""
     if not titolo or not script:
         return False, "titolo o script vuoti"
 
     inizio = script.lower().lstrip(" \"'-–—")
-    for vietata in APERTURE_VIETATE:
+    for vietata in _lingua()["aperture_vietate"]:
         if inizio.startswith(vietata):
             return False, f"apertura debole vietata: '{vietata}'"
+
+    # Nove Short di fila aperti con "Stai..." o "Nessuno ti ha detto che..."
+    # sono il motivo per cui questo controllo esiste: e' la firma del
+    # contenuto prodotto in serie, quello che YouTube guarda quando decide
+    # se un canale e' monetizzabile.
+    impronta = _impronta_apertura(script)
+    if impronta and impronta in set(aperture_recenti):
+        return False, f"apre come un video recente ('{impronta}...')"
+
+    # Il controllo qui sopra guarda le parole, questo guarda la forma: quattro
+    # domande retoriche di fila hanno quattro impronte diverse e un solo
+    # schema. Vedi MEMORIA_SCHEMI.
+    schema = _schema_apertura(script)
+    if schema and schema in set(schemi_recenti):
+        return False, f"apre con {schema}, come i video recenti"
+
+    formato = _nome_formato_in_chiaro(script)
+    if formato:
+        return False, f"lo script contiene il nome interno del formato ({formato})"
 
     n_parole = len(script.split())
     if n_parole < MIN_PAROLE_SCRIPT:
         return False, f"script troppo corto ({n_parole} parole)"
     if n_parole > MAX_PAROLE_SCRIPT:
         return False, f"script troppo lungo ({n_parole} parole, lo Short sforerebbe)"
+    if _script_troncato(script):
+        return False, "lo script si interrompe a meta' frase"
 
     return True, ""
 
@@ -467,13 +926,48 @@ def costruisci_tag(dati, massimo=15, max_caratteri=450):
     return risultato
 
 
-def costruisci_descrizione(dati):
+def _riga_materiale(dati, materiale):
+    """La riga di credito sul materiale video.
+
+    Prima diceva "materiale promozionale ufficiale dei rispettivi editori"
+    ogni volta che il modello aveva indicato un gioco. Ma quando Steam non
+    trova il gioco, o ne restituisce meno del minimo, `procura_materiale()`
+    ripiega su clip d'archivio senza azzerare 'gioco': su quei video la
+    descrizione dichiarava il falso proprio nella riga che dovrebbe dare
+    credibilita'. Ora la riga la decide chi ha montato davvero il video, e il
+    nome usato e' quello ufficiale trovato su Steam, non quello scritto dal
+    modello.
+    """
+    if materiale is None:
+        # Chiamante che non sa dire cosa e' finito nel montaggio: meglio una
+        # riga generica ma vera che una precisa e falsa.
+        return "\nFilmati e immagini a scopo illustrativo."
+
+    nome = (materiale.get("gioco_ufficiale") or dati.get("gioco") or "").strip()
+    ufficiali = materiale.get("sorgenti_ufficiali", 0)
+    stock = materiale.get("sorgenti_stock", 0)
+
+    if not (ufficiali and nome):
+        return "\nFilmati d'archivio a scopo illustrativo."
+
+    if stock:
+        return (f"\nFilmati e immagini di {nome}: materiale promozionale "
+                "ufficiale dei rispettivi editori, integrato con filmati "
+                "d'archivio.")
+    return (f"\nFilmati e immagini di {nome}: materiale promozionale "
+            "ufficiale dei rispettivi editori.")
+
+
+def costruisci_descrizione(dati, materiale=None):
     """Descrizione del video.
 
     Prima solo le prime due righe cambiavano da un video all'altro e tutto il
     resto era identico su ogni upload: e' il pattern che fa riconoscere un
-    canale automatizzato. Ora cambiano anche la fonte (con il link vero, non
-    solo il nome della testata) e gli hashtag finali.
+    canale automatizzato. Ora cambiano anche la fonte e gli hashtag finali.
+
+    Nota sul link: viene dal campo <link> del feed Google News, quindi e' un
+    indirizzo news.google.com/rss/articles/... che rimanda all'articolo, non
+    l'indirizzo della testata. Funziona, ma nella descrizione si legge male.
     """
     parti = [dati.get("descrizione") or dati.get("titolo", "")]
 
@@ -483,11 +977,7 @@ def costruisci_descrizione(dati):
     elif dati.get("fonte"):
         parti.append(f"\nFonte: {dati['fonte']}")
 
-    if dati.get("gioco"):
-        parti.append(
-            f"\nFilmati e immagini di {dati['gioco']}: materiale promozionale "
-            "ufficiale dei rispettivi editori."
-        )
+    parti.append(_riga_materiale(dati, materiale))
 
     # Dichiararlo qui non cambia nulla per YouTube (la dichiarazione formale la
     # fa gia' uploader.py), ma toglie di mano il commento "e' fatto con l'AI".
@@ -501,6 +991,11 @@ def costruisci_descrizione(dati):
     )
     parti.append("\n" + " ".join(costruisci_hashtag(dati)))
     return "\n".join(parti)
+
+
+# Il 'for you' di TikTok, lingua per lingua: il video delle 21:00 esce in
+# inglese e '#perte' la' non lo cerca nessuno.
+HASHTAG_PER_TE = {"it": "#perte", "en": "#fyp"}
 
 
 def costruisci_didascalia_tiktok(dati, massimo_hashtag=4):
@@ -520,10 +1015,12 @@ def costruisci_didascalia_tiktok(dati, massimo_hashtag=4):
     prima_riga = descrizione.splitlines()[0].strip() if descrizione else ""
 
     hashtag = costruisci_hashtag(dati, massimo=massimo_hashtag)
-    # '#perte' e' il 'for you' italiano: su TikTok e' una convenzione, su
-    # YouTube sarebbe solo rumore, per questo sta qui e non in costruisci_hashtag.
-    if len(hashtag) < massimo_hashtag and "#perte" not in hashtag:
-        hashtag.append("#perte")
+    # L'hashtag del 'per te' e' una convenzione di TikTok e cambia con la
+    # lingua del video: su YouTube sarebbe solo rumore, per questo sta qui e
+    # non in costruisci_hashtag.
+    per_te = HASHTAG_PER_TE.get((config.LINGUA or "it").lower(), "#perte")
+    if len(hashtag) < massimo_hashtag and per_te not in hashtag:
+        hashtag.append(per_te)
 
     parti = [p for p in (titolo, prima_riga, " ".join(hashtag)) if p]
     return "\n\n".join(parti)
@@ -549,7 +1046,9 @@ def testo_miniatura(titolo, massimo_parole=4):
 # ===========================================================================
 # GENERAZIONE
 # ===========================================================================
-def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti):
+def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti,
+                              aperture_recenti=(), giochi_recenti=(),
+                              notizie_gia_usate=(), schemi_recenti=()):
     meta = FORMATI_VIDEO[formato]
 
     blocco_notizie = "NESSUNA notizia fresca disponibile."
@@ -562,7 +1061,8 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti):
     if hook_vincenti:
         blocco_hook = (
             "\nHOOK CHE HANNO FUNZIONATO DAVVERO su questo canale "
-            "(replicane la struttura, NON il contenuto):\n"
+            "(replicane il meccanismo, NON le parole: se li ricopi alla "
+            "lettera ottieni dieci video che attaccano uguali):\n"
             + "\n".join(f"  - {h}" for h in hook_vincenti) + "\n"
         )
 
@@ -576,19 +1076,66 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti):
         "Imposta 'indice_notizia' a -1.\n"
     )
 
+    # Le regole 11 e 12 compaiono solo quando c'e' davvero qualcosa da evitare:
+    # al primo video della vita del canale una lista vuota sarebbe rumore che
+    # occupa contesto e non dice niente.
+    righe_ripetizioni = []
+    if aperture_recenti:
+        righe_ripetizioni.append(
+            "11. NON aprire lo script come questi video recenti. Cambia proprio "
+            "le prime parole, non basta cambiare il gioco nominato:\n"
+            + "\n".join(f"   - \"{a}...\"" for a in aperture_recenti)
+        )
+    if schemi_recenti:
+        righe_ripetizioni.append(
+            "12. CAMBIA LA FORMA DELL'ATTACCO, non solo le parole. Gli ultimi "
+            "video hanno aperto con " + " e con ".join(schemi_recenti)
+            + ". Questo Short deve attaccare in un modo diverso: un numero "
+            "che stona, una scena raccontata a meta', un confronto fra due "
+            "cose che non c'entrano, una contraddizione secca. Una domanda "
+            "diversa resta una domanda: non basta."
+        )
+    if giochi_recenti or notizie_gia_usate:
+        vietati = []
+        if giochi_recenti:
+            vietati.append(f"giochi: {json.dumps(list(giochi_recenti), ensure_ascii=False)}")
+        if notizie_gia_usate:
+            vietati.append(f"notizie: {json.dumps(list(notizie_gia_usate), ensure_ascii=False)}")
+        righe_ripetizioni.append(
+            "13. NIENTE DOPPIONI: questi sono gia' usciti, scegli altro.\n   "
+            + "\n   ".join(vietati)
+        )
+    blocco_ripetizioni = "\n".join(righe_ripetizioni)
+    if blocco_ripetizioni:
+        blocco_ripetizioni += "\n"   # la riga vuota prima di "Rispondi..."
+
     return (
         f"Sei il Lead Social Media Manager di '{config.NOME_CANALE}', canale YouTube "
         "Gaming italiano. Scrivi uno script per uno Short ad ALTISSIMA RETENTION "
         "(24-30 secondi, quindi 55-85 parole).\n\n"
-        f"FORMATO RICHIESTO: {formato} - {meta['descrizione']}\n\n"
-        f"NOTIZIE GAMING REALI DI OGGI:\n{blocco_notizie}\n\n"
+        f"LINGUA DELL'OUTPUT: {_lingua()['nome']}. Titolo, script e "
+        f"descrizione vanno scritti INTERAMENTE in {_lingua()['nome']}. "
+        "Le regole qui sotto sono scritte in italiano perche' parlano a te, "
+        "ma dicono come scrivere, non in che lingua.\n\n"
+        f"FORMATO RICHIESTO: {formato} - {meta['descrizione']}\n"
+        "(quella sigla e' un'etichetta interna: non deve comparire ne' nel "
+        "titolo ne' nello script)\n\n"
+        f"NOTIZIE GAMING REALI DI OGGI, IN ORDINE DI IMPORTANZA "
+        f"(la [0] e' quella che piu' gente sta cercando in questo momento: "
+        f"scegli quella, e passa a una successiva solo se con la [0] non si "
+        f"riesce a scrivere niente di sensato):\n{blocco_notizie}\n\n"
         f"{vincolo_fatti}"
         f"{blocco_hook}\n"
         "REGOLE TASSATIVE:\n"
         "1. PRIMA FRASE = HOOK. Deve bloccare lo scroll in 3 secondi. "
         "VIETATO iniziare con saluti ('Ciao', 'Raga', 'Benvenuti', 'Oggi vi parlo'). "
-        "Inizia con una contraddizione, un numero shock o un'accusa diretta allo "
-        "spettatore (es: 'Stai sbagliando tutto su...', 'Nessuno ti ha detto che...').\n"
+        "Attacca con un meccanismo forte, scegliendone uno diverso ogni volta: "
+        "una contraddizione, un numero che stona, un'accusa diretta allo "
+        "spettatore, una scena raccontata a meta', una domanda secca, un "
+        "confronto fra due cose che non c'entrano. Cambia anche le parole, non "
+        "solo il gioco nominato: due Short che aprono uguali si leggono come "
+        "contenuto prodotto in serie, ed e' cosi' che un canale perde la "
+        "monetizzazione.\n"
         "2. SEAMLESS LOOP: l'ultima frase deve ricollegarsi in modo naturale alla "
         "prima parola dello script, cosi' il video riparte senza stacco percepibile.\n"
         "3. RITMO: frasi corte. Una informazione per frase. Niente subordinate.\n"
@@ -613,7 +1160,8 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti):
         "e inventarli fa danno al canale. In quel caso parla di meccaniche, "
         "segreti di gioco o consigli, che non hanno bisogno di una fonte.\n"
         "10. NON riusare questi titoli gia' pubblicati:\n"
-        f"   {json.dumps(ultimi_titoli, ensure_ascii=False)}\n\n"
+        f"   {json.dumps(ultimi_titoli, ensure_ascii=False)}\n"
+        f"{blocco_ripetizioni}\n"
         "Rispondi ESCLUSIVAMENTE con un JSON valido con le chiavi: "
         "'titolo', 'script', 'gioco', 'query_video', 'descrizione', "
         "'indice_notizia'."
@@ -657,6 +1205,27 @@ _SPIE_DI_CRONACA = (
 )
 
 
+def _doppione_recente(gioco, fonte, gioco_precedente, fonti_recenti):
+    """Motivo per cui questo video sarebbe un doppione, o stringa vuota.
+
+    Due controlli diversi con due finestre diverse. La notizia non si riusa
+    entro MEMORIA_RIPETIZIONI video: e' il caso vero visto il 18 settembre
+    2026, due Short usciti dallo stesso articolo su No Man's Sky. Il gioco
+    invece si blocca solo sul video immediatamente precedente, perche'
+    vietarlo piu' a lungo puo' non lasciare nessuna notizia utilizzabile e
+    far saltare la pubblicazione, che e' un danno peggiore della ripetizione.
+    """
+    f = (fonte or "").strip().lower()
+    if f and f in set(fonti_recenti):
+        return "riusa la stessa notizia di un video gia' pubblicato"
+
+    g = (gioco or "").strip().lower()
+    if g and g == (gioco_precedente or "").strip().lower():
+        return f"parla di {gioco} come il video precedente"
+
+    return ""
+
+
 def _cronaca_senza_fonte(script, fonte):
     """Vero se lo script afferma fatti di cronaca ma non cita nessuna notizia.
 
@@ -695,8 +1264,30 @@ def genera_script_samaritan(tema=None):
     notizie = recupera_trend_gaming_online()
     formato = scegli_formato(notizie)
 
-    cronologia = carica_cronologia()
-    ultimi_titoli = [_normalizza(i).get("titolo", "") for i in cronologia[-12:]]
+    cronologia = _stessa_lingua([_normalizza(i) for i in carica_cronologia()])
+    ultimi_titoli = [v.get("titolo", "") for v in cronologia[-12:]]
+
+    # Due liste dalla stessa fonte: al modello servono aperture leggibili da
+    # evitare, alla validazione serve l'impronta di tre parole da confrontare.
+    recenti = [_normalizza(i) for i in cronologia[-MEMORIA_RIPETIZIONI:]]
+    estratti = [r.get("estratto_script", "") for r in recenti]
+    aperture_da_mostrare = [" ".join(e.split()[:8]) for e in estratti if e.strip()]
+    impronte_aperture = {_impronta_apertura(e) for e in estratti}
+    impronte_aperture.discard("")
+
+    # La forma dell'attacco si guarda su una finestra piu' corta delle parole:
+    # vedi MEMORIA_SCHEMI.
+    schemi_recenti = {_schema_apertura(e) for e in estratti[-MEMORIA_SCHEMI:]}
+    schemi_recenti.discard("")
+    schemi_recenti = sorted(schemi_recenti)
+
+    notizie_gia_usate = sorted({r.get("fonte", "").strip() for r in recenti} - {""})
+    fonti_recenti = {f.lower() for f in notizie_gia_usate}
+
+    # Il gioco si blocca solo sull'ultimo video, non su tutta la finestra:
+    # vedi _doppione_recente per il perche'.
+    gioco_precedente = recenti[-1].get("gioco", "") if recenti else ""
+    giochi_recenti = [gioco_precedente] if gioco_precedente.strip() else []
 
     try:
         from analyst import migliori_hook
@@ -705,21 +1296,42 @@ def genera_script_samaritan(tema=None):
         hook_vincenti = []
 
     system_prompt = _costruisci_system_prompt(
-        formato, notizie, ultimi_titoli, hook_vincenti
+        formato, notizie, ultimi_titoli, hook_vincenti,
+        aperture_da_mostrare, giochi_recenti, notizie_gia_usate,
+        schemi_recenti
     )
-    prompt_utente = "Scrivi lo Short di oggi."
+    prompt_base = "Scrivi lo Short di oggi."
     if tema:
-        prompt_utente += f" Focus specifico richiesto: {tema}"
+        prompt_base += f" Focus specifico richiesto: {tema}"
+
+    # Motivo dell'ultimo scarto: senza questo ogni tentativo riparte dallo
+    # stesso identico input e rifa' un tiro di dado. Dicendo al modello cosa
+    # non e' andato, i tentativi diventano correzioni.
+    motivo_scarto = ""
 
     modelli = config.GROQ_MODELLI
 
-    for modello in modelli:
+    for n_modello, modello in enumerate(modelli):
         for tentativo in range(1, 3):       # 2 tentativi per modello
+            # Sull'ultimo tentativo le regole anti-ripetizione si spengono.
+            # Dicono che un video somiglia a quello di ieri, non che e'
+            # sbagliato, e un video che apre come quello di ieri vale
+            # comunque piu' di un buco nella pubblicazione. Il 20 settembre
+            # 2026 l'uscita delle 18:00 e' saltata proprio cosi': tre
+            # tentativi bruciati da un titolo che non passava, il quarto
+            # scartato per la forma dell'apertura.
+            ultima_spiaggia = (n_modello == len(modelli) - 1 and tentativo == 2)
             try:
                 # Primo tentativo con lo schema vincolato, secondo in testo
                 # libero ritagliando il JSON: cosi' anche un modello che non
                 # supporta lo schema riesce comunque a rispondere.
                 con_schema = tentativo == 1
+                prompt_utente = prompt_base
+                if motivo_scarto:
+                    prompt_utente += (
+                        f" Il tentativo precedente e' stato scartato perche' "
+                        f"{motivo_scarto}. Correggi quel punto."
+                    )
                 print(f"[Samaritan Brain] {modello} - tentativo {tentativo} "
                       f"(formato {formato}, "
                       f"{'schema' if con_schema else 'testo libero'})...")
@@ -755,6 +1367,10 @@ def genera_script_samaritan(tema=None):
                     else _estrai_json(contenuto)
                 titolo = _pulisci_titolo(str(data.get("titolo", "")))
                 script = str(data.get("script", "")).strip()
+                intero = script
+                script = _senza_coda_troncata(script)
+                if script != intero:
+                    print("[Samaritan Brain] Coda tronca rimossa dallo script.")
                 query_video = str(data.get("query_video", "gameplay")).strip()
                 descrizione = str(data.get("descrizione", "")).strip()
                 gioco = _pulisci_nome_gioco(str(data.get("gioco", "")))
@@ -773,15 +1389,29 @@ def genera_script_samaritan(tema=None):
                 except (TypeError, ValueError):
                     pass
 
-                ok, motivo = valida_script(titolo, script)
+                ok, motivo = valida_script(
+                    titolo, script,
+                    () if ultima_spiaggia else impronte_aperture,
+                    () if ultima_spiaggia else schemi_recenti,
+                )
                 if ok:
                     ok, motivo = valida_titolo(titolo, gioco)
                 if ok and _cronaca_senza_fonte(script, fonte):
                     ok = False
                     motivo = "afferma fatti di cronaca senza citare una notizia"
+                if ok:
+                    doppione = _doppione_recente(
+                        gioco, fonte, gioco_precedente, fonti_recenti
+                    )
+                    if doppione:
+                        ok = False
+                        motivo = doppione
                 if not ok:
                     print(f"[Samaritan Brain] SCARTATO: {motivo}. Rigenero.")
+                    motivo_scarto = motivo
                     continue
+
+                motivo_scarto = ""
 
                 if "gameplay" not in query_video.lower():
                     query_video = f"{query_video} gameplay"

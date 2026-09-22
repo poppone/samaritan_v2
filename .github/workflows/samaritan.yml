@@ -2,9 +2,19 @@ name: Samaritan Auto-Poster
 
 on:
   schedule:
-    # Orari di picco del pubblico gaming italiano (14:00 e 20:00 ora italiana)
-    - cron: '0 12 * * *'
-    - cron: '0 18 * * *'
+    # ATTENZIONE: queste NON sono le ore di pubblicazione. GitHub fa partire le
+    # run schedulate in ritardo, da un'ora a tre e mezza, e il ritardo non si
+    # puo' prevedere. Quindi la pipeline parte con molto anticipo e il video
+    # esce all'ora giusta perche' YouTube lo pubblica da solo (publishAt, vedi
+    # orari.py). Cambiando questi cron si sposta solo il margine; per cambiare
+    # l'ora di uscita si cambia ORARIO_USCITA piu' sotto.
+    - cron: '30 7 * * *'          # per l'uscita delle 14:00 italiane
+    - cron: '30 11 * * *'         # per l'uscita delle 18:00 italiane
+    - cron: '30 14 * * *'         # per l'uscita delle 21:00, in inglese
+    # La riserva di fine giornata. Non produce un video suo: guarda quali
+    # delle tre uscite di oggi sono rimaste scoperte e rifa' la piu' vecchia,
+    # una sola. Se sono tutte a posto termina subito senza fare niente.
+    - cron: '30 20 * * *'         # riserva, verso le 22:30 italiane
   workflow_dispatch:
     inputs:
       tema:
@@ -17,6 +27,17 @@ on:
         default: 'public'
         type: choice
         options: [public, private, unlisted]
+      lingua:
+        description: 'Lingua del video'
+        required: false
+        default: 'it'
+        type: choice
+        options: [it, en]
+      recupero:
+        description: 'Recupera un video saltato invece di farne uno nuovo'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -79,8 +100,31 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           PRIVACY_STATUS: ${{ inputs.privacy || 'public' }}
+          # Un orario di uscita per ciascun cron. La riserva e le run lanciate
+          # a mano non programmano niente: escono subito, com'e' giusto sia
+          # per una prova sia per un'uscita gia' saltata.
+          ORARIO_USCITA: ${{ (github.event.schedule == '30 7 * * *' && '14:00') || (github.event.schedule == '30 11 * * *' && '18:00') || (github.event.schedule == '30 14 * * *' && '21:00') || '' }}
+          FUSO_USCITA: 'Europe/Rome'
+          # Quale uscita sta coprendo questa lavorazione. Sui tre cron normali
+          # e' lo stesso valore di ORARIO_USCITA, ma i due campi non sono la
+          # stessa cosa: ORARIO_USCITA dice a YouTube quando mostrare il video,
+          # SLOT serve a non farne due per la stessa uscita quando una
+          # lavorazione arriva in ritardo. Sulla riserva resta vuoto: quale
+          # uscita recuperare lo decide lei leggendo la cronologia.
+          SLOT: ${{ (github.event.schedule == '30 7 * * *' && '14:00') || (github.event.schedule == '30 11 * * *' && '18:00') || (github.event.schedule == '30 14 * * *' && '21:00') || '' }}
+          RECUPERO: ${{ (github.event.schedule == '30 20 * * *' && '1') || (inputs.recupero && '1') || '' }}
+          # Il video delle 21:00 e' in inglese: stesso canale, pubblico
+          # diverso. Le run lanciate a mano scelgono dal menu.
+          LINGUA: ${{ github.event_name == 'schedule' && (github.event.schedule == '30 14 * * *' && 'en' || 'it') || inputs.lingua || 'it' }}
           NOME_CANALE: ${{ vars.NOME_CANALE || 'Poppone TV' }}
-          VOCE_TTS: ${{ vars.VOCE_TTS || 'it-IT-DiegoNeural' }}
+          # Le parentesi contano: in GitHub Actions && lega piu' di ||,
+          # e senza di quelle l'espressione restituisce 'true' invece del
+          # nome della voce.
+          VOCE_TTS: ${{ ((github.event_name == 'schedule' && github.event.schedule == '30 14 * * *') || (inputs.lingua == 'en')) && (vars.VOCE_TTS_EN || 'en-US-AndrewNeural') || (vars.VOCE_TTS || 'it-IT-DiegoNeural') }}
+          # La riserva sceglie la lingua solo a lavorazione iniziata, quindi
+          # le servono tutt'e due le voci gia' pronte.
+          VOCE_TTS_IT: ${{ vars.VOCE_TTS || 'it-IT-DiegoNeural' }}
+          VOCE_TTS_EN: ${{ vars.VOCE_TTS_EN || 'en-US-AndrewNeural' }}
           ELEVENLABS_VOCE: ${{ vars.ELEVENLABS_VOCE }}
           ELEVENLABS_MODELLO: ${{ vars.ELEVENLABS_MODELLO }}
           WHISPER_MODEL: ${{ vars.WHISPER_MODEL || 'base' }}

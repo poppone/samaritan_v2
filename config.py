@@ -72,6 +72,20 @@ NOME_CANALE = _get("NOME_CANALE", "Poppone TV")
 HANDLE_CANALE = _get("HANDLE_CANALE", "@PopponeTV")
 LINGUA = _get("LINGUA", "it")
 
+# Quale delle uscite giornaliere sta coprendo questa run ('14:00', '18:00',
+# '21:00'), oppure vuoto per le run lanciate a mano. Non e' l'ora di
+# pubblicazione, che e' ORARIO_USCITA piu' sotto: SLOT serve solo a non
+# pubblicare due volte lo stesso video quando una run arriva in ritardo e
+# un'altra l'ha gia' fatto. Di norma i due valori coincidono; la run di
+# recupero invece ha SLOT pieno e ORARIO_USCITA vuoto, perche' recupera
+# un'uscita saltata e la pubblica subito.
+SLOT = _get("SLOT", "")
+# La run di recupero non sa in partenza quale uscita le tocchera': lo decide
+# leggendo la cronologia, e con esso sceglie lingua e voce fra queste due.
+RECUPERO = _get("RECUPERO", "") not in ("", "0", "false", "False")
+VOCE_TTS_IT = _get("VOCE_TTS_IT", "it-IT-DiegoNeural")
+VOCE_TTS_EN = _get("VOCE_TTS_EN", "en-US-AndrewNeural")
+
 # ------------------------------------------------------------------ Voce (TTS)
 # Voce neurale Microsoft Edge. Voci italiane disponibili:
 #   it-IT-DiegoNeural     (maschile, energico  -> consigliata per il gaming)
@@ -105,6 +119,15 @@ ZOOM_GAMEPLAY = float(_get("ZOOM_GAMEPLAY", "1.18"))
 # 'public' = pubblica subito | 'private' = attende la tua approvazione manuale
 PRIVACY_STATUS = _get("PRIVACY_STATUS", "public")
 
+# A che ora il video deve COMPARIRE sul canale, ora locale del fuso qui sotto.
+# Non e' l'ora in cui parte la pipeline: GitHub fa partire le run schedulate
+# con ritardi da un'ora a tre e mezza, quindi il video si carica in anticipo e
+# YouTube lo rende pubblico da solo all'istante esatto. Vuoto = subito, ed e'
+# il caso delle run lanciate a mano. Lo imposta il workflow, un orario per
+# ciascun cron. Vedi orari.py.
+ORARIO_USCITA = _get("ORARIO_USCITA", "")
+FUSO_USCITA = _get("FUSO_USCITA", "Europe/Rome")
+
 # ------------------------------------------------ Notifiche Telegram (opzionali)
 TELEGRAM_BOT_TOKEN = _get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = _get("TELEGRAM_CHAT_ID")
@@ -120,6 +143,14 @@ FILE_CRONOLOGIA = os.path.join(DIR_PROGETTO, "cronologia_trend.json")
 FILE_PERFORMANCE = os.path.join(DIR_PROGETTO, "performance.json")
 DIR_TEMP = os.path.join(DIR_PROGETTO, "temp_assets")
 DIR_OUTPUT = os.path.join(DIR_PROGETTO, "output_videos")
+
+# Le clip girate da popponetv: l'unico materiale originale del canale, tutto
+# il resto viene dagli store. Una sottocartella per categoria ('guida',
+# 'fortnite') e si montano solo nei video di quella categoria, altrimenti
+# stonano piu' di quanto aggiungano. MAX_CLIP_MIE dice quante ne entrano al
+# massimo in uno Short.
+DIR_CLIP_MIE = os.path.join(DIR_PROGETTO, "clip_mie")
+MAX_CLIP_MIE = int(_get("MAX_CLIP_MIE", "2"))
 
 # Miniatura personalizzata dello Short. Senza, YouTube estrae un fotogramma a
 # caso: nella griglia del canale si vede, e si vede male.

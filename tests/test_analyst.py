@@ -91,3 +91,264 @@ class TestMiglioriHook:
     def test_senza_dati_lista_vuota(self, monkeypatch):
         monkeypatch.setattr(analyst, "_video_valutati", lambda: [])
         assert analyst.migliori_hook() == []
+
+
+# ---------------------------------------------------------------------------
+# Il confronto col totale di canale
+#
+# Nasce dal 19 settembre 2026: YouTube Studio segnava 9.843 visualizzazioni in
+# sette giorni, la somma per video del file ne contava 4.488 in novanta. Questi
+# test non dicono quale cifra sia giusta, dicono che il log deve permettere di
+# scoprirlo alla prossima run invece di far tirare a indovinare.
+# ---------------------------------------------------------------------------
+import datetime
+
+
+class _RispostaFinta:
+    def __init__(self, valore):
+        self._valore = valore
+
+    def execute(self):
+        return {"rows": [[self._valore]]} if self._valore is not None else {}
+
+
+class _ReportFinto:
+    """Finge youtubeAnalytics: risponde con i totali che gli vengono dati.
+
+    Distingue le due richieste dalla lunghezza del periodo: quella lunga e' la
+    finestra di analisi, quella corta i sette giorni che si confrontano con
+    l'app di YouTube Studio.
+    """
+
+    def __init__(self, lungo, breve):
+        self.lungo, self.breve = lungo, breve
+        self.chiamate = []
+
+    def reports(self):
+        return self
+
+    def query(self, **kwargs):
+        self.chiamate.append(kwargs)
+        giorni = (datetime.date.fromisoformat(kwargs["endDate"])
+                  - datetime.date.fromisoformat(kwargs["startDate"])).days
+        return _RispostaFinta(self.lungo if giorni > 30 else self.breve)
+
+
+def _performance(*views):
+    return {f"video{i}": {"views": v} for i, v in enumerate(views)}
+
+
+class TestConfrontoColCanale:
+
+    def _esegui(self, performance, lungo, breve, capsys):
+        oggi = datetime.date(2026, 9, 19)
+        inizio = oggi - datetime.timedelta(days=analyst.GIORNI_ANALISI)
+        finto = _ReportFinto(lungo, breve)
+        analyst._controlla_contro_il_canale(finto, performance, inizio, oggi)
+        return finto, capsys.readouterr().out
+
+    def test_stampa_sia_il_totale_sia_la_somma(self, capsys):
+        _, uscita = self._esegui(_performance(1000, 500), 9000, 4000, capsys)
+        assert "9000" in uscita          # totale di canale
+        assert "4000" in uscita          # ultimi sette giorni
+        assert "1500" in uscita          # somma per video
+
+    def test_avvisa_quando_la_somma_e_molto_piu_bassa(self, capsys):
+        _, uscita = self._esegui(_performance(4488), 9843, 9843, capsys)
+        assert "Warning Analyst" in uscita
+        assert "5355" in uscita          # le visualizzazioni non attribuite
+
+    def test_tace_quando_i_conti_tornano(self, capsys):
+        _, uscita = self._esegui(_performance(9000), 9100, 4000, capsys)
+        assert "Warning Analyst" not in uscita
+
+    def test_la_finestra_di_sette_giorni_finisce_ieri(self, capsys):
+        """Studio mostra i sette giorni fino a ieri: per confrontare le due
+        cifre la richiesta deve coprire lo stesso periodo, non includere oggi."""
+        finto, _ = self._esegui(_performance(10), 100, 50, capsys)
+        breve = [c for c in finto.chiamate if c["startDate"] == "2026-09-12"]
+        assert breve, "manca la richiesta sui sette giorni"
+        assert breve[0]["endDate"] == "2026-09-18"
+
+    def test_chiede_il_totale_senza_dimensione_video(self, capsys):
+        finto, _ = self._esegui(_performance(10), 100, 50, capsys)
+        for chiamata in finto.chiamate:
+            assert "dimensions" not in chiamata
+            assert chiamata["metrics"] == "views"
+
+    def test_un_errore_non_ferma_la_pipeline(self, capsys):
+        class Rotto:
+            def reports(self):
+                return self
+
+            def query(self, **kwargs):
+                raise RuntimeError("quota finita")
+
+        oggi = datetime.date(2026, 9, 19)
+        analyst._controlla_contro_il_canale(
+            Rotto(), _performance(10), oggi - datetime.timedelta(days=90), oggi)
+        assert "non riuscito" in capsys.readouterr().out
+
+    def test_risposta_vuota_vale_zero(self, capsys):
+        _, uscita = self._esegui(_performance(10), None, None, capsys)
+        assert "Warning Analyst" not in uscita
+        assert "0 views" in uscita
+
+
+# ---------------------------------------------------------------------------
+# I TERMINI DI RICERCA DEL PUBBLICO
+# ---------------------------------------------------------------------------
+# popponetv, 21 settembre 2026, alla domanda se Samaritan tenesse conto dei
+# trend e della SEO: la risposta onesta era che la classifica delle notizie era
+# tutta scritta a mano, quindi un'ipotesi. Questi termini sono l'unico pezzo
+# misurato: cosa la gente ha davvero scritto nella ricerca di YouTube per
+# finire su un video del canale.
+# ---------------------------------------------------------------------------
+import json
+
+import config
+
+
+class _AnalyticsFinto:
+    """Finge youtubeAnalytics per la sola richiesta dei termini di ricerca."""
+
+    def __init__(self, righe):
+        self.righe = righe
+        self.chiamate = []
+
+    def reports(self):
+        return self
+
+    def query(self, **kwargs):
+        self.chiamate.append(kwargs)
+        return self
+
+    def execute(self):
+        return {"rows": self.righe}
+
+
+def _prepara_analytics(monkeypatch, righe, scope=True):
+    import googleapiclient.discovery
+    import uploader
+
+    finto = _AnalyticsFinto(righe)
+    monkeypatch.setattr(uploader, "ottieni_credenziali", lambda: object())
+    monkeypatch.setattr(uploader, "ha_scope_analytics", lambda c: scope)
+    monkeypatch.setattr(googleapiclient.discovery, "build",
+                        lambda *a, **k: finto)
+    return finto
+
+
+class TestScaricaTerminiDiRicerca:
+
+    def test_restituisce_i_termini_con_le_visualizzazioni(self, monkeypatch):
+        _prepara_analytics(monkeypatch, [["gta 6 data uscita", 120],
+                                         ["fortnite sora", 40]])
+        termini = analyst.scarica_termini_di_ricerca()
+        assert termini == [{"termine": "gta 6 data uscita", "views": 120},
+                           {"termine": "fortnite sora", "views": 40}]
+
+    def test_chiede_solo_il_traffico_dalla_ricerca(self, monkeypatch):
+        """Senza il filtro arrivano anche i suggeriti e le pagine del canale,
+        che non sono cose che qualcuno ha digitato."""
+        finto = _prepara_analytics(monkeypatch, [["gta 6", 10]])
+        analyst.scarica_termini_di_ricerca()
+        chiamata = finto.chiamate[0]
+        assert chiamata["dimensions"] == "insightTrafficSourceDetail"
+        assert chiamata["filters"] == "insightTrafficSourceType==YT_SEARCH"
+
+    def test_scarta_i_termini_con_pochissime_visualizzazioni(self, monkeypatch):
+        _prepara_analytics(monkeypatch, [["gta 6", 50], ["caso isolato", 1]])
+        termini = analyst.scarica_termini_di_ricerca()
+        assert [t["termine"] for t in termini] == ["gta 6"]
+
+    def test_senza_scope_analytics_lista_vuota(self, monkeypatch):
+        _prepara_analytics(monkeypatch, [["gta 6", 50]], scope=False)
+        assert analyst.scarica_termini_di_ricerca() == []
+
+    def test_un_errore_non_ferma_la_pipeline(self, monkeypatch, capsys):
+        import uploader
+        monkeypatch.setattr(uploader, "ottieni_credenziali",
+                            lambda: (_ for _ in ()).throw(RuntimeError("quota")))
+        assert analyst.scarica_termini_di_ricerca() == []
+        assert "non disponibili" in capsys.readouterr().out
+
+
+class TestParoleCercate:
+
+    def _con_termini(self, monkeypatch, termini, tmp_path):
+        file_finto = tmp_path / "performance.json"
+        file_finto.write_text(json.dumps(
+            {"video": {}, "ricerche": [{"termine": t, "views": 10}
+                                       for t in termini]}), encoding="utf-8")
+        monkeypatch.setattr(config, "FILE_PERFORMANCE", str(file_finto))
+
+    def test_scende_alle_parole(self, monkeypatch, tmp_path):
+        """Nessuna notizia ripetera' mai la frase intera che qualcuno ha
+        digitato, quindi il confronto si fa sulle parole."""
+        self._con_termini(monkeypatch, ["gta 6 data uscita"], tmp_path)
+        assert "gta" in analyst.parole_cercate()
+        assert "uscita" in analyst.parole_cercate()
+
+    def test_butta_le_parole_che_non_dicono_l_argomento(self, monkeypatch, tmp_path):
+        self._con_termini(monkeypatch, ["shorts gaming ita"], tmp_path)
+        assert analyst.parole_cercate() == frozenset()
+
+    def test_butta_il_nome_del_canale(self, monkeypatch, tmp_path):
+        """Chi cerca il canale non sta cercando un argomento."""
+        monkeypatch.setattr(config, "NOME_CANALE", "Poppone TV")
+        self._con_termini(monkeypatch, ["poppone tv"], tmp_path)
+        assert analyst.parole_cercate() == frozenset()
+
+    def test_butta_i_numeri_da_soli(self, monkeypatch, tmp_path):
+        self._con_termini(monkeypatch, ["gta 6"], tmp_path)
+        assert analyst.parole_cercate() == frozenset({"gta"})
+
+    def test_tiene_le_sigle_corte(self, monkeypatch, tmp_path):
+        self._con_termini(monkeypatch, ["f1 25 setup"], tmp_path)
+        assert "f1" in analyst.parole_cercate()
+
+    def test_senza_file_nessuna_parola(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(config, "FILE_PERFORMANCE",
+                            str(tmp_path / "non-esiste.json"))
+        assert analyst.parole_cercate() == frozenset()
+
+    def test_un_file_rotto_non_solleva(self, monkeypatch, tmp_path):
+        rotto = tmp_path / "performance.json"
+        rotto.write_text("{ non json", encoding="utf-8")
+        monkeypatch.setattr(config, "FILE_PERFORMANCE", str(rotto))
+        assert analyst.parole_cercate() == frozenset()
+
+
+class TestSalvataggioDeiTermini:
+
+    def test_i_termini_finiscono_nel_file_delle_metriche(self, monkeypatch, tmp_path):
+        """Stanno li' perche' performance.json e' uno dei due soli file che il
+        workflow ricommitta: un file nuovo non sopravviverebbe alla run."""
+        file_finto = tmp_path / "performance.json"
+        monkeypatch.setattr(config, "FILE_PERFORMANCE", str(file_finto))
+        monkeypatch.setattr(analyst, "scarica_performance",
+                            lambda: {"video1": {"views": 10}})
+        monkeypatch.setattr(analyst, "scarica_termini_di_ricerca",
+                            lambda: [{"termine": "gta 6", "views": 50}])
+
+        analyst.aggiorna_performance()
+
+        salvato = json.loads(file_finto.read_text(encoding="utf-8"))
+        assert salvato["ricerche"] == [{"termine": "gta 6", "views": 50}]
+
+    def test_una_lettura_fallita_non_cancella_i_termini_vecchi(
+            self, monkeypatch, tmp_path):
+        file_finto = tmp_path / "performance.json"
+        file_finto.write_text(json.dumps(
+            {"video": {}, "ricerche": [{"termine": "gta 6", "views": 50}]}),
+            encoding="utf-8")
+        monkeypatch.setattr(config, "FILE_PERFORMANCE", str(file_finto))
+        monkeypatch.setattr(analyst, "scarica_performance",
+                            lambda: {"video1": {"views": 10}})
+        monkeypatch.setattr(analyst, "scarica_termini_di_ricerca", lambda: [])
+
+        analyst.aggiorna_performance()
+
+        salvato = json.loads(file_finto.read_text(encoding="utf-8"))
+        assert salvato["ricerche"] == [{"termine": "gta 6", "views": 50}]

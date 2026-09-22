@@ -16,9 +16,18 @@ Catena delle fonti:
   1. Trailer ufficiali Steam del gioco esatto  (gameplay vero)
   2. Screenshot ufficiali Steam animati in Ken Burns  (gioco esatto, statico)
   3. Pexels  (stock generico, solo se il gioco non e' identificabile)
+
+Sullo stesso gioco non esce due volte lo stesso materiale: quanti Short sono
+gia' usciti su quel titolo decide da che punto dell'elenco si comincia a
+pescare trailer e screenshot, e da che secondo del trailer si taglia. Senza,
+due video sullo stesso gioco a settimane di distanza montano le stesse
+identiche clip, che e' il modo piu' rapido per farsi riconoscere come canale
+automatizzato.
 """
+import json
 import os
 import re
+import shutil
 import subprocess
 from difflib import SequenceMatcher
 from urllib.parse import quote, urljoin
@@ -58,8 +67,22 @@ ALIAS_GIOCHI = {
 
 
 def _ffmpeg():
-    """Trova ffmpeg. moviepy lo installa via imageio-ffmpeg, quindi e'
-    disponibile anche quando non e' nel PATH di sistema."""
+    """Trova ffmpeg, preferendo quello di sistema.
+
+    L'ordine conta, e non e' un dettaglio di gusto: il binario che si porta
+    dietro imageio-ffmpeg va in segmentation fault sugli stream HLS di Steam.
+    Verificato sulle run del 18 e 19 settembre 2026, dove OGNI trailer falliva
+    sia in remux sia in ricodifica e il log chiudeva con "0 trailer ufficiali
+    pronti": i video uscivano di soli screenshot fermi, mentre il montaggio e'
+    costruito sull'idea che i trailer diano il movimento.
+
+    Quello di sistema legge gli stessi stream senza problemi ed e' gia'
+    installato dal workflow con apt. imageio resta il ripiego per chi lavora
+    in locale senza ffmpeg nel PATH.
+    """
+    percorso = shutil.which("ffmpeg")
+    if percorso:
+        return percorso
     try:
         from imageio_ffmpeg import get_ffmpeg_exe
         return get_ffmpeg_exe()
@@ -135,6 +158,113 @@ def _somiglianza(richiesto, ufficiale):
         SequenceMatcher(None, a, b).ratio(),
         SequenceMatcher(None, a, base).ratio(),
     )
+
+
+def video_gia_fatti(gioco):
+    """Quanti Short sono gia' usciti su questo gioco, secondo la cronologia.
+
+    Il confronto e' fra il nome che ha scritto il modello e quelli che aveva
+    scritto le volte precedenti, non col nome ufficiale di Steam: sono la
+    stessa penna, quindi si assomigliano molto piu' di quanto 'GTA 6'
+    assomigli a 'Grand Theft Auto VI'. Gli alias noti sono appianati prima.
+    """
+    if not gioco:
+        return 0
+    cercato = ALIAS_GIOCHI.get(_normalizza(gioco), gioco)
+    try:
+        with open(config.FILE_CRONOLOGIA, "r", encoding="utf-8") as f:
+            cronologia = json.load(f)
+    except Exception:
+        return 0
+    if not isinstance(cronologia, list):
+        return 0
+
+    quanti = 0
+    for elemento in cronologia:
+        if not isinstance(elemento, dict):
+            continue
+        passato = (elemento.get("gioco") or "").strip()
+        if not passato:
+            continue
+        passato = ALIAS_GIOCHI.get(_normalizza(passato), passato)
+        if _somiglianza(passato, cercato) >= SOGLIA_CORRISPONDENZA:
+            quanti += 1
+    return quanti
+
+
+def ruota(elementi, salto):
+    """Stessa lista, cominciando da un altro punto. Lista vuota: niente da fare."""
+    if not elementi:
+        return elementi
+    inizio = salto % len(elementi)
+    return elementi[inizio:] + elementi[:inizio]
+
+
+# ===========================================================================
+# LE CLIP GIRATE DA POPPONE
+# ===========================================================================
+# Sono l'unico materiale originale del canale: trailer e screenshot li
+# pubblica l'editore ed escono identici su mille altri canali, mentre due mani
+# vere su un volante vero non ce le ha nessun altro. Stanno in
+# 'clip_mie/<categoria>/' e si montano SOLO dove sono a tema: un volante
+# dentro una notizia su GTA 6 toglie piu' di quanto aggiunga. Una categoria
+# puo' essere un genere ('guida') o un gioco solo ('fortnite').
+GENERI_CLIP_MIE = {"racing": "guida"}
+
+PAROLE_CLIP_MIE = {
+    "fortnite": ("fortnite",),
+    "guida": (
+        "assetto corsa", "forza horizon", "forza motorsport", "gran turismo",
+        "need for speed", "formula 1", "f1 2", "f1 24", "f1 25", "f1 26",
+        "dirt rally", "wrc", "motogp", "nascar", "trackmania", "the crew",
+        "burnout", "rally", "mario kart", "ride 5", "automobilista",
+        "le mans ultimate", "iracing", "rfactor",
+    ),
+}
+
+ESTENSIONI_CLIP = (".mp4", ".mov", ".webm")
+
+
+def categoria_clip_mie(gioco, dati=None):
+    """A quale cartella di clip mie appartiene questo gioco, o None.
+
+    Prima il genere dichiarato da Steam, che e' il dato piu' affidabile;
+    poi il nome, perche' un gioco appena annunciato spesso su Steam non c'e'
+    ancora ed e' proprio quello di cui parlano le notizie.
+    """
+    for genere in (dati or {}).get("genres") or []:
+        etichetta = (genere.get("description") or "").strip().lower()
+        if etichetta in GENERI_CLIP_MIE:
+            return GENERI_CLIP_MIE[etichetta]
+
+    nome = _normalizza(gioco or "")
+    if not nome:
+        return None
+    for categoria, parole in PAROLE_CLIP_MIE.items():
+        if any(parola in nome for parola in parole):
+            return categoria
+    return None
+
+
+def clip_mie(categoria, salto=0, quante=None):
+    """I file di quella categoria, ruotati come trailer e screenshot.
+
+    La rotazione serve alla stessa cosa: due Short sullo stesso gioco non
+    devono aprire con la stessa identica clip.
+    """
+    if not categoria:
+        return []
+    quante = config.MAX_CLIP_MIE if quante is None else quante
+    if quante <= 0:
+        return []
+    cartella = os.path.join(config.DIR_CLIP_MIE, categoria)
+    try:
+        nomi = sorted(n for n in os.listdir(cartella)
+                      if n.lower().endswith(ESTENSIONI_CLIP))
+    except OSError:
+        return []
+    percorsi = [os.path.join(cartella, n) for n in nomi]
+    return ruota(percorsi, salto)[:quante]
 
 
 def cerca_gioco_steam(nome):
@@ -251,14 +381,33 @@ def _estrai_mp4(url_stream, destinazione, salta=SALTA_INTRO_SEC):
     return os.path.exists(destinazione) and os.path.getsize(destinazione) > 100_000
 
 
-def scarica_trailer_steam(appid, dati, quanti=3):
-    """Scarica i trailer ufficiali come mp4 muti. Ritorna i percorsi locali."""
+def scarica_trailer_steam(appid, dati, quanti=3, salto=0):
+    """Scarica i trailer ufficiali come mp4 muti. Ritorna i percorsi locali.
+
+    `salto` e' quanti Short sono gia' usciti su questo gioco: sposta sia il
+    punto da cui si comincia a pescare nell'elenco, sia il secondo da cui si
+    taglia lo spezzone, cosi' il secondo video sullo stesso titolo non monta
+    gli stessi fotogrammi del primo.
+    """
     filmati = dati.get("movies", []) or []
     if not filmati:
         return []
 
     # I trailer marcati 'highlight' sono quelli principali scelti dall'editore
-    filmati = sorted(filmati, key=lambda m: not m.get("highlight", False))
+    # e restano davanti: la rotazione avviene dentro i due gruppi, cosi' il
+    # video di ripasso cambia materiale ma non ripiega sugli scarti.
+    principali = [m for m in filmati if m.get("highlight", False)]
+    altri = [m for m in filmati if not m.get("highlight", False)]
+    filmati = ruota(principali, salto) + ruota(altri, salto)
+
+    # Un trailer dura in genere un paio di minuti: spostarsi di venti secondi
+    # per ogni passaggio da' quattro inquadrature d'apertura diverse prima di
+    # tornare al punto di partenza.
+    inizio = SALTA_INTRO_SEC + (salto % 4) * 20
+    tentativi = [inizio]
+    if inizio != SALTA_INTRO_SEC:
+        tentativi.append(SALTA_INTRO_SEC)   # trailer troppo corto per il salto
+    tentativi.append(0)                     # piu' corto anche dell'intro
 
     percorsi = []
     for filmato in filmati:
@@ -280,19 +429,22 @@ def scarica_trailer_steam(appid, dati, quanti=3):
         nome_breve = filmato.get("name", "")[:48]
         print(f"[Gameplay] Scarico trailer ufficiale: {nome_breve}")
 
-        if _estrai_mp4(url_stream, destinazione):
-            percorsi.append(destinazione)
-        elif _estrai_mp4(url_stream, destinazione, salta=0):
-            # Trailer piu' corto del salto intro: riprovo dall'inizio
-            percorsi.append(destinazione)
+        for salta in tentativi:
+            if _estrai_mp4(url_stream, destinazione, salta=salta):
+                percorsi.append(destinazione)
+                break
 
     print(f"[Gameplay] {len(percorsi)} trailer ufficiali pronti.")
     return percorsi
 
 
-def scarica_screenshot_steam(appid, dati, quanti=4):
-    """Screenshot ufficiali in 1920x1080: usati come inserti animati."""
-    screenshot = dati.get("screenshots", []) or []
+def scarica_screenshot_steam(appid, dati, quanti=4, salto=0):
+    """Screenshot ufficiali in 1920x1080: usati come inserti animati.
+
+    `salto` sposta il punto di partenza nell'elenco: un gioco con dodici
+    screenshot ne ha tre gruppi diversi prima di ripetersi.
+    """
+    screenshot = ruota(dati.get("screenshots", []) or [], salto * quanti)
     percorsi = []
 
     for shot in screenshot[:quanti * 2]:
@@ -328,24 +480,44 @@ def procura_materiale(gioco=None, query_pexels="gameplay", minimo=3):
     os.makedirs(config.DIR_TEMP, exist_ok=True)
     sorgenti = []
     nome_ufficiale = None
+    dati_gioco = None
+    salto = video_gia_fatti(gioco)
 
     if gioco and config.USA_STEAM:
         appid, nome_ufficiale = cerca_gioco_steam(gioco)
         if appid:
             dati = dettagli_gioco(appid)
+            dati_gioco = dati
             if dati:
+                # Quante volte abbiamo gia' parlato di questo gioco: decide da
+                # dove si pesca, cosi' il materiale non si ripete.
+                if salto:
+                    print(f"[Gameplay] Short numero {salto + 1} su "
+                          f"'{nome_ufficiale}': cambio materiale.")
                 for percorso in scarica_trailer_steam(appid, dati,
-                                                      config.STEAM_MAX_TRAILER):
+                                                      config.STEAM_MAX_TRAILER,
+                                                      salto):
                     sorgenti.append({"tipo": "video", "path": percorso,
                                      "gioco": nome_ufficiale})
-                for percorso in scarica_screenshot_steam(appid, dati,
-                                                         config.STEAM_MAX_SCREENSHOT):
+                for percorso in scarica_screenshot_steam(
+                        appid, dati, config.STEAM_MAX_SCREENSHOT, salto):
                     sorgenti.append({"tipo": "immagine", "path": percorso,
                                      "gioco": nome_ufficiale})
 
+    # Le clip girate in casa: non sostituiscono il materiale del gioco, ci si
+    # aggiungono. 'gioco' resta None perche' non sono di QUEL gioco, e il
+    # conteggio del materiale ufficiale nel resoconto deve restare onesto.
+    categoria = categoria_clip_mie(gioco, dati_gioco)
+    mie = clip_mie(categoria, salto)
+    for percorso in mie:
+        sorgenti.append({"tipo": "video", "path": percorso,
+                         "gioco": None, "mia": True})
+    if mie:
+        print(f"[Gameplay] {len(mie)} clip girate in casa ('{categoria}').")
+
     if len(sorgenti) >= minimo:
         print(f"[Gameplay] Materiale UFFICIALE di '{nome_ufficiale}': "
-              f"{len(sorgenti)} sorgenti.")
+              f"{len(sorgenti) - len(mie)} sorgenti.")
         return sorgenti, nome_ufficiale
 
     # ------------------------------------------------- Fallback su Pexels

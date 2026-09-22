@@ -8,6 +8,11 @@ La qualita' visiva nasce dall'EDITING, non da riprese fatte a mano:
   3. Zoom lento (Ken Burns) su ogni stacco: movimento costante
   4. Sorgenti 16:9 inserite nel 9:16 con sfondo sfocato e scurito
   5. Progress bar, banner del titolo, sottotitoli parola-per-parola
+
+La VESTE (colori, altezze, barra, banner, verso dello zoom, ritmo degli
+stacchi) non e' fissa: la sceglie `veste.py` e cambia a ogni video, cosi' due
+Short di fila non si somigliano. Qui dentro non ci sono piu' costanti grafiche
+da leggere: tutto quello che si vede arriva dal dizionario `stile`.
 """
 import os
 import re
@@ -26,6 +31,7 @@ from moviepy import (
 )
 
 import config
+import veste
 from voice import genera_voce_samaritan, pulisci_testo
 
 FALLBACK_QUERY = [
@@ -37,13 +43,13 @@ FALLBACK_QUERY = [
     "gamer playing console",
 ]
 
+# Colore di riserva del testo, usato solo da chi chiama queste funzioni senza
+# passare una veste: i colori veri stanno in veste.py.
 GIALLO = "#FFE600"
-VERDE = "#00FF9C"
 
-# Layout verticale: gameplay in alto, sottotitoli sotto, UI YouTube libera in fondo
-Y_GAMEPLAY = 0.30
-Y_SOTTOTITOLI = 0.68
-Y_BANNER = 0.16
+# Veste di riserva: serve a chi chiama una singola funzione di questo modulo
+# (test, prove a mano) senza passare da assembla_video_finale.
+STILE_BASE = veste.VESTI[0]
 
 _FONT_PATHS = [
     "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",        # Ubuntu (Actions)
@@ -136,7 +142,7 @@ def scarica_clip_sfondo(query, quante=None):
 # ===========================================================================
 # ADATTAMENTO AL FORMATO VERTICALE
 # ===========================================================================
-def _sfondo_sfocato(frame, durata):
+def _sfondo_sfocato(frame, durata, luminosita=0.42):
     """Sfondo 9:16 ricavato dal frame stesso: sfocato e scurito.
 
     La sfocatura viene fatta in miniatura e poi ingrandita: e' ~50 volte piu'
@@ -156,19 +162,20 @@ def _sfondo_sfocato(frame, durata):
     img = img.crop((sinistra, alto, sinistra + piccolo_w, alto + piccolo_h))
 
     img = img.filter(ImageFilter.GaussianBlur(4))
-    img = ImageEnhance.Brightness(img).enhance(0.42)   # scurito: il primo piano spicca
+    img = ImageEnhance.Brightness(img).enhance(luminosita)   # scurito: il primo piano spicca
     img = img.resize((W, H), Image.BILINEAR)
 
     return ImageClip(np.array(img)).with_duration(durata)
 
 
-def _adatta_a_verticale(clip, durata):
+def _adatta_a_verticale(clip, durata, stile=None):
     """Porta qualunque sorgente a 1080x1920.
 
     - Sorgenti gia' verticali  -> scale-to-cover + crop centrale (schermo pieno)
     - Sorgenti 16:9 (Steam)    -> riquadro centrale su sfondo sfocato
     """
     W, H = config.VIDEO_W, config.VIDEO_H
+    stile = stile or STILE_BASE
 
     # --- Caso verticale: riempie tutto lo schermo ---
     if clip.h / max(clip.w, 1) >= 1.4:
@@ -191,21 +198,34 @@ def _adatta_a_verticale(clip, durata):
 
     try:
         istante = min(clip.duration / 2, max(clip.duration - 0.05, 0))
-        sfondo = _sfondo_sfocato(clip.get_frame(istante), durata)
+        sfondo = _sfondo_sfocato(clip.get_frame(istante), durata,
+                                 stile["luminosita_sfondo"])
     except Exception as e:
         print(f"[Warning Maker] Sfondo sfocato non generato ({e}), uso il nero.")
         sfondo = ColorClip(size=(W, H), color=(0, 0, 0)).with_duration(durata)
 
     return CompositeVideoClip(
-        [sfondo, primo_piano.with_position(("center", int(H * Y_GAMEPLAY)))],
+        [sfondo, primo_piano.with_position(("center",
+                                           int(H * stile["y_gameplay"])))],
         size=(W, H),
     ).with_duration(durata)
 
 
-def _applica_zoom(clip, durata, intensita=0.08):
-    """Ken Burns: zoom lento e continuo, il movimento trattiene l'occhio."""
+def _applica_zoom(clip, durata, intensita=0.08, verso="dentro"):
+    """Ken Burns: zoom lento e continuo, il movimento trattiene l'occhio.
+
+    Il verso fa piu' differenza di quanta sembri: "dentro" stringe sul
+    dettaglio, "fuori" apre sulla scena. Lo stesso spezzone montato nei due
+    versi si legge come due inquadrature diverse.
+    """
     try:
-        zoomata = clip.resized(lambda t: 1 + intensita * (t / max(durata, 0.01)))
+        if verso == "fuori":
+            def fattore(t):
+                return 1 + intensita * (1 - t / max(durata, 0.01))
+        else:
+            def fattore(t):
+                return 1 + intensita * (t / max(durata, 0.01))
+        zoomata = clip.resized(fattore)
         return CompositeVideoClip(
             [zoomata.with_position("center")],
             size=(config.VIDEO_W, config.VIDEO_H),
@@ -224,12 +244,16 @@ def _apri_video(percorso):
     return _CACHE_VIDEO[percorso]
 
 
-def _prepara_segmento(sorgente, durata):
+def _prepara_segmento(sorgente, durata, stile=None, verso="dentro"):
     """Costruisce un singolo stacco gia' in formato 1080x1920."""
+    stile = stile or STILE_BASE
+    intensita = stile["intensita_zoom"]
+
     if sorgente["tipo"] == "immagine":
         base = ImageClip(sorgente["path"]).with_duration(durata)
         # Sugli screenshot lo zoom e' piu' marcato: senza, sembrerebbero fermi
-        return _applica_zoom(_adatta_a_verticale(base, durata), durata, intensita=0.16)
+        return _applica_zoom(_adatta_a_verticale(base, durata, stile), durata,
+                             intensita=intensita * 2, verso=verso)
 
     video = _apri_video(sorgente["path"])
     if video.duration <= durata:
@@ -239,15 +263,18 @@ def _prepara_segmento(sorgente, durata):
         inizio = random.uniform(0, video.duration - durata)
         pezzo = video.subclipped(inizio, inizio + durata)
 
-    return _applica_zoom(_adatta_a_verticale(pezzo, durata), durata)
+    return _applica_zoom(_adatta_a_verticale(pezzo, durata, stile), durata,
+                         intensita=intensita, verso=verso)
 
 
-def costruisci_sfondo_montato(sorgenti, durata_totale):
+def costruisci_sfondo_montato(sorgenti, durata_totale, stile=None):
     """Alterna le sorgenti con uno stacco ogni 2-3 secondi.
 
     Video e immagini vengono mescolati: i trailer danno movimento, gli
-    screenshot danno inquadrature pulite del gioco.
+    screenshot danno inquadrature pulite del gioco. La veste decide quanto
+    durano gli stacchi (`ritmo`) e da che verso si muove lo zoom.
     """
+    stile = stile or STILE_BASE
     utilizzabili = [s for s in sorgenti if os.path.exists(s["path"])]
     if not utilizzabili:
         return None
@@ -261,13 +288,21 @@ def costruisci_sfondo_montato(sorgenti, durata_totale):
         sorgente = utilizzabili[indice % len(utilizzabili)]
         indice += 1
 
-        durata = random.uniform(config.STACCO_MIN, config.STACCO_MAX)
+        durata = random.uniform(config.STACCO_MIN * stile["ritmo"],
+                                config.STACCO_MAX * stile["ritmo"])
         durata = min(durata, durata_totale - coperto)
         if durata < 0.4:
             break
 
+        # "alternato" cambia verso a ogni stacco: il montaggio respira invece
+        # di spingere sempre nella stessa direzione per tutto il video.
+        if stile["zoom"] == "alternato":
+            verso = "dentro" if len(segmenti) % 2 == 0 else "fuori"
+        else:
+            verso = stile["zoom"]
+
         try:
-            segmento = _prepara_segmento(sorgente, durata)
+            segmento = _prepara_segmento(sorgente, durata, stile, verso)
         except Exception as e:
             print(f"[Warning Maker] Sorgente scartata ({sorgente['path']}): {e}")
             utilizzabili = [s for s in utilizzabili if s is not sorgente]
@@ -282,6 +317,7 @@ def costruisci_sfondo_montato(sorgenti, durata_totale):
         return None
 
     n_video = sum(1 for s in utilizzabili if s["tipo"] == "video")
+    print(f"[Samaritan Maker] Veste '{stile['nome']}', zoom {stile['zoom']}.")
     print(f"[Samaritan Maker] {len(segmenti)} stacchi in {coperto:.1f}s "
           f"(media {coperto / len(segmenti):.1f}s) da {len(utilizzabili)} sorgenti "
           f"({n_video} video, {len(utilizzabili) - n_video} immagini)")
@@ -293,12 +329,23 @@ def costruisci_sfondo_montato(sorgenti, durata_totale):
 # GRAFICA
 # ===========================================================================
 def crea_immagine_parola(testo, font_size=115, colore=GIALLO):
-    font = _carica_font(font_size)
+    bordo, pad_x, pad_y = 9, 44, 28
+    larghezza_utile = config.VIDEO_W * 0.94 - 2 * (bordo + pad_x)
     misura = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+
+    # Le vesti usano corpi diversi, e una parola lunga scritta grande uscirebbe
+    # dallo schermo: si rimpicciolisce finche' non ci sta. Meglio una parola
+    # piu' piccola che una parola tagliata a meta'.
+    while font_size > 60:
+        font = _carica_font(font_size)
+        if misura.textlength(testo, font=font) <= larghezza_utile:
+            break
+        font_size -= 6
+
+    font = _carica_font(font_size)
     bbox = misura.textbbox((0, 0), testo, font=font)
     testo_w, testo_h = bbox[2] - bbox[0], bbox[3] - bbox[1]
 
-    bordo, pad_x, pad_y = 9, 44, 28
     img = Image.new(
         "RGBA",
         (testo_w + bordo * 2 + pad_x * 2, testo_h + bordo * 2 + pad_y * 2),
@@ -355,7 +402,7 @@ def _manda_a_capo(draw, testo, font, larghezza_max):
     return righe
 
 
-def crea_miniatura(frame, testo, percorso=None):
+def crea_miniatura(frame, testo, percorso=None, colore=GIALLO):
     """Miniatura verticale ricavata dallo sfondo, con l'amo scritto grande.
 
     Senza miniatura personalizzata YouTube estrae un fotogramma a caso. Nel
@@ -387,7 +434,7 @@ def crea_miniatura(frame, testo, percorso=None):
         y = (H - altezza_riga * len(righe)) // 2
         for riga in righe:
             larghezza = draw.textlength(riga, font=font)
-            draw.text(((W - larghezza) / 2, y), riga, font=font, fill=GIALLO,
+            draw.text(((W - larghezza) / 2, y), riga, font=font, fill=colore,
                       stroke_width=max(4, dimensione // 18), stroke_fill="black")
             y += altezza_riga
 
@@ -401,8 +448,10 @@ def crea_miniatura(frame, testo, percorso=None):
     return percorso
 
 
-def crea_progress_bar(durata, passi=60):
-    clips, altezza = [], 12
+def crea_progress_bar(durata, passi=60, altezza=12, colore=(255, 230, 0)):
+    """La barra sta sempre in cima: in fondo la coprirebbe l'interfaccia di
+    YouTube. Quello che cambia da una veste all'altra e' spessore e colore."""
+    clips = []
     clips.append(
         ColorClip(size=(config.VIDEO_W, altezza), color=(20, 20, 20))
         .with_duration(durata).with_position((0, 0)).with_opacity(0.55)
@@ -411,7 +460,7 @@ def crea_progress_bar(durata, passi=60):
     for i in range(1, passi + 1):
         clips.append(
             ColorClip(size=(max(int(config.VIDEO_W * i / passi), 1), altezza),
-                      color=(255, 230, 0))
+                      color=colore)
             .with_start(passo * (i - 1)).with_duration(passo).with_position((0, 0))
         )
     return clips
@@ -420,8 +469,10 @@ def crea_progress_bar(durata, passi=60):
 # ===========================================================================
 # SOTTOTITOLI
 # ===========================================================================
-def genera_sottotitoli_clips(audio_path, titolo="", gioco=""):
+def genera_sottotitoli_clips(audio_path, titolo="", gioco="", stile=None):
     import whisper
+
+    stile = stile or STILE_BASE
 
     print(f"[Samaritan Subtitles] Trascrizione con modello '{config.WHISPER_MODEL}'...")
     modello = whisper.load_model(config.WHISPER_MODEL)
@@ -431,7 +482,7 @@ def genera_sottotitoli_clips(audio_path, titolo="", gioco=""):
     parole_chiave = {w.upper() for w in re.findall(r"\b[A-Za-z]{4,}\b",
                                                    f"{titolo} {gioco}")}
     clips = []
-    y = int(config.VIDEO_H * Y_SOTTOTITOLI)
+    y = int(config.VIDEO_H * stile["y_sottotitoli"])
 
     for segmento in risultato.get("segments", []):
         for info in segmento.get("words", []):
@@ -444,9 +495,11 @@ def genera_sottotitoli_clips(audio_path, titolo="", gioco=""):
             nudo = parola.strip(".,!?;:")
             evidenzia = nudo.isdigit() or nudo in parole_chiave
 
+            colore = (stile["colore_evidenza"] if evidenzia
+                      else stile["colore_testo"])
             clip = (
-                ImageClip(crea_immagine_parola(parola,
-                                               colore=VERDE if evidenzia else GIALLO))
+                ImageClip(crea_immagine_parola(
+                    parola, font_size=stile["corpo_sottotitoli"], colore=colore))
                 .with_start(inizio).with_duration(durata)
                 .with_position(("center", y))
             )
@@ -464,9 +517,14 @@ def genera_sottotitoli_clips(audio_path, titolo="", gioco=""):
 # PIPELINE
 # ===========================================================================
 def assembla_video_finale(testo_per_audio=None, query_video="gameplay",
-                          titolo="", gioco="", tema="Gaming"):
+                          titolo="", gioco="", tema="Gaming",
+                          resoconto=None):
     os.makedirs(config.DIR_OUTPUT, exist_ok=True)
     print("\n--- SAMARITAN MAKER: PRODUZIONE VIDEO ---")
+
+    # La veste di oggi: colori, altezze, barra, banner, zoom, ritmo. Cambia a
+    # ogni video, quindi due Short di fila non si somigliano.
+    stile = veste.scegli_veste()
 
     if not testo_per_audio:
         from brain import genera_script_samaritan
@@ -490,10 +548,20 @@ def assembla_video_finale(testo_per_audio=None, query_video="gameplay",
         print("[Errore Maker] Nessun materiale video disponibile: interrompo.")
         return None
 
+    # Qui dentro e' l'unico posto che sa se il materiale e' davvero ufficiale:
+    # procura_materiale() ripiega su clip d'archivio senza azzerare 'gioco',
+    # quindi chi scrive la descrizione non puo' dedurlo dal nome del gioco.
+    # Le sorgenti d'archivio hanno 'gioco' a None, quelle Steam no.
+    if resoconto is not None:
+        ufficiali = sum(1 for s in sorgenti if s.get("gioco"))
+        resoconto["gioco_ufficiale"] = gioco_ufficiale
+        resoconto["sorgenti_ufficiali"] = ufficiali
+        resoconto["sorgenti_stock"] = len(sorgenti) - ufficiali
+
     audio_clip = AudioFileClip(audio_path)
     durata = audio_clip.duration + 0.4
 
-    sfondo = costruisci_sfondo_montato(sorgenti, durata)
+    sfondo = costruisci_sfondo_montato(sorgenti, durata, stile)
     if sfondo is None:
         print("[Errore Maker] Montaggio fallito: interrompo.")
         audio_clip.close()
@@ -502,26 +570,32 @@ def assembla_video_finale(testo_per_audio=None, query_video="gameplay",
     sfondo = sfondo.with_duration(durata).with_audio(audio_clip)
     livelli = [sfondo]
 
-    if titolo:
+    # Banner e barra non ci sono in tutte le vesti: l'assenza e' una scelta,
+    # non un errore, ed e' il modo piu' netto per far sembrare diverso il video.
+    if titolo and stile["banner"]:
+        altezza_banner, secondi_banner = stile["banner"]
         try:
             banner = (
                 ImageClip(crea_banner_titolo(pulisci_testo(titolo).upper(),
                                              int(config.VIDEO_W * 0.92)))
-                .with_start(0).with_duration(min(2.5, durata))
-                .with_position(("center", int(config.VIDEO_H * Y_BANNER)))
+                .with_start(0).with_duration(min(secondi_banner, durata))
+                .with_position(("center", int(config.VIDEO_H * altezza_banner)))
             )
             livelli.append(banner)
         except Exception as e:
             print(f"[Warning Maker] Banner titolo saltato: {e}")
 
-    try:
-        livelli.extend(crea_progress_bar(durata))
-    except Exception as e:
-        print(f"[Warning Maker] Progress bar saltata: {e}")
+    if stile["barra"]:
+        spessore, colore_barra = stile["barra"]
+        try:
+            livelli.extend(crea_progress_bar(durata, altezza=spessore,
+                                             colore=colore_barra))
+        except Exception as e:
+            print(f"[Warning Maker] Progress bar saltata: {e}")
 
     try:
         livelli.extend(genera_sottotitoli_clips(audio_path, titolo,
-                                                gioco_ufficiale or gioco))
+                                                gioco_ufficiale or gioco, stile))
     except Exception as e:
         print(f"[Warning Maker] Sottotitoli saltati: {e}")
 
@@ -544,7 +618,8 @@ def assembla_video_finale(testo_per_audio=None, query_video="gameplay",
     try:
         from brain import testo_miniatura
         istante = min(1.2, max(durata - 0.2, 0.1))
-        crea_miniatura(sfondo.get_frame(istante), testo_miniatura(titolo))
+        crea_miniatura(sfondo.get_frame(istante), testo_miniatura(titolo),
+                       colore=stile["colore_evidenza"])
     except Exception as e:
         print(f"[Warning Maker] Miniatura saltata: {e}")
 
@@ -554,6 +629,11 @@ def assembla_video_finale(testo_per_audio=None, query_video="gameplay",
         except Exception:
             pass
     _CACHE_VIDEO.clear()
+
+    # Il giro delle vesti avanza solo ora: il video esiste davvero, quindi
+    # questa veste e' spesa. Se il rendering fosse fallito, la prossima
+    # esecuzione riproverebbe con la stessa invece di saltarla.
+    veste.segna_veste(stile["nome"])
 
     print("\nVIDEO GENERATO CON SUCCESSO!")
     return output_file

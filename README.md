@@ -11,6 +11,7 @@ FASE 1  brain.py     sceglie il formato (pesato sui dati) e scrive lo script
                      ancorandolo a notizie gaming VERE
 FASE 2  gameplay.py  trailer e screenshot UFFICIALI del gioco da Steam
         voice.py     voce neurale Edge-TTS
+        veste.py     sceglie la veste grafica, diversa a ogni video
         maker.py     stacco ogni 2-3s, zoom, sfondo sfocato, sottotitoli
 FASE 3  uploader.py  upload su YouTube
         notifier.py  notifica Telegram + didascalia pronta per TikTok
@@ -55,6 +56,40 @@ scaricare gameplay di 'Grand Theft Auto IV', o 'Portal' quello di 'Portal 2'.
 I trailer Steam sono 16:9: vengono montati dentro il 9:16 con sfondo sfocato
 ricavato dal frame stesso, che e' il formato standard degli Shorts gaming.
 
+**La notizia si sceglie, non si sorteggia.** Quattro ricerche diverse su Google
+News per lingua, quindici voci ciascuna, e poi una classifica: pesa il gioco
+grosso, pesano le parole che dicono che la notizia e' viva (`esce`, `data`,
+`gratis`, `leak`, `crossover`) e pesa il comparire in piu' di una ricerca, che
+e' il segno che sta girando. La piu' alta arriva al modello per prima.
+
+**E pesano soprattutto le parole che il pubblico cerca davvero.** Da YouTube
+Analytics si legge cosa la gente ha scritto nella ricerca per finire su un
+video del canale (`insightTrafficSourceDetail` filtrato su `YT_SEARCH`); i
+termini si salvano in `performance.json` sotto `ricerche` e si scendono alle
+parole, perche' nessuna notizia ripetera' mai la frase intera che qualcuno ha
+digitato. Una notizia che tocca quelle parole sale. E' l'unico pezzo della
+classifica che non e' un'ipotesi scritta a mano: il resto dice cosa pensiamo
+interessi, questo dice cosa e' stato misurato. Quando il dato manca (token
+senza permesso Analytics, canale nuovo) il punteggio resta quello di prima.
+
+**Il materiale girato in casa.** In `clip_mie/<categoria>/` stanno gli spezzoni
+registrati da popponetv: sono l'unico pezzo dei video che non arriva da uno
+store, e sono anche la risposta piu' diretta alla regola YouTube sui contenuti
+prodotti in serie. Si montano **solo nei video della loro categoria** — un
+volante dentro una notizia su GTA 6 toglie piu' di quanto aggiunga — e la
+categoria si ricava dal genere dichiarato da Steam o, quando il gioco su Steam
+non c'e', dal nome del gioco. Ruotano come i trailer, cosi' due Short sullo
+stesso gioco non aprono con la stessa clip. Istruzioni per aggiungerne in
+`clip_mie/README.md`.
+
+**Sullo stesso gioco non esce due volte lo stesso materiale.** Quanti Short
+sono gia' usciti su quel titolo (contati sulla cronologia) decide da che punto
+dell'elenco si comincia a pescare trailer e screenshot, e da che secondo del
+trailer si taglia lo spezzone. I trailer principali scelti dall'editore
+restano comunque davanti ai teaser: cambia il materiale, non la qualita'. Se
+un trailer e' troppo corto per il taglio spostato, si ripiega sul punto
+normale e poi sull'inizio, invece di perdere la sorgente.
+
 ---
 
 ## 1. Installazione
@@ -92,7 +127,9 @@ Poi compila `.env`:
 > dell'account. Piu' nomi separati da virgola (es. `Marco, Giulia, Luca`)
 > vengono alternati, un video a testa: Samaritan annota in
 > `cronologia_trend.json` quale voce ha usato e il giro dopo passa alla
-> successiva. Un nome che nell'account non esiste salta il proprio turno
+> successiva. L'annotazione arriva solo se ElevenLabs ha prodotto l'audio
+> davvero, cosi' il campo `voce` dice con che voce parla il video e non quale
+> era stata scelta; se e' entrato un ripiego, il turno non e' speso. Un nome che nell'account non esiste salta il proprio turno
 > invece di far ripiegare tutto sulla voce Microsoft. Uno Short da 400 caratteri costa circa 400 crediti, quindi due
 > video al giorno stanno dentro il piano da 30.000 al mese e non dentro quello
 > gratuito da 10.000.
@@ -179,16 +216,60 @@ Stampa i valori base64 da incollare in **Settings > Secrets and variables > Acti
 `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
 
 **Variables opzionali**
-`NOME_CANALE`, `VOCE_TTS`, `WHISPER_MODEL`
+`NOME_CANALE`, `VOCE_TTS`, `VOCE_TTS_EN`, `WHISPER_MODEL`
 
-Il workflow parte alle 12:00 e alle 18:00 UTC, oppure a mano dalla tab Actions
-(dove puoi anche scegliere tema e visibilita').
+**I video escono alle 14:00, alle 18:00 e alle 21:00 italiane**, sempre, anche
+quando cambia l'ora legale. **Quello delle 21:00 e' in inglese**: stesso
+canale, pubblico diverso, per misurare se l'inglese rende piu' dell'italiano
+invece di deciderlo a naso. La lingua la passa il workflow con `LINGUA`, e una
+run lanciata a mano la sceglie dal menu.
 
-Attenzione al fuso: il cron di GitHub e' sempre in UTC e non conosce l'ora
-legale. Da fine marzo a fine ottobre sono le 14:00 e le 20:00 italiane, nel
-resto dell'anno diventano le 13:00 e le 19:00. Per tenere fissi gli orari
-italiani vanno spostate le ore in `.github/workflows/samaritan.yml` al cambio
-di stagione.
+Le regole anti-ripetizione (apertura, gioco, notizia gia' usata) valgono
+**dentro una lingua sola**: il video inglese deve poter raccontare la stessa
+notizia grossa di quello italiano, perche' parla ad altra gente. Ogni voce di
+`cronologia_trend.json` porta scritta la sua lingua; quelle vecchie, che non ce
+l'hanno, contano come italiane.
+
+L'orario NON viene dal cron. GitHub fa partire le run schedulate in ritardo, e
+il ritardo non si puo' prevedere: fra il 17 e il 19 settembre 2026 e' andato da
+un'ora e quaranta a tre ore e mezza. Quindi la pipeline parte con circa quattro
+ore e mezza di anticipo (`30 7`, `30 11` e `30 14` UTC), carica il video privato e
+chiede a YouTube di renderlo pubblico all'istante giusto: e' il campo
+`publishAt`, e vale al minuto.
+
+Per cambiare l'ora di uscita si cambia `ORARIO_USCITA` in
+`.github/workflows/samaritan.yml`, un valore per ciascun cron; i cron si
+toccano solo per allargare il margine. L'ora si calcola in ora italiana vera
+(`FUSO_USCITA`, default `Europe/Rome`), quindi al cambio di stagione non c'e'
+piu' niente da correggere a mano.
+
+Se la run arriva talmente in ritardo da superare l'ora di uscita, il video
+esce subito invece di aspettare il giorno dopo.
+
+### La riserva di fine giornata
+
+Il 21 settembre 2026 GitHub ha fatto partire una run con sette ore di ritardo e
+un'altra non l'ha fatta partire affatto: il video delle 21:00 non e' mai
+uscito. Il codice non c'entrava, ma il canale un video l'ha perso lo stesso.
+
+Da qui un quarto cron (`30 20` UTC, verso le 22:30 italiane) che non produce un
+video suo. Guarda quali delle tre uscite di oggi sono rimaste scoperte e rifa'
+la piu' vecchia, una sola, pubblicandola subito; se sono tutte a posto termina
+in pochi secondi senza fare niente. Si puo' lanciare anche a mano, dalla tab
+Actions, spuntando `recupero`.
+
+Perche' questo non produca doppioni ogni lavorazione dichiara quale uscita sta
+coprendo (`SLOT`, che finisce in `cronologia_trend.json`) e si ferma se quella
+uscita ha gia' il suo video. Un video conta come pubblicato solo quando ha un
+`video_id`: una lavorazione morta prima del caricamento lascia l'uscita
+scoperta, che e' esattamente il caso in cui la riserva deve intervenire.
+
+L'elenco delle uscite sta in `orari.py` (`SLOT_GIORNALIERI`) e nei cron del
+workflow: sono due copie della stessa cosa, e un test controlla che dicano lo
+stesso.
+
+Le run lanciate a mano dalla tab Actions (dove puoi anche scegliere tema e
+visibilita') non programmano niente: escono subito.
 
 ---
 
@@ -228,6 +309,21 @@ del canale e nella ricerca si vede eccome. Serve il canale verificato via
 telefono: se non lo e', YouTube risponde 403 e il video sale lo stesso senza
 miniatura.
 
+**Veste grafica** (`veste.py`): colori dei sottotitoli, altezza a cui
+compaiono, corpo del testo, presenza e posizione del banner del titolo,
+spessore e colore della barra di avanzamento, verso dello zoom, velocita' degli
+stacchi. Non e' una sola: ce ne sono cinque e ruotano, una per video. Due Short
+di fila non hanno mai lo stesso aspetto, e non e' una questione estetica: un
+canale i cui video sono tutti visivamente identici e' il profilo che YouTube
+chiama "contenuto ripetitivo" e non ammette alla monetizzazione.
+
+La rotazione si ricorda dove e' arrivata scrivendo il nome della veste in
+`cronologia_trend.json`, e lo scrive solo a rendering riuscito: se il video non
+esce, quella veste non e' spesa e tocca a lei il giro dopo. Aggiungere o
+togliere vesti significa modificare la lista `VESTI`; `tests/test_veste.py`
+boccia le combinazioni in cui il testo finirebbe fuori dallo schermo o sotto i
+comandi di YouTube.
+
 ---
 
 ## Personalizzazione rapida
@@ -246,6 +342,7 @@ Tutto si regola da `.env`, senza toccare il codice:
 | `USA_STEAM` | `0` per tornare allo stock generico invece del gameplay reale |
 | `ZOOM_GAMEPLAY` | quanto ingrandire il riquadro di gameplay (1.0 = larghezza piena) |
 | `STEAM_MAX_TRAILER` / `STEAM_MAX_SCREENSHOT` | quanto materiale scaricare per video |
+| `MAX_CLIP_MIE` | quante clip girate in casa entrano in uno Short (2) |
 
 I formati video si modificano nel dizionario `FORMATI_VIDEO` in `brain.py`.
 

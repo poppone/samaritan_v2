@@ -11,6 +11,12 @@ output_videos/
 *.mp3
 *.wav
 
+# Le clip girate in casa NON sono un artefatto: sono materiale del progetto,
+# l'unico pezzo dei video che non arriva da uno store.
+!clip_mie/**/*.mp4
+!clip_mie/**/*.mov
+!clip_mie/**/*.webm
+
 # === Python ===
 __pycache__/
 *.py[cod]
