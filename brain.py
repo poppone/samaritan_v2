@@ -229,10 +229,38 @@ def _stessa_lingua(voci):
     return [v for v in voci if _lingua_di(v) == attuale]
 
 
+def _formato_di(voce):
+    """Il formato di una voce di cronologia. Le voci scritte prima del 22
+    settembre 2026 non ce l'hanno e sono tutte Short."""
+    return (voce.get("formato") or "short").lower()
+
+
+def _stesso_formato(voci):
+    """Solo i video usciti nello stesso formato di adesso.
+
+    Stesso ragionamento di _stessa_lingua: le regole anti-ripetizione valgono
+    dentro un formato. Un video lungo da otto minuti su un gioco non deve
+    impedire allo Short della sera di parlarne, sono due cose diverse per due
+    modi diversi di guardare; e l'apertura di una sezione di otto minuti non
+    dice niente su come deve attaccare uno Short.
+    """
+    attuale = "lungo" if config.VIDEO_LUNGO else "short"
+    return [v for v in voci if _formato_di(v) == attuale]
+
+
 PUNTI_GIOCO_GROSSO = 4
 PUNTI_PAROLA_CALDA = 1
 MAX_PAROLE_CALDE = 3      # oltre, e' un titolo acchiappaclic, non una notizia
 PUNTI_RIPETIZIONE = 2     # la stessa notizia trovata da piu' di una ricerca
+
+# Le parole che il pubblico di QUESTO canale scrive davvero nella ricerca di
+# YouTube, prese da Analytics (analyst.parole_cercate). Pesano piu' di tutto il
+# resto messo qui a mano: GIOCHI_GROSSI e le parole calde sono una mia ipotesi
+# su cosa interessa, queste sono un fatto misurato. Il tetto serve perche' una
+# notizia che tocca tre parole cercate non vale il triplo di una che ne tocca
+# una: vuol dire solo che e' dello stesso mondo.
+PUNTI_PAROLA_CERCATA = 3
+MAX_PAROLE_CERCATE = 2
 
 # Con quante voci di cronologia confrontare le PAROLE di una notizia. E' un
 # confronto sfumato, quindi la finestra deve restare corta: `titoli_passati`
@@ -285,6 +313,7 @@ _PAROLE_DEBOLI = {
 # Tema in hashtag per ogni formato: il primo hashtag della descrizione e'
 # l'unico che YouTube mostra sopra al titolo, quindi non va sprecato.
 TEMA_PER_FORMATO = {
+    "VIDEO_LUNGO": "gamingita",
     "VIRAL_HOOK_NEWS": "newsgaming",
     "MYTH_BUSTING_VIRAL": "rumor",
     "EASTER_EGG_SECRET": "easteregg",
@@ -298,6 +327,9 @@ TEMA_PER_FORMATO = {
 # IDENTICI su ogni upload sono una delle impronte che fanno riconoscere un
 # canale automatizzato: per questo costruisci_tag() ne aggiunge di variabili.
 TAG_FISSI = ["gaming ita", "videogiochi", "shorts ita", "curiosita gaming"]
+# Sul video lungo 'shorts ita' e' un tag sbagliato, e i due che lo
+# sostituiscono dicono a YouTube di che tipo di video si tratta.
+TAG_FISSI_LUNGO = ["gaming ita", "videogiochi", "recensione", "guida gaming"]
 
 
 # ===========================================================================
@@ -337,6 +369,10 @@ def salva_in_cronologia(dati):
         # coprono niente. Serve a orari.gia_pubblicato() per non far uscire
         # due video sulla stessa uscita quando una run arriva in ritardo.
         "slot": (config.SLOT or "").strip(),
+        # 'short' oppure 'lungo'. Serve alla lavorazione di recupero, che deve
+        # sapere che formato rifare, e ai conti sulle performance, dove un
+        # video da otto minuti e uno da trenta secondi non si sommano.
+        "formato": "lungo" if config.VIDEO_LUNGO else "short",
         "estratto_script": dati["script"][:90],
         "stile": dati["stile"],
         "gioco": dati.get("gioco", ""),
@@ -389,12 +425,17 @@ def _notizia_di_una_voce(fonte):
     return _impronta_notizia(testo)
 
 
-def _punteggio_notizia(titolo, apparizioni=1):
+def _punteggio_notizia(titolo, apparizioni=1, cercate=frozenset()):
     """Quanto vale una notizia in entrata. Piu' alto = piu' gente la cerca.
 
     Non giudica come e' scritta la notizia, giudica di cosa parla. Sui video
     veri di questo canale l'argomento e' l'unica cosa che separa i video
     andati bene da quelli morti, e finora l'argomento veniva scelto a caso.
+
+    'cercate' sono le parole che il pubblico scrive nella ricerca di YouTube
+    per arrivare su questo canale: l'unico pezzo di questo punteggio che non
+    e' un'ipotesi. Quando mancano (token senza Analytics, canale nuovo) il
+    punteggio resta quello di prima, non peggiore.
     """
     testo = _senza_accenti(titolo or "").lower()
     punti = 0
@@ -405,6 +446,13 @@ def _punteggio_notizia(titolo, apparizioni=1):
     # Trovata da piu' di una ricerca: non e' un giudizio nostro, e' il segno
     # che la notizia sta girando.
     punti += (apparizioni - 1) * PUNTI_RIPETIZIONE
+    # Le parole si confrontano intere: 'gta' non deve accendersi dentro
+    # 'gtavicecity', e soprattutto una sigla di due lettere non deve
+    # accendersi dentro mezzo vocabolario.
+    if cercate:
+        parole_titolo = set(re.split(r"[^\w]+", testo))
+        trovate = len(parole_titolo & cercate)
+        punti += min(trovate, MAX_PAROLE_CERCATE) * PUNTI_PAROLA_CERCATA
     return punti
 
 
@@ -441,6 +489,15 @@ def recupera_trend_gaming_online(max_notizie=8):
     perche' lo script deve poter citare la fonte reale.
     """
     print("[Samaritan Search] Ricerca trend gaming reali...")
+
+    # Cosa cerca davvero il pubblico di questo canale. Importato qui dentro e
+    # non in cima al file: analyst importa brain, e in cima si avviterebbero.
+    try:
+        from analyst import parole_cercate
+        cercate = parole_cercate()
+    except Exception as e:
+        print(f"[Samaritan Search] Ricerche del pubblico non leggibili ({e}).")
+        cercate = frozenset()
 
     cronologia = carica_cronologia()
     voci = _stessa_lingua([_normalizza(i) for i in cronologia])
@@ -492,7 +549,9 @@ def recupera_trend_gaming_online(max_notizie=8):
             }
 
     for voce in trovate.values():
-        voce["punteggio"] = _punteggio_notizia(voce["titolo"], voce["apparizioni"])
+        voce["punteggio"] = _punteggio_notizia(
+            voce["titolo"], voce["apparizioni"], cercate
+        )
 
     # In ordine di importanza, non a caso: la piu' grossa arriva al modello
     # per prima. A parita' di punteggio l'ordine e' quello di arrivo.
@@ -502,6 +561,13 @@ def recupera_trend_gaming_online(max_notizie=8):
         print(f"[Samaritan Search] {len(notizie)} notizie fresche non ancora "
               f"usate, la piu' grossa vale {notizie[0]['punteggio']} punti: "
               f"{notizie[0]['titolo']}")
+        if cercate:
+            testo = _senza_accenti(notizie[0]["titolo"]).lower()
+            toccate = sorted(set(re.split(r"[^\w]+", testo)) & cercate)
+            if toccate:
+                print(f"[Samaritan Search] Parole che il pubblico cerca "
+                      f"davvero e che questa notizia tocca: "
+                      f"{', '.join(toccate)}.")
     else:
         print("[Samaritan Search] Nessuna notizia nuova: uso un formato evergreen.")
 
@@ -860,7 +926,7 @@ def costruisci_tag(dati, massimo=15, max_caratteri=450):
     YouTube accetta 500 caratteri di tag in totale e oltre quella soglia
     rifiuta l'upload intero, non i tag in eccesso: qui si taglia a 450.
     """
-    tag = list(TAG_FISSI)
+    tag = list(TAG_FISSI_LUNGO if config.VIDEO_LUNGO else TAG_FISSI)
     if config.NOME_CANALE:
         tag.append(config.NOME_CANALE.lower())
 
@@ -919,7 +985,7 @@ def _riga_materiale(dati, materiale):
             "ufficiale dei rispettivi editori.")
 
 
-def costruisci_descrizione(dati, materiale=None):
+def costruisci_descrizione(dati, materiale=None, capitoli=""):
     """Descrizione del video.
 
     Prima solo le prime due righe cambiavano da un video all'altro e tutto il
@@ -931,6 +997,13 @@ def costruisci_descrizione(dati, materiale=None):
     l'indirizzo della testata. Funziona, ma nella descrizione si legge male.
     """
     parti = [dati.get("descrizione") or dati.get("titolo", "")]
+
+    # I capitoli vanno IN ALTO, subito sotto le prime righe: YouTube li legge
+    # ovunque siano nella descrizione, ma chi guarda li cerca li'. Li ha solo
+    # il video lungo, dove sono la ragione principale per cui uno spettatore
+    # resta invece di chiudere al primo minuto.
+    if capitoli:
+        parti.append("\nCapitoli:\n" + capitoli)
 
     fonte_url = (dati.get("fonte_url") or "").strip()
     if fonte_url:
@@ -946,12 +1019,46 @@ def costruisci_descrizione(dati, materiale=None):
         "\nVideo realizzato con voce sintetica e montaggio automatico, "
         "su fatti e notizie verificabili."
     )
+    cosa = "Altri video" if config.VIDEO_LUNGO else "Altri Shorts"
     parti.append(
-        f"\nAltri Shorts gaming ogni giorno su {config.NOME_CANALE}: "
+        f"\n{cosa} gaming ogni giorno su {config.NOME_CANALE}: "
         f"youtube.com/{config.HANDLE_CANALE}"
     )
     parti.append("\n" + " ".join(costruisci_hashtag(dati)))
     return "\n".join(parti)
+
+
+# Il 'for you' di TikTok, lingua per lingua: il video delle 21:00 esce in
+# inglese e '#perte' la' non lo cerca nessuno.
+HASHTAG_PER_TE = {"it": "#perte", "en": "#fyp"}
+
+
+def costruisci_didascalia_tiktok(dati, massimo_hashtag=4):
+    """La didascalia pronta da incollare su TikTok.
+
+    Non e' la descrizione di YouTube e non deve diventarlo: li' servono la
+    fonte, il credito al materiale e il link al canale, qui no. Su TikTok i
+    link non sono cliccabili e le prime due righe sono le uniche che si
+    leggono prima di 'altro', quindi resta il titolo, un rigo di contenuto e
+    gli hashtag.
+    """
+    titolo = (dati.get("titolo") or "").strip()
+
+    # Della descrizione tengo solo la prima riga: la seconda e' la domanda
+    # finale, che nel video la voce la dice gia'.
+    descrizione = (dati.get("descrizione") or "").strip()
+    prima_riga = descrizione.splitlines()[0].strip() if descrizione else ""
+
+    hashtag = costruisci_hashtag(dati, massimo=massimo_hashtag)
+    # L'hashtag del 'per te' e' una convenzione di TikTok e cambia con la
+    # lingua del video: su YouTube sarebbe solo rumore, per questo sta qui e
+    # non in costruisci_hashtag.
+    per_te = HASHTAG_PER_TE.get((config.LINGUA or "it").lower(), "#perte")
+    if len(hashtag) < massimo_hashtag and per_te not in hashtag:
+        hashtag.append(per_te)
+
+    parti = [p for p in (titolo, prima_riga, " ".join(hashtag)) if p]
+    return "\n\n".join(parti)
 
 
 def testo_miniatura(titolo, massimo_parole=4):
@@ -1192,7 +1299,9 @@ def genera_script_samaritan(tema=None):
     notizie = recupera_trend_gaming_online()
     formato = scegli_formato(notizie)
 
-    cronologia = _stessa_lingua([_normalizza(i) for i in carica_cronologia()])
+    cronologia = _stesso_formato(
+        _stessa_lingua([_normalizza(i) for i in carica_cronologia()])
+    )
     ultimi_titoli = [v.get("titolo", "") for v in cronologia[-12:]]
 
     # Due liste dalla stessa fonte: al modello servono aperture leggibili da

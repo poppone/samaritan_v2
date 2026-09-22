@@ -9,6 +9,7 @@ piu' economico di restare dalla parte giusta di quella linea.
 Se le variabili TELEGRAM_* non sono configurate, il modulo non fa nulla
 e non blocca mai la pipeline.
 """
+import html
 import os
 
 import requests
@@ -65,12 +66,53 @@ def invia_video(percorso, didascalia=""):
         return False
 
 
+def _didascalia_tiktok(dati):
+    """Il testo pronto per TikTok, o stringa vuota se non si riesce a produrlo.
+
+    brain lo importo qui dentro e non in cima al file apposta: se un giorno
+    quella funzione cambia o sparisce, il massimo che succede e' che manca la
+    didascalia, non che salta la notifica del video appena pubblicato.
+    """
+    try:
+        from brain import costruisci_didascalia_tiktok
+        return costruisci_didascalia_tiktok(dati)
+    except Exception as e:
+        print(f"[Warning Telegram] Didascalia TikTok non preparata: {e}")
+        return ""
+
+
+def invia_didascalia_tiktok(dati):
+    """Secondo messaggio: la didascalia da copiare con un tocco.
+
+    Il video che Samaritan produce va bene su TikTok cosi' com'e' (verticale
+    1080x1920, MP4, mezzo minuto): l'unica cosa che manca per ripubblicarlo a
+    mano e' il testo. Su Telegram un blocco <code> si copia toccandolo, quindi
+    la didascalia sta in un messaggio tutto suo: video dal messaggio sopra,
+    testo da qui.
+    """
+    if not config.TELEGRAM_ATTIVO:
+        return False
+    didascalia = _didascalia_tiktok(dati)
+    if not didascalia:
+        return False
+    return invia_messaggio(
+        "<b>Didascalia per TikTok</b> (tocca il testo per copiarlo)\n\n"
+        f"<code>{html.escape(didascalia, quote=False)}</code>\n\n"
+        "Quando pubblichi, attiva l'etichetta \"Contenuto generato dall'IA\": "
+        "su YouTube Samaritan la dichiara da solo, su TikTok la spunta e' tua."
+    )
+
+
 def notifica_pubblicazione(dati, video_id, percorso_video):
     """Riepilogo di fine pipeline con link diretto al video."""
     if not config.TELEGRAM_ATTIVO:
         return
 
-    url = f"https://youtube.com/shorts/{video_id}" if video_id else "(upload fallito)"
+    if video_id:
+        url = (f"https://youtu.be/{video_id}" if config.VIDEO_LUNGO
+               else f"https://youtube.com/shorts/{video_id}")
+    else:
+        url = "(upload fallito)"
     stato = "PUBBLICATO" if config.PRIVACY_STATUS == "public" else "IN ATTESA DI APPROVAZIONE"
 
     testo = (
@@ -83,6 +125,11 @@ def notifica_pubblicazione(dati, video_id, percorso_video):
     )
     if not invia_video(percorso_video, testo):
         invia_messaggio(testo)
+
+    # Il file e' gia' pronto per TikTok: gli manca solo la didascalia. Vale
+    # solo per gli Short: su TikTok un 16:9 da otto minuti non si pubblica.
+    if not config.VIDEO_LUNGO:
+        invia_didascalia_tiktok(dati)
 
 
 def notifica_errore(messaggio):

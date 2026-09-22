@@ -1,6 +1,7 @@
 # Samaritan
 
-Sistema automatico di produzione e pubblicazione di YouTube Shorts gaming.
+Sistema automatico di produzione e pubblicazione di video gaming su YouTube:
+tre Short verticali al giorno e un video lungo 16:9 da otto minuti.
 
 Non e' solo un generatore: misura la retention reale dei video pubblicati e
 usa quei dati per decidere cosa produrre dopo.
@@ -14,8 +15,74 @@ FASE 2  gameplay.py  trailer e screenshot UFFICIALI del gioco da Steam
         veste.py     sceglie la veste grafica, diversa a ogni video
         maker.py     stacco ogni 2-3s, zoom, sfondo sfocato, sottotitoli
 FASE 3  uploader.py  upload su YouTube
-        notifier.py  notifica Telegram
+        notifier.py  notifica Telegram + didascalia pronta per TikTok
 ```
+
+Sul video lungo la FASE 1 la fa `lungo.py` invece di `brain.py`: scaletta,
+una sezione per volta, e un pezzo di audio per sezione da cui escono i
+capitoli veri. Il resto del percorso e' identico.
+
+## Il video lungo, e perche' esiste
+
+YouTube ha **due** porte per il programma partner, e un canale di soli Short
+ne puo' aprire una sola:
+
+| | Serve | Il canale oggi |
+|---|---|---|
+| Short | 1.000 iscritti + **10 milioni** di visualizzazioni Short in 90 giorni | ~1.400 al giorno, servirebbero ~111.000 |
+| Video lunghi | 1.000 iscritti + **4.000 ore** di visione pubbliche in 12 mesi | un video al giorno da otto minuti ci arriva con ~250-300 visualizzazioni vere al giorno |
+
+Le ore guardate sugli Short **non contano** per la soglia delle 4.000 ore. Su
+questi numeri la prima porta e' fuori portata di due ordini di grandezza e la
+seconda no: per questo dal 22 settembre 2026 esce anche un video lungo al
+giorno, alle 20:00 italiane.
+
+Come e' fatto (`lungo.py`):
+
+- **Si scrive a sezioni, non in un colpo solo.** Prima una scaletta (titolo,
+  gioco, e per ogni sezione il suo titolo e cosa deve dire), poi una chiamata
+  al modello per ogni sezione, ognuna sapendo come finiva la precedente. Otto
+  minuti sono circa 1.200 parole: chiederle in una risposta sola significa
+  farsi troncare a meta'.
+- **I capitoli sono timestamp veri.** Ogni sezione ha il suo pezzo di audio,
+  quindi la sua durata e' misurata e non stimata, e i capitoli finiscono in
+  cima alla descrizione YouTube. Se non sono validi (meno di tre, il primo non
+  a 00:00, due a meno di dieci secondi l'uno dall'altro) non vengono scritti
+  affatto: YouTube in quel caso li ignorerebbe tutti.
+- **Trailer ufficiali interi.** `config.SECONDI_TRAILER` passa da 45 secondi a
+  quattro minuti, e i trailer scaricati da tre a sei: con spezzoni corti le
+  stesse inquadrature tornerebbero sei o sette volte nello stesso video.
+- **Sottotitoli a frase**, in basso, non una parola per volta al centro. Su
+  otto minuti la forma dello Short vorrebbe oltre mille clip sovrapposti.
+- **Le clip girate in casa contano di piu'**: `MAX_CLIP_MIE` passa da 2 a 8. E'
+  li' che un video lungo smette di sembrare un montaggio automatico.
+
+Da dove NON viene il materiale: da YouTube. Prendere spezzoni di gameplay dai
+video di altri e' quello che fa bocciare la domanda di monetizzazione
+("contenuti riutilizzati" piu' copyright), ed e' il controllo che si fa
+proprio nel momento in cui si presenta la domanda. Le fonti restano due:
+trailer e screenshot ufficiali degli store, e le registrazioni di popponetv in
+`clip_mie/`.
+
+Per provarlo a mano: tab Actions, **Run workflow**, spunta `lungo` e metti
+`privacy` su `private`.
+
+## E su TikTok?
+
+Su TikTok Samaritan **non** pubblica da solo: servirebbe un'app registrata su
+TikTok for Developers e la loro revisione, e finche' non la si supera tutto
+cio' che l'API pubblica resta visibile solo a chi lo carica.
+
+Il video pero' va bene per TikTok cosi' com'e' (verticale 1080x1920, MP4,
+25-30 secondi), quindi a fine pipeline Telegram manda due messaggi: il file
+del video e, subito sotto, la didascalia gia' pronta in un blocco che si copia
+toccandolo. Caricarlo a mano sono trenta secondi.
+
+La didascalia non e' la descrizione di YouTube: niente link al canale (su
+TikTok non sono cliccabili) e niente righe di credito, solo titolo, un rigo di
+contenuto e gli hashtag. Quando si pubblica va attivata a mano l'etichetta
+"Contenuto generato dall'IA": su YouTube la dichiara `uploader.py`, su TikTok
+no.
 
 ## Da dove viene il gameplay
 
@@ -38,6 +105,35 @@ scaricare gameplay di 'Grand Theft Auto IV', o 'Portal' quello di 'Portal 2'.
 
 I trailer Steam sono 16:9: vengono montati dentro il 9:16 con sfondo sfocato
 ricavato dal frame stesso, che e' il formato standard degli Shorts gaming.
+
+**La notizia si sceglie, non si sorteggia.** Quattro ricerche diverse su Google
+News per lingua, quindici voci ciascuna, e poi una classifica: pesa il gioco
+grosso, pesano le parole che dicono che la notizia e' viva (`esce`, `data`,
+`gratis`, `leak`, `crossover`) e pesa il comparire in piu' di una ricerca, che
+e' il segno che sta girando. La piu' alta arriva al modello per prima.
+
+**E pesano soprattutto le parole che il pubblico cerca davvero.** Da YouTube
+Analytics si legge cosa la gente ha scritto nella ricerca per finire su un
+video del canale (`insightTrafficSourceDetail` filtrato su `YT_SEARCH`); i
+termini si salvano in `performance.json` sotto `ricerche` e si scendono alle
+parole, perche' nessuna notizia ripetera' mai la frase intera che qualcuno ha
+digitato. Una notizia che tocca quelle parole sale. E' l'unico pezzo della
+classifica che non e' un'ipotesi scritta a mano: il resto dice cosa pensiamo
+interessi, questo dice cosa e' stato misurato. Quando il dato manca (token
+senza permesso Analytics, canale nuovo) il punteggio resta quello di prima.
+
+> Su questo rapporto `maxResults` **non puo' superare 25**. Chiedendone di piu'
+> l'API non restituisce meno righe: fallisce tutta la richiesta con un 500 e
+> `FIELD_UNKNOWN_VALUE` su `max-results`, che non somiglia per niente a un
+> limite superato. E' costato una giornata di termini mancanti.
+
+Insieme ai termini si legge anche **da dove arrivano le visualizzazioni**
+(`insightTrafficSourceType`: feed Shorts, ricerca, suggeriti, home e
+iscrizioni), salvato in `performance.json` sotto `sorgenti` e stampato nel log
+in percentuale. Serve a sapere se lavorare sulla ricerca abbia senso: su un
+canale di soli Short il pubblico puo' arrivare quasi tutto dal feed, e in quel
+caso le parole cercate non sono il segnale da inseguire. E' una domanda a cui
+si risponde coi numeri, non a intuito.
 
 **Il materiale girato in casa.** In `clip_mie/<categoria>/` stanno gli spezzoni
 registrati da popponetv: sono l'unico pezzo dei video che non arriva da uno
@@ -185,11 +281,20 @@ Stampa i valori base64 da incollare in **Settings > Secrets and variables > Acti
 **Variables opzionali**
 `NOME_CANALE`, `VOCE_TTS`, `VOCE_TTS_EN`, `WHISPER_MODEL`
 
-**I video escono alle 14:00, alle 18:00 e alle 21:00 italiane**, sempre, anche
-quando cambia l'ora legale. **Quello delle 21:00 e' in inglese**: stesso
-canale, pubblico diverso, per misurare se l'inglese rende piu' dell'italiano
-invece di deciderlo a naso. La lingua la passa il workflow con `LINGUA`, e una
-run lanciata a mano la sceglie dal menu.
+**I video escono alle 14:00, alle 18:00, alle 20:00 e alle 21:00 italiane**,
+sempre, anche quando cambia l'ora legale.
+
+- 14:00 e 18:00: Short in italiano.
+- **20:00: il video lungo**, 16:9 da otto minuti, in italiano.
+- **21:00: Short in inglese**, stesso canale, pubblico diverso, per misurare
+  se l'inglese rende piu' dell'italiano invece di deciderlo a naso.
+
+La lingua la passa il workflow con `LINGUA` e il formato con `VIDEO_LUNGO`;
+una run lanciata a mano li sceglie dal menu.
+
+Quattro caricamenti al giorno stanno sotto il tetto di YouTube, che e' di sei
+(la quota giornaliera dell'API e' 10.000 unita' e ogni caricamento ne costa
+1.600).
 
 Le regole anti-ripetizione (apertura, gioco, notizia gia' usata) valgono
 **dentro una lingua sola**: il video inglese deve poter raccontare la stessa
@@ -200,7 +305,7 @@ l'hanno, contano come italiane.
 L'orario NON viene dal cron. GitHub fa partire le run schedulate in ritardo, e
 il ritardo non si puo' prevedere: fra il 17 e il 19 settembre 2026 e' andato da
 un'ora e quaranta a tre ore e mezza. Quindi la pipeline parte con circa quattro
-ore e mezza di anticipo (`30 7`, `30 11` e `30 14` UTC), carica il video privato e
+ore e mezza di anticipo (`30 7`, `30 11`, `30 13` e `30 14` UTC), carica il video privato e
 chiede a YouTube di renderlo pubblico all'istante giusto: e' il campo
 `publishAt`, e vale al minuto.
 
@@ -219,11 +324,17 @@ Il 21 settembre 2026 GitHub ha fatto partire una run con sette ore di ritardo e
 un'altra non l'ha fatta partire affatto: il video delle 21:00 non e' mai
 uscito. Il codice non c'entrava, ma il canale un video l'ha perso lo stesso.
 
-Da qui un quarto cron (`30 20` UTC, verso le 22:30 italiane) che non produce un
-video suo. Guarda quali delle tre uscite di oggi sono rimaste scoperte e rifa'
-la piu' vecchia, una sola, pubblicandola subito; se sono tutte a posto termina
-in pochi secondi senza fare niente. Si puo' lanciare anche a mano, dalla tab
-Actions, spuntando `recupero`.
+Da qui un cron in piu' (`30 20` UTC, verso le 22:30 italiane) che non produce
+un video suo. Guarda quali delle quattro uscite di oggi sono rimaste scoperte
+e rifa' la piu' vecchia, una sola, **nel formato che quell'uscita voleva**,
+pubblicandola subito; se sono tutte a posto termina in pochi secondi senza
+fare niente. Si puo' lanciare anche a mano, dalla tab Actions, spuntando
+`recupero`.
+
+Il formato viaggia insieme all'orario proprio per questo: la riserva scopre
+solo a lavorazione iniziata se le tocca uno Short verticale o il video lungo
+orizzontale, e a quel punto richiama `config.applica_formato()` per rifare
+tutte le misure.
 
 Perche' questo non produca doppioni ogni lavorazione dichiara quale uscita sta
 coprendo (`SLOT`, che finisce in `cronologia_trend.json`) e si ferma se quella

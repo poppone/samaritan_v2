@@ -6,6 +6,11 @@ Orchestratore della pipeline Samaritan.
   FASE 2  Montaggio -> voce neurale, stacchi rapidi, sottotitoli
   FASE 3  Upload    -> YouTube + notifica Telegram
 
+Escono due cose diverse dallo stesso percorso: lo Short verticale da mezzo
+minuto (tre al giorno) e il video lungo 16:9 da otto minuti (uno al giorno,
+VIDEO_LUNGO=1). Cambiano la FASE 1 e l'inizio della FASE 2; il resto e'
+identico, e il perche' dei due formati sta in lungo.py e nel README.
+
 Uso:
     python main.py                         # tema libero
     python main.py "easter egg nascosti"   # tema specifico
@@ -44,13 +49,18 @@ def prepara_uscita():
         if not scelta:
             print("[Recupero] Le uscite di oggi sono tutte a posto: non faccio niente.")
             return False
-        slot, lingua = scelta
+        slot, lingua, formato = scelta
         config.SLOT = slot
         config.LINGUA = lingua
         config.VOCE_TTS = config.VOCE_TTS_EN if lingua == "en" else config.VOCE_TTS_IT
+        # Il formato va riapplicato PRIMA di qualunque conto: la riserva non
+        # sa in partenza se le tocchera' uno Short verticale o il video lungo
+        # orizzontale, e le misure calcolate all'import sono quelle dell'altro.
+        config.applica_formato(formato == "lungo")
         # Niente ORARIO_USCITA: l'ora e' passata da un pezzo, il video esce
         # appena e' pronto.
-        print(f"[Recupero] Manca l'uscita delle {slot} ({lingua}): la rifaccio adesso.")
+        print(f"[Recupero] Manca l'uscita delle {slot} ({lingua}, {formato}): "
+              f"la rifaccio adesso.")
         return True
 
     if config.SLOT and orari.gia_pubblicato(config.SLOT, carica_cronologia()):
@@ -60,26 +70,56 @@ def prepara_uscita():
     return True
 
 
-def esegui_pipeline_samaritan(tema=None):
-    if not prepara_uscita():
-        return None
+def _scrivi_e_monta(tema):
+    """FASE 1 e 2. Ritorna (dati, percorso_video, materiale, capitoli).
 
-    print("=" * 62)
-    print(f"SAMARITAN ONLINE | {config.NOME_CANALE} | privacy={config.PRIVACY_STATUS}")
-    print("=" * 62)
+    I capitoli esistono solo sul video lungo: sullo Short sono una stringa
+    vuota, e costruisci_descrizione non scrive la sezione.
+    """
+    if config.VIDEO_LUNGO:
+        import lungo
 
-    # ---------------------------------------------------- FASE 0: Analisi
-    print("\n[FASE 0/3] Aggiornamento dati di performance...")
-    try:
-        from analyst import aggiorna_performance
-        aggiorna_performance()
-    except Exception as e:
-        print(f"[Analyst] Salto l'analisi ({e}).")
+        print("\n[FASE 1/3] Scrittura del video lungo, sezione per sezione...")
+        dati = lungo.genera_video_lungo(tema)
+        _stampa_scheda(dati)
 
-    # -------------------------------------------------- FASE 1: Scrittura
+        print("\n[FASE 2/3] Voce, gameplay, montaggio e sottotitoli...")
+        # La voce si genera qui e non dentro il montaggio: una sezione per
+        # volta, per sapere quanto dura ciascuna e ricavarne i capitoli veri.
+        audio, capitoli = lungo.produci_audio_e_capitoli(dati["sezioni"])
+        materiale = {}
+        video = assembla_video_finale(
+            testo_per_audio=dati["script"],
+            query_video=dati["query_video"],
+            titolo=dati["titolo"],
+            gioco=dati.get("gioco", ""),
+            tema=tema or "Gaming",
+            resoconto=materiale,
+            audio_pronto=audio,
+        )
+        return dati, video, materiale, lungo.formatta_capitoli(capitoli)
+
     print("\n[FASE 1/3] Generazione contenuto...")
     dati = genera_script_samaritan(tema)
+    _stampa_scheda(dati)
 
+    print("\n[FASE 2/3] Gameplay, voce, montaggio e sottotitoli...")
+    # Il montaggio riempie questo dizionario con cosa e' finito davvero nel
+    # video: serve alla descrizione, che altrimenti dichiara materiale
+    # ufficiale dell'editore anche sui video fatti di clip d'archivio.
+    materiale = {}
+    video = assembla_video_finale(
+        testo_per_audio=dati["script"],
+        query_video=dati["query_video"],
+        titolo=dati["titolo"],
+        gioco=dati.get("gioco", ""),
+        tema=tema or "Gaming",
+        resoconto=materiale,
+    )
+    return dati, video, materiale, ""
+
+
+def _stampa_scheda(dati):
     print("-" * 62)
     print(f"TITOLO  : {dati['titolo']}")
     print(f"FORMATO : {dati['stile']}")
@@ -90,20 +130,27 @@ def esegui_pipeline_samaritan(tema=None):
     print(dati["script"])
     print("-" * 62)
 
-    # -------------------------------------------------- FASE 2: Montaggio
-    print("\n[FASE 2/3] Gameplay, voce, montaggio e sottotitoli...")
-    # Il montaggio riempie questo dizionario con cosa e' finito davvero nel
-    # video: serve alla descrizione, che altrimenti dichiara materiale
-    # ufficiale dell'editore anche sui video fatti di clip d'archivio.
-    materiale = {}
-    video_path = assembla_video_finale(
-        testo_per_audio=dati["script"],
-        query_video=dati["query_video"],
-        titolo=dati["titolo"],
-        gioco=dati.get("gioco", ""),
-        tema=tema or "Gaming",
-        resoconto=materiale,
-    )
+
+def esegui_pipeline_samaritan(tema=None):
+    if not prepara_uscita():
+        return None
+
+    che_cosa = "VIDEO LUNGO" if config.VIDEO_LUNGO else "SHORT"
+    print("=" * 62)
+    print(f"SAMARITAN ONLINE | {config.NOME_CANALE} | {che_cosa} | "
+          f"privacy={config.PRIVACY_STATUS}")
+    print("=" * 62)
+
+    # ---------------------------------------------------- FASE 0: Analisi
+    print("\n[FASE 0/3] Aggiornamento dati di performance...")
+    try:
+        from analyst import aggiorna_performance
+        aggiorna_performance()
+    except Exception as e:
+        print(f"[Analyst] Salto l'analisi ({e}).")
+
+    # -------------------------------------- FASE 1 e 2: scrittura e montaggio
+    dati, video_path, materiale, capitoli = _scrivi_e_monta(tema)
 
     if not video_path or not os.path.exists(video_path):
         print("\n[Errore Pipeline] Rendering non completato.")
@@ -124,7 +171,7 @@ def esegui_pipeline_samaritan(tema=None):
     video_id = carica_short(
         filepath=video_path,
         titolo=dati["titolo"],
-        descrizione=costruisci_descrizione(dati, materiale),
+        descrizione=costruisci_descrizione(dati, materiale, capitoli),
         tag=costruisci_tag(dati),
         privacy=config.PRIVACY_STATUS,
         miniatura=miniatura,
@@ -138,11 +185,13 @@ def esegui_pipeline_samaritan(tema=None):
     notifier.notifica_pubblicazione(dati, video_id, video_path)
 
     print("=" * 62)
-    if video_id and uscita:
-        print(f"PIPELINE COMPLETATA -> https://youtube.com/shorts/{video_id} "
-              f"(esce alle {uscita:%H:%M})")
-    elif video_id:
-        print(f"PIPELINE COMPLETATA -> https://youtube.com/shorts/{video_id}")
+    if video_id:
+        indirizzo = (f"https://youtu.be/{video_id}" if config.VIDEO_LUNGO
+                     else f"https://youtube.com/shorts/{video_id}")
+        if uscita:
+            print(f"PIPELINE COMPLETATA -> {indirizzo} (esce alle {uscita:%H:%M})")
+        else:
+            print(f"PIPELINE COMPLETATA -> {indirizzo}")
     else:
         print("PIPELINE COMPLETATA MA UPLOAD FALLITO (il video e' in output_videos/)")
     print("=" * 62)

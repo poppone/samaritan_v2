@@ -476,7 +476,7 @@ class TestRigaMateriale:
             maker_py = f.read()
 
         assert "resoconto=materiale" in main_py
-        assert "costruisci_descrizione(dati, materiale)" in main_py
+        assert "costruisci_descrizione(dati, materiale, capitoli)" in main_py
         assert 'resoconto["sorgenti_ufficiali"]' in maker_py
 
 
@@ -941,6 +941,52 @@ class TestNotiziaPiuGrossa:
         tre = brain._punteggio_notizia("Minecraft cambia tutto", apparizioni=3)
         assert tre == una + 2 * brain.PUNTI_RIPETIZIONE
 
+    def test_una_parola_che_il_pubblico_cerca_vale_di_piu(self):
+        """Il resto di questo punteggio e' un criterio scritto a mano; queste
+        parole vengono da YouTube Analytics e sono un fatto misurato."""
+        senza = brain._punteggio_notizia("Silksong riceve una patch")
+        con = brain._punteggio_notizia("Silksong riceve una patch",
+                                       cercate=frozenset({"silksong"}))
+        assert con == senza + brain.PUNTI_PAROLA_CERCATA
+
+    def test_le_parole_cercate_non_valgono_all_infinito(self):
+        """Toccarne tre non vuol dire valere il triplo: vuol dire solo essere
+        dello stesso mondo."""
+        cercate = frozenset({"silksong", "patch", "riceve", "una"})
+        con = brain._punteggio_notizia("Silksong riceve una patch",
+                                       cercate=cercate)
+        senza = brain._punteggio_notizia("Silksong riceve una patch")
+        assert con - senza == brain.MAX_PAROLE_CERCATE * brain.PUNTI_PAROLA_CERCATA
+
+    def test_il_confronto_e_su_parole_intere(self):
+        """'gta' dentro 'gtavicecity' non e' qualcuno che cerca GTA."""
+        assert brain._punteggio_notizia(
+            "Il sito gtavicecity chiude", cercate=frozenset({"gta"})
+        ) == brain._punteggio_notizia("Il sito gtavicecity chiude")
+
+    def test_senza_dati_di_ricerca_il_punteggio_resta_quello_di_prima(self):
+        """Token senza Analytics, o canale appena nato: il punteggio non deve
+        peggiorare, solo restare com'era."""
+        assert brain._punteggio_notizia("GTA 6 ha finalmente una data",
+                                        cercate=frozenset()) == \
+            brain._punteggio_notizia("GTA 6 ha finalmente una data")
+
+    def test_le_ricerche_del_pubblico_arrivano_al_punteggio(self, monkeypatch):
+        """Il collegamento vero: se analyst dice che il pubblico cerca una
+        cosa, la notizia che la nomina deve salire in cima."""
+        import analyst
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: [])
+        monkeypatch.setattr(analyst, "parole_cercate",
+                            lambda: frozenset({"silksong"}))
+        monkeypatch.setattr(brain.requests, "get", self._rss_per_ricerca({
+            "videogiochi": ["Un gestionale indie riceve una patch",
+                            "Silksong riceve una patch"],
+        }, []))
+
+        notizie = brain.recupera_trend_gaming_online()
+
+        assert notizie[0]["titolo"] == "Silksong riceve una patch"
+
     def test_interroga_tutte_le_ricerche(self, monkeypatch):
         viste = []
         monkeypatch.setattr(brain, "carica_cronologia", lambda: [])
@@ -1117,3 +1163,54 @@ class TestLinguaInglese:
 
         monkeypatch.setattr(brain.config, "LINGUA", "en")
         assert notizia in [n["titolo"] for n in brain.recupera_trend_gaming_online()]
+
+
+class TestDidascaliaTikTok:
+    """La didascalia da incollare a mano su TikTok.
+
+    Il video finito e' gia' buono per TikTok (verticale, MP4, mezzo minuto):
+    quello che cambia e' il testo che lo accompagna, perche' su TikTok il link
+    al canale non e' cliccabile e le righe di credito non le legge nessuno.
+    """
+
+    def test_apre_con_il_titolo(self):
+        didascalia = brain.costruisci_didascalia_tiktok(DATI_GTA)
+        assert didascalia.startswith(DATI_GTA["titolo"])
+
+    def test_non_porta_dentro_la_roba_di_youtube(self):
+        didascalia = brain.costruisci_didascalia_tiktok(DATI_GTA)
+        assert "youtube.com" not in didascalia
+        assert "@PopponeTV" not in didascalia
+        assert DATI_GTA["fonte_url"] not in didascalia
+
+    def test_finisce_con_gli_hashtag(self):
+        didascalia = brain.costruisci_didascalia_tiktok(DATI_GTA)
+        ultima = didascalia.splitlines()[-1]
+        assert ultima.startswith("#grandtheftautovi")
+        assert "#perte" in ultima
+
+    def test_il_per_te_segue_la_lingua_del_video(self, monkeypatch):
+        # Il video delle 21:00 esce in inglese: '#perte' li' non lo cerca
+        # nessuno, e la lingua si legge a ogni chiamata come nel resto di brain.
+        monkeypatch.setattr(brain.config, "LINGUA", "en")
+        assert "#fyp" in brain.costruisci_didascalia_tiktok(DATI_GTA)
+        monkeypatch.setattr(brain.config, "LINGUA", "it")
+        assert "#perte" in brain.costruisci_didascalia_tiktok(DATI_GTA)
+
+    def test_sta_sotto_il_limite_di_tiktok(self):
+        # TikTok taglia la didascalia a 2200 caratteri.
+        assert len(brain.costruisci_didascalia_tiktok(DATI_GTA)) <= 2200
+
+    def test_regge_il_video_senza_gioco_e_senza_descrizione(self):
+        didascalia = brain.costruisci_didascalia_tiktok(
+            {"titolo": "Un titolo", "descrizione": "", "gioco": "", "stile": ""})
+        assert didascalia.startswith("Un titolo")
+        assert "#gamingita" in didascalia
+
+    def test_la_descrizione_youtube_non_e_cambiata(self):
+        # Il senso di questa modifica e' aggiungere TikTok senza toccare
+        # niente di quello che finisce su YouTube.
+        descrizione = brain.costruisci_descrizione(DATI_GTA)
+        assert "@PopponeTV" in descrizione
+        assert DATI_GTA["fonte_url"] in descrizione
+        assert "#perte" not in descrizione

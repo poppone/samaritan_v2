@@ -95,25 +95,97 @@ VOCE_TTS = _get("VOCE_TTS", "it-IT-DiegoNeural")
 VOCE_VELOCITA = _get("VOCE_VELOCITA", "+12%")   # gli Shorts virali parlano veloce
 VOCE_PITCH = _get("VOCE_PITCH", "+8Hz")         # leggermente piu alto = piu "sveglio"
 
+# -------------------------------------------------------------- Formato video
+# Samaritan produce due cose diverse con la stessa pipeline:
+#
+#   Short  9:16, mezzo minuto, tre al giorno. E' quello che il canale fa da
+#          sempre.
+#   Lungo  16:9, otto minuti, uno al giorno. Serve alla seconda porta del
+#          programma partner YouTube: 1.000 iscritti piu' 4.000 ore di
+#          visione in 12 mesi. Le ore guardate sugli Short NON contano per
+#          quella soglia, quindi un canale di soli Short quella porta non la
+#          apre mai, e l'altra (10 milioni di visualizzazioni in 90 giorni)
+#          e' fuori portata di due ordini di grandezza.
+#
+# Quasi tutto il resto del codice non sa quale dei due sta facendo: legge le
+# misure da qui e si comporta di conseguenza.
+VIDEO_LUNGO = _get("VIDEO_LUNGO", "") not in ("", "0", "false", "False")
+
+# Quanto dura il video lungo e in quante parti e' diviso. Le parti non sono un
+# dettaglio di scrittura: ognuna ha il suo pezzo di audio, e da quelle durate
+# escono i capitoli veri della descrizione YouTube.
+MINUTI_VIDEO_LUNGO = float(_get("MINUTI_VIDEO_LUNGO", "8"))
+SEZIONI_VIDEO_LUNGO = int(_get("SEZIONI_VIDEO_LUNGO", "6"))
+
 # ---------------------------------------------------------------- Rendering
-VIDEO_W = int(_get("VIDEO_W", "1080"))
-VIDEO_H = int(_get("VIDEO_H", "1920"))
-FPS = int(_get("FPS", "30"))
-# Durata di ogni stacco di montaggio: sotto i 3s l'occhio non si annoia mai
-STACCO_MIN = float(_get("STACCO_MIN", "2.0"))
-STACCO_MAX = float(_get("STACCO_MAX", "3.2"))
-NUM_CLIP_SFONDO = int(_get("NUM_CLIP_SFONDO", "4"))
+# I valori qui sotto li imposta applica_formato(), perche' quasi tutti
+# cambiano fra Short e video lungo. Sono dichiarati prima solo per avere un
+# posto dove leggerli.
+VIDEO_W = VIDEO_H = FPS = 0
+STACCO_MIN = STACCO_MAX = 0.0
+NUM_CLIP_SFONDO = 0
+PRESET_RENDER = ""
 WHISPER_MODEL = _get("WHISPER_MODEL", "base")   # 'tiny' sbaglia troppe parole in italiano
 
 # ------------------------------------------------- Gameplay reale (Steam)
-# Usa trailer e screenshot UFFICIALI del gioco di cui parla lo Short, invece
+# Usa trailer e screenshot UFFICIALI del gioco di cui parla il video, invece
 # di stock generico. Se il gioco non e' su Steam, si ripiega su Pexels.
 USA_STEAM = _get("USA_STEAM", "1") not in ("0", "false", "False")
-STEAM_MAX_TRAILER = int(_get("STEAM_MAX_TRAILER", "3"))
-STEAM_MAX_SCREENSHOT = int(_get("STEAM_MAX_SCREENSHOT", "4"))
-# I trailer Steam sono 16:9: vengono inseriti in un 9:16 con sfondo sfocato.
-# Questo valore ingrandisce il riquadro di gameplay (1.0 = larghezza piena).
+STEAM_MAX_TRAILER = STEAM_MAX_SCREENSHOT = SECONDI_TRAILER = 0
+# I trailer Steam sono 16:9: dentro uno Short vengono inseriti in un 9:16 con
+# sfondo sfocato, e questo valore ingrandisce il riquadro di gameplay
+# (1.0 = larghezza piena). Nel video lungo il formato coincide e non serve.
 ZOOM_GAMEPLAY = float(_get("ZOOM_GAMEPLAY", "1.18"))
+
+
+def applica_formato(lungo=None):
+    """Imposta le misure che dipendono dal formato del video.
+
+    Si chiama una volta all'import, e una seconda volta dalla lavorazione di
+    recupero: quella non sa in partenza se le tocchera' rifare uno Short o il
+    video lungo, lo scopre leggendo la cronologia, e a quel punto le misure
+    gia' calcolate sarebbero quelle sbagliate.
+
+    Ogni valore resta sovrascrivibile da variabile d'ambiente: il formato
+    decide solo il valore di partenza.
+    """
+    global VIDEO_LUNGO, VIDEO_W, VIDEO_H, FPS, STACCO_MIN, STACCO_MAX
+    global NUM_CLIP_SFONDO, PRESET_RENDER, VOCE_VELOCITA, MAX_CLIP_MIE
+    global STEAM_MAX_TRAILER, STEAM_MAX_SCREENSHOT, SECONDI_TRAILER
+
+    if lungo is not None:
+        VIDEO_LUNGO = bool(lungo)
+
+    VIDEO_W = int(_get("VIDEO_W", "1920" if VIDEO_LUNGO else "1080"))
+    VIDEO_H = int(_get("VIDEO_H", "1080" if VIDEO_LUNGO else "1920"))
+    FPS = int(_get("FPS", "30"))
+
+    # Durata di ogni stacco di montaggio. Nello Short sotto i 3 secondi
+    # l'occhio non si annoia mai; nel video lungo lo stesso ritmo darebbe piu'
+    # di cento stacchi al minuto e stancherebbe, quindi si respira.
+    STACCO_MIN = float(_get("STACCO_MIN", "4.0" if VIDEO_LUNGO else "2.0"))
+    STACCO_MAX = float(_get("STACCO_MAX", "7.5" if VIDEO_LUNGO else "3.2"))
+    NUM_CLIP_SFONDO = int(_get("NUM_CLIP_SFONDO", "8" if VIDEO_LUNGO else "4"))
+
+    # Otto minuti in 1080p con il preset 'medium' non stanno dentro il tempo
+    # massimo di una lavorazione su GitHub. 'veryfast' costa qualche mega in
+    # piu' di file e fa risparmiare piu' della meta' del tempo.
+    PRESET_RENDER = _get("PRESET_RENDER", "veryfast" if VIDEO_LUNGO else "medium")
+
+    # Gli Short virali parlano veloce. Un video da otto minuti letto alla
+    # stessa velocita' diventa faticoso dopo il secondo minuto.
+    VOCE_VELOCITA = _get("VOCE_VELOCITA", "+4%" if VIDEO_LUNGO else "+12%")
+
+    # Otto minuti chiedono molto piu' materiale di trenta secondi, altrimenti
+    # le stesse inquadrature tornano cinque volte.
+    STEAM_MAX_TRAILER = int(_get("STEAM_MAX_TRAILER", "6" if VIDEO_LUNGO else "3"))
+    STEAM_MAX_SCREENSHOT = int(_get("STEAM_MAX_SCREENSHOT",
+                                    "12" if VIDEO_LUNGO else "4"))
+    # Quanti secondi si prendono da ogni trailer ufficiale. Quarantacinque
+    # bastano a uno Short; per il video lungo si scarica il trailer intero,
+    # che e' proprio la richiesta di popponetv del 22 settembre 2026.
+    SECONDI_TRAILER = int(_get("SECONDI_TRAILER", "240" if VIDEO_LUNGO else "45"))
+    MAX_CLIP_MIE = int(_get("MAX_CLIP_MIE", "8" if VIDEO_LUNGO else "2"))
 
 # ---------------------------------------------------------------- Pubblicazione
 # 'public' = pubblica subito | 'private' = attende la tua approvazione manuale
@@ -162,13 +234,20 @@ DIR_OUTPUT = os.path.join(DIR_PROGETTO, "output_videos")
 # il resto viene dagli store. Una sottocartella per categoria ('guida',
 # 'fortnite') e si montano solo nei video di quella categoria, altrimenti
 # stonano piu' di quanto aggiungano. MAX_CLIP_MIE dice quante ne entrano al
-# massimo in uno Short.
+# massimo in un video, e nel lungo sono molte di piu': e' li' che il
+# materiale originale conta davvero, perche' un video di otto minuti fatto
+# solo di trailer si legge come un montaggio automatico.
 DIR_CLIP_MIE = os.path.join(DIR_PROGETTO, "clip_mie")
-MAX_CLIP_MIE = int(_get("MAX_CLIP_MIE", "2"))
+MAX_CLIP_MIE = 0     # impostata da applica_formato()
 
-# Miniatura personalizzata dello Short. Senza, YouTube estrae un fotogramma a
-# caso: nella griglia del canale si vede, e si vede male.
+# Miniatura personalizzata. Senza, YouTube estrae un fotogramma a caso: nella
+# griglia del canale si vede, e si vede male.
 FILE_MINIATURA = os.path.join(DIR_OUTPUT, "samaritan_miniatura.jpg")
 
 os.makedirs(DIR_TEMP, exist_ok=True)
 os.makedirs(DIR_OUTPUT, exist_ok=True)
+
+# Le misure che dipendono dal formato. Ultima riga del modulo, cosi' vale sia
+# quando si importa config sia quando la lavorazione di recupero la richiama
+# per cambiare formato a meta' strada.
+applica_formato()

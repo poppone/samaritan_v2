@@ -284,7 +284,8 @@
     "fonte": "Il Professor Layton su Nintendo Switch svelato in un nuovissimo trailer (sortiraparis.com)",
     "fonte_url": "https://news.google.com/rss/articles/CBMiiAJBVV95cUxOTzdnN2I3MWRVNWlIbzNDOHZ0bzg5bGpxeE41WnF6R1FZbUFqVkpQNUZDY0V0LWNKOWcwZU5xM1NfMzFVVk93S2wxUEVsZkNpRXRhUlFyZWNJWjF2dFpVSWJ0UXBMRkNuWEh5TXhNUEJIbjI3dFZ5TXhMcXI1SHVEWWtUb3F6MVlTUjVTWHFPTzNQU0g1YUFzNXI0T3NkZTRkVXNVYmJhOFdVeHZKOVhkRkUxWFhhQWVUY0ZSRWZtakw1TXFBSzJYaEJrMEJZREw0bzdraXFUTHo3SVBpR3lZbktybHpDNGpXTklGV3VoY3JfQlZYc1dWUkQxX1VQWEdtR0M3bU5pT1U?oc=5",
     "video_id": "EN_5Db7E5V0",
-    "veste": "pulito"
+    "veste": "pulito",
+    "slot": "14:00"
   },
   {
     "timestamp": 1790010750,
@@ -298,7 +299,8 @@
     "fonte": "The Alighieri Circle: Dante's Bloodline ha una data di uscita, arriverà anche su Nintendo Switch 2 (Multiplayer)",
     "fonte_url": "https://news.google.com/rss/articles/CBMiywFBVV95cUxPb2tOYnRrNk9ITmpWWXp5TlE1UkZCcE9kbFJaRmhlMGxPc0xuNVd6d0RGckR2dEJxZkNuSEl4Y3FEaVN5VWx4Y1hCaUNicENHcTNDbVF5d1BBMGhaS1dRazBNZHNMZmh2TjVoZVNTSlp6N0lNT3MtdldGT3JacXdlcjJLVlc1MDJ0S1kzXzFZOG5Hd0NBNC1XRkduN2xadXJUZ1NiRlBZclMxZUFpRngxaEVXRDkxMVlIMG9pME9kVUFQaHI0Z3R4TWM2SQ?oc=5",
     "video_id": "VcWzJ4-efkY",
-    "veste": "arena"
+    "veste": "arena",
+    "slot": "18:00"
   },
   {
     "timestamp": 1790016086,
@@ -313,5 +315,36 @@
     "fonte_url": "",
     "video_id": "XaU2hP-SWpM",
     "veste": "notte"
+  },
+  {
+    "timestamp": 1790019741,
+    "data": "2026-09-21",
+    "titolo": "PlayStation 5: the PS1 classics you can't miss 🎮",
+    "lingua": "en",
+    "slot": "21:00",
+    "estratto_script": "Ten years after the original, 20+ PS1 titles are finally on PS5. Imagine playing Metal Gea",
+    "stile": "VIRAL_HOOK_NEWS",
+    "gioco": "PlayStation 5",
+    "query_video": "ps5 ps1 collection gameplay",
+    "fonte": "PlayStation 5 Collection of Popular PS1 Action Games Gets Release Date Window (PlayStation LifeStyle)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMirwFBVV95cUxPWGNBY0xBU0QzMmM3VTBER08ycXdBU01PUk5ZVExrM0JZWWhPSFZ0RVV4QTNPMDRFM2VZRWFUMTRSU2NISnRtalh5V1I5bEhRNG92ajR5T2xGaXZST1lodjJ1VUdaeW0zamlJajZZSDd2MzFPT01oMVNSZzY4a3JnNkp3THFZcmN3NEplVWtsMFVBXzhjSVJtWU8xYWMxc0FfSHJHUG5sLXdVSWVBellZ0gG0AUFVX3lxTFBiVFFPTV8zclRXNGFXZDF1dGJaaDJXcEpLc2ZrYkVPWXhoZV9NY2p3ejRLczh4NTV0cXEyOHdZYmdDM0dBMGNqejJoLTRqMjhYd0MtLTZSTWlvRHNLUm5DNmhyalpReWRVQjlfVWZTVUNWdU5UcUx1WllRaUJzakRXT0gtdXhpV0p1UVNEb3NrMDhVeW5ETHMwWXFNSVhiR3FUSU1oRWxpMEJFOEpScG9GODJ0aA?oc=5",
+    "video_id": "OAoeRrqAWL0",
+    "veste": "ghiaccio"
+  },
+  {
+    "timestamp": 1790051138,
+    "data": "2026-09-22",
+    "titolo": "Grand Theft Auto VI: la colonna sonora che trasforma il gioco",
+    "lingua": "it",
+    "slot": "",
+    "formato": "lungo",
+    "estratto_script": "La colonna sonora di Grand Theft Auto VI è stata finalmente svelata, e subito si percepisc",
+    "stile": "VIDEO_LUNGO",
+    "gioco": "Grand Theft Auto VI",
+    "query_video": "Grand Theft Auto VI soundtrack gameplay",
+    "fonte": "Grand Theft Auto VI, arriva l'album con la soundtrack del videogame (Sky TG24)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMif0FVX3lxTFBabWVNTHBjdEZ4aDloVXpIVld3TWpyUDdNbFdzZGNMUUhCaFhiYUpHZ2JTQ1dJa3Axb0FFaEtJUEJqeVkyWk5Objk4SlpJWlRCVldSU0JkcHF0dTNzczBkR1hranJpRUl2Vm1yTVRTTDRGSnhHbmNJb0VETUJITzQ?oc=5",
+    "video_id": "SHmPQOzpkKQ",
+    "veste": "fuoco"
   }
 ]
