@@ -21,13 +21,19 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import config
 
 
-# Le uscite della giornata, con la lingua di ciascuna. E' l'elenco che la run
-# di recupero usa per capire quale manca; il workflow ha la sua copia sotto
-# forma di cron, e un test controlla che le due dicano la stessa cosa.
+# Le uscite della giornata: orario, lingua e formato di ciascuna. E' l'elenco
+# che la run di recupero usa per capire quale manca; il workflow ha la sua
+# copia sotto forma di cron, e un test controlla che le due dicano la stessa
+# cosa.
+#
+# Il formato non e' un dettaglio di etichetta: il video lungo esce 16:9 da
+# otto minuti e lo Short 9:16 da mezzo minuto, e la lavorazione di recupero
+# deve sapere quale dei due sta rifacendo prima di calcolare qualunque misura.
 SLOT_GIORNALIERI = (
-    ("14:00", "it"),
-    ("18:00", "it"),
-    ("21:00", "en"),
+    ("14:00", "it", "short"),
+    ("18:00", "it", "short"),
+    ("20:00", "it", "lungo"),
+    ("21:00", "en", "short"),
 )
 
 # La finestra dentro cui un video "appartiene" a una certa uscita. Non e'
@@ -141,7 +147,9 @@ def gia_pubblicato(slot, cronologia, adesso=None):
 
 
 def slot_da_recuperare(cronologia, adesso=None):
-    """L'uscita saltata da recuperare adesso, come (orario, lingua), o None.
+    """L'uscita saltata da recuperare adesso, come (orario, lingua, formato).
+
+    None se non manca niente.
 
     Si guardano solo le uscite il cui orario e' passato da poco: recuperare
     un'uscita di ieri vuol dire pubblicare una notizia di ieri, e recuperarne
@@ -152,7 +160,7 @@ def slot_da_recuperare(cronologia, adesso=None):
     """
     adesso = adesso or datetime.now(_fuso())
     mancanti = []
-    for slot, lingua in SLOT_GIORNALIERI:
+    for slot, lingua, formato in SLOT_GIORNALIERI:
         try:
             occorrenza = _ultima_occorrenza(slot, adesso)
         except ValueError:
@@ -161,9 +169,9 @@ def slot_da_recuperare(cronologia, adesso=None):
             continue
         if gia_pubblicato(slot, cronologia, adesso):
             continue
-        mancanti.append((occorrenza, slot, lingua))
+        mancanti.append((occorrenza, slot, lingua, formato))
     if not mancanti:
         return None
     mancanti.sort()
-    _, slot, lingua = mancanti[0]
-    return slot, lingua
+    _, slot, lingua, formato = mancanti[0]
+    return slot, lingua, formato

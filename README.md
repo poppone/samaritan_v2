@@ -1,6 +1,7 @@
 # Samaritan
 
-Sistema automatico di produzione e pubblicazione di YouTube Shorts gaming.
+Sistema automatico di produzione e pubblicazione di video gaming su YouTube:
+tre Short verticali al giorno e un video lungo 16:9 da otto minuti.
 
 Non e' solo un generatore: misura la retention reale dei video pubblicati e
 usa quei dati per decidere cosa produrre dopo.
@@ -16,6 +17,55 @@ FASE 2  gameplay.py  trailer e screenshot UFFICIALI del gioco da Steam
 FASE 3  uploader.py  upload su YouTube
         notifier.py  notifica Telegram + didascalia pronta per TikTok
 ```
+
+Sul video lungo la FASE 1 la fa `lungo.py` invece di `brain.py`: scaletta,
+una sezione per volta, e un pezzo di audio per sezione da cui escono i
+capitoli veri. Il resto del percorso e' identico.
+
+## Il video lungo, e perche' esiste
+
+YouTube ha **due** porte per il programma partner, e un canale di soli Short
+ne puo' aprire una sola:
+
+| | Serve | Il canale oggi |
+|---|---|---|
+| Short | 1.000 iscritti + **10 milioni** di visualizzazioni Short in 90 giorni | ~1.400 al giorno, servirebbero ~111.000 |
+| Video lunghi | 1.000 iscritti + **4.000 ore** di visione pubbliche in 12 mesi | un video al giorno da otto minuti ci arriva con ~250-300 visualizzazioni vere al giorno |
+
+Le ore guardate sugli Short **non contano** per la soglia delle 4.000 ore. Su
+questi numeri la prima porta e' fuori portata di due ordini di grandezza e la
+seconda no: per questo dal 22 settembre 2026 esce anche un video lungo al
+giorno, alle 20:00 italiane.
+
+Come e' fatto (`lungo.py`):
+
+- **Si scrive a sezioni, non in un colpo solo.** Prima una scaletta (titolo,
+  gioco, e per ogni sezione il suo titolo e cosa deve dire), poi una chiamata
+  al modello per ogni sezione, ognuna sapendo come finiva la precedente. Otto
+  minuti sono circa 1.200 parole: chiederle in una risposta sola significa
+  farsi troncare a meta'.
+- **I capitoli sono timestamp veri.** Ogni sezione ha il suo pezzo di audio,
+  quindi la sua durata e' misurata e non stimata, e i capitoli finiscono in
+  cima alla descrizione YouTube. Se non sono validi (meno di tre, il primo non
+  a 00:00, due a meno di dieci secondi l'uno dall'altro) non vengono scritti
+  affatto: YouTube in quel caso li ignorerebbe tutti.
+- **Trailer ufficiali interi.** `config.SECONDI_TRAILER` passa da 45 secondi a
+  quattro minuti, e i trailer scaricati da tre a sei: con spezzoni corti le
+  stesse inquadrature tornerebbero sei o sette volte nello stesso video.
+- **Sottotitoli a frase**, in basso, non una parola per volta al centro. Su
+  otto minuti la forma dello Short vorrebbe oltre mille clip sovrapposti.
+- **Le clip girate in casa contano di piu'**: `MAX_CLIP_MIE` passa da 2 a 8. E'
+  li' che un video lungo smette di sembrare un montaggio automatico.
+
+Da dove NON viene il materiale: da YouTube. Prendere spezzoni di gameplay dai
+video di altri e' quello che fa bocciare la domanda di monetizzazione
+("contenuti riutilizzati" piu' copyright), ed e' il controllo che si fa
+proprio nel momento in cui si presenta la domanda. Le fonti restano due:
+trailer e screenshot ufficiali degli store, e le registrazioni di popponetv in
+`clip_mie/`.
+
+Per provarlo a mano: tab Actions, **Run workflow**, spunta `lungo` e metti
+`privacy` su `private`.
 
 ## E su TikTok?
 
@@ -231,11 +281,20 @@ Stampa i valori base64 da incollare in **Settings > Secrets and variables > Acti
 **Variables opzionali**
 `NOME_CANALE`, `VOCE_TTS`, `VOCE_TTS_EN`, `WHISPER_MODEL`
 
-**I video escono alle 14:00, alle 18:00 e alle 21:00 italiane**, sempre, anche
-quando cambia l'ora legale. **Quello delle 21:00 e' in inglese**: stesso
-canale, pubblico diverso, per misurare se l'inglese rende piu' dell'italiano
-invece di deciderlo a naso. La lingua la passa il workflow con `LINGUA`, e una
-run lanciata a mano la sceglie dal menu.
+**I video escono alle 14:00, alle 18:00, alle 20:00 e alle 21:00 italiane**,
+sempre, anche quando cambia l'ora legale.
+
+- 14:00 e 18:00: Short in italiano.
+- **20:00: il video lungo**, 16:9 da otto minuti, in italiano.
+- **21:00: Short in inglese**, stesso canale, pubblico diverso, per misurare
+  se l'inglese rende piu' dell'italiano invece di deciderlo a naso.
+
+La lingua la passa il workflow con `LINGUA` e il formato con `VIDEO_LUNGO`;
+una run lanciata a mano li sceglie dal menu.
+
+Quattro caricamenti al giorno stanno sotto il tetto di YouTube, che e' di sei
+(la quota giornaliera dell'API e' 10.000 unita' e ogni caricamento ne costa
+1.600).
 
 Le regole anti-ripetizione (apertura, gioco, notizia gia' usata) valgono
 **dentro una lingua sola**: il video inglese deve poter raccontare la stessa
@@ -246,7 +305,7 @@ l'hanno, contano come italiane.
 L'orario NON viene dal cron. GitHub fa partire le run schedulate in ritardo, e
 il ritardo non si puo' prevedere: fra il 17 e il 19 settembre 2026 e' andato da
 un'ora e quaranta a tre ore e mezza. Quindi la pipeline parte con circa quattro
-ore e mezza di anticipo (`30 7`, `30 11` e `30 14` UTC), carica il video privato e
+ore e mezza di anticipo (`30 7`, `30 11`, `30 13` e `30 14` UTC), carica il video privato e
 chiede a YouTube di renderlo pubblico all'istante giusto: e' il campo
 `publishAt`, e vale al minuto.
 
@@ -265,11 +324,17 @@ Il 21 settembre 2026 GitHub ha fatto partire una run con sette ore di ritardo e
 un'altra non l'ha fatta partire affatto: il video delle 21:00 non e' mai
 uscito. Il codice non c'entrava, ma il canale un video l'ha perso lo stesso.
 
-Da qui un quarto cron (`30 20` UTC, verso le 22:30 italiane) che non produce un
-video suo. Guarda quali delle tre uscite di oggi sono rimaste scoperte e rifa'
-la piu' vecchia, una sola, pubblicandola subito; se sono tutte a posto termina
-in pochi secondi senza fare niente. Si puo' lanciare anche a mano, dalla tab
-Actions, spuntando `recupero`.
+Da qui un cron in piu' (`30 20` UTC, verso le 22:30 italiane) che non produce
+un video suo. Guarda quali delle quattro uscite di oggi sono rimaste scoperte
+e rifa' la piu' vecchia, una sola, **nel formato che quell'uscita voleva**,
+pubblicandola subito; se sono tutte a posto termina in pochi secondi senza
+fare niente. Si puo' lanciare anche a mano, dalla tab Actions, spuntando
+`recupero`.
+
+Il formato viaggia insieme all'orario proprio per questo: la riserva scopre
+solo a lavorazione iniziata se le tocca uno Short verticale o il video lungo
+orizzontale, e a quel punto richiama `config.applica_formato()` per rifare
+tutte le misure.
 
 Perche' questo non produca doppioni ogni lavorazione dichiara quale uscita sta
 coprendo (`SLOT`, che finisce in `cronologia_trend.json`) e si ferma se quella

@@ -10,10 +10,16 @@ on:
     # l'ora di uscita si cambia ORARIO_USCITA piu' sotto.
     - cron: '30 7 * * *'          # per l'uscita delle 14:00 italiane
     - cron: '30 11 * * *'         # per l'uscita delle 18:00 italiane
+    # Il video LUNGO: 16:9, otto minuti, uno al giorno. E' la seconda porta
+    # per la monetizzazione (4.000 ore di visione in 12 mesi), che gli Short
+    # da soli non aprono mai perche' le loro ore non contano per quella
+    # soglia. Vedi lungo.py.
+    - cron: '30 13 * * *'         # per l'uscita delle 20:00, video lungo
     - cron: '30 14 * * *'         # per l'uscita delle 21:00, in inglese
     # La riserva di fine giornata. Non produce un video suo: guarda quali
-    # delle tre uscite di oggi sono rimaste scoperte e rifa' la piu' vecchia,
-    # una sola. Se sono tutte a posto termina subito senza fare niente.
+    # delle quattro uscite di oggi sono rimaste scoperte e rifa' la piu'
+    # vecchia, una sola, nel formato che quell'uscita voleva. Se sono tutte a
+    # posto termina subito senza fare niente.
     - cron: '30 20 * * *'         # riserva, verso le 22:30 italiane
   workflow_dispatch:
     inputs:
@@ -38,18 +44,33 @@ on:
         required: false
         default: false
         type: boolean
+      lungo:
+        description: 'Fai il video lungo (16:9, otto minuti) invece di uno Short'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
 
+# Il video lungo ha una coda sua. Non e' un capriccio: il suo montaggio dura
+# decine di minuti, e in una coda sola bloccherebbe gli Short dietro di se'.
+# GitHub inoltre tiene UNA sola lavorazione in attesa per coda e cancella la
+# precedente, quindi una coda affollata perde uscite. I due passi finali che
+# scrivono sul repository sopportano di girare in parallelo: il push viene
+# riprovato dopo un riallineo.
 concurrency:
-  group: samaritan-publish
+  group: ${{ ((github.event.schedule == '30 13 * * *') || inputs.lungo) && 'samaritan-lungo' || 'samaritan-publish' }}
   cancel-in-progress: false
 
 jobs:
   produci-e-pubblica:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # Otto minuti in 1080p non si montano nei 45 minuti che bastano a uno
+    # Short da mezzo minuto. La riserva rientra nel tempo lungo perche' puo'
+    # ritrovarsi a rifare proprio il video lungo: quale uscita le tocchi lo
+    # scopre solo a lavorazione iniziata.
+    timeout-minutes: ${{ ((github.event.schedule == '30 13 * * *') || (github.event.schedule == '30 20 * * *') || inputs.lungo || inputs.recupero) && 120 || 45 }}
 
     steps:
       - name: Checkout
@@ -103,7 +124,7 @@ jobs:
           # Un orario di uscita per ciascun cron. La riserva e le run lanciate
           # a mano non programmano niente: escono subito, com'e' giusto sia
           # per una prova sia per un'uscita gia' saltata.
-          ORARIO_USCITA: ${{ (github.event.schedule == '30 7 * * *' && '14:00') || (github.event.schedule == '30 11 * * *' && '18:00') || (github.event.schedule == '30 14 * * *' && '21:00') || '' }}
+          ORARIO_USCITA: ${{ (github.event.schedule == '30 7 * * *' && '14:00') || (github.event.schedule == '30 11 * * *' && '18:00') || (github.event.schedule == '30 13 * * *' && '20:00') || (github.event.schedule == '30 14 * * *' && '21:00') || '' }}
           FUSO_USCITA: 'Europe/Rome'
           # Quale uscita sta coprendo questa lavorazione. Sui tre cron normali
           # e' lo stesso valore di ORARIO_USCITA, ma i due campi non sono la
@@ -111,7 +132,12 @@ jobs:
           # SLOT serve a non farne due per la stessa uscita quando una
           # lavorazione arriva in ritardo. Sulla riserva resta vuoto: quale
           # uscita recuperare lo decide lei leggendo la cronologia.
-          SLOT: ${{ (github.event.schedule == '30 7 * * *' && '14:00') || (github.event.schedule == '30 11 * * *' && '18:00') || (github.event.schedule == '30 14 * * *' && '21:00') || '' }}
+          SLOT: ${{ (github.event.schedule == '30 7 * * *' && '14:00') || (github.event.schedule == '30 11 * * *' && '18:00') || (github.event.schedule == '30 13 * * *' && '20:00') || (github.event.schedule == '30 14 * * *' && '21:00') || '' }}
+          # Quale dei due formati produrre. Vuoto = Short, com'e' sempre
+          # stato: tutto il resto della pipeline e' identico.
+          VIDEO_LUNGO: ${{ (github.event.schedule == '30 13 * * *' && '1') || (inputs.lungo && '1') || '' }}
+          MINUTI_VIDEO_LUNGO: ${{ vars.MINUTI_VIDEO_LUNGO }}
+          SEZIONI_VIDEO_LUNGO: ${{ vars.SEZIONI_VIDEO_LUNGO }}
           RECUPERO: ${{ (github.event.schedule == '30 20 * * *' && '1') || (inputs.recupero && '1') || '' }}
           # Il video delle 21:00 e' in inglese: stesso canale, pubblico
           # diverso. Le run lanciate a mano scelgono dal menu.

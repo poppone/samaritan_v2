@@ -177,10 +177,10 @@ class TestWorkflowCollegato:
         # L'ultimo e' la riserva di fine giornata: non produce un'uscita sua,
         # quindi non ha un margine da rispettare.
         produzione = [c for c in cron if c != (CRON_RISERVA_MIN, CRON_RISERVA_ORA)]
-        # 14:00, 18:00 e 21:00 italiane d'estate sono le 12:00, 16:00 e
-        # 19:00 UTC.
-        assert len(produzione) == 3, cron
-        for (minuto, ora), uscita_utc in zip(produzione, (12, 16, 19)):
+        # 14:00, 18:00, 20:00 e 21:00 italiane d'estate sono le 12:00,
+        # 16:00, 18:00 e 19:00 UTC.
+        assert len(produzione) == 4, cron
+        for (minuto, ora), uscita_utc in zip(produzione, (12, 16, 18, 19)):
             partenza = int(ora) + int(minuto) / 60
             assert uscita_utc - partenza >= 4, (ora, minuto, uscita_utc)
 
@@ -189,9 +189,9 @@ class TestWorkflowCollegato:
         informazione: se divergono, la riserva va a cercare un'uscita che non
         esiste, o non si accorge di quella che manca davvero."""
         testo = self._workflow()
-        for orario, _ in orari.SLOT_GIORNALIERI:
+        for orario, _, _ in orari.SLOT_GIORNALIERI:
             assert f"'{orario}'" in testo, orario
-        assert len(orari.SLOT_GIORNALIERI) == 3
+        assert len(orari.SLOT_GIORNALIERI) == 4
 
     def test_la_riserva_di_fine_giornata_e_collegata(self):
         testo = self._workflow()
@@ -206,8 +206,30 @@ class TestWorkflowCollegato:
         testo = self._workflow()
         riga = [r for r in testo.splitlines() if r.strip().startswith("SLOT:")]
         assert riga, "il workflow non passa SLOT"
-        for orario, _ in orari.SLOT_GIORNALIERI:
+        for orario, _, _ in orari.SLOT_GIORNALIERI:
             assert f"'{orario}'" in riga[0], orario
+
+    def test_il_video_lungo_ha_il_suo_interruttore_nel_workflow(self):
+        """Senza VIDEO_LUNGO la lavorazione delle 20:00 produrrebbe un
+        quarto Short verticale invece del video da otto minuti, e la porta
+        delle 4.000 ore resterebbe chiusa."""
+        testo = self._workflow()
+        riga = [r for r in testo.splitlines()
+                if r.strip().startswith("VIDEO_LUNGO:")]
+        assert riga, "il workflow non passa VIDEO_LUNGO"
+        orario_lungo = [s for s in orari.SLOT_GIORNALIERI if s[2] == "lungo"]
+        assert len(orario_lungo) == 1, orari.SLOT_GIORNALIERI
+        # Lo stesso cron che imposta quell'orario deve accendere il formato.
+        slot_riga = [r for r in testo.splitlines()
+                     if r.strip().startswith("SLOT:")][0]
+        import re
+        cron_lungo = re.search(
+            r"\(github\.event\.schedule == '([^']+)' && '"
+            + re.escape(orario_lungo[0][0]) + r"'\)",
+            slot_riga,
+        )
+        assert cron_lungo, slot_riga
+        assert cron_lungo.group(1) in riga[0], (cron_lungo.group(1), riga[0])
 
     def test_la_riserva_ha_tutt_e_due_le_voci(self):
         """Sceglie la lingua a lavorazione iniziata, quindi non puo' contare
@@ -290,6 +312,7 @@ class TestQualeUscitaRecuperare:
         cronologia = [
             _voce("14:00", ADESSO.replace(hour=15)),
             _voce("18:00", ADESSO.replace(hour=19)),
+            _voce("20:00", ADESSO.replace(hour=20, minute=30)),
             _voce("21:00", ADESSO.replace(hour=21, minute=30)),
         ]
         assert orari.slot_da_recuperare(cronologia, ADESSO) is None
@@ -297,35 +320,53 @@ class TestQualeUscitaRecuperare:
     def test_recupera_quella_che_manca(self):
         cronologia = [
             _voce("14:00", ADESSO.replace(hour=15)),
+            _voce("20:00", ADESSO.replace(hour=20, minute=30)),
             _voce("21:00", ADESSO.replace(hour=21, minute=30)),
         ]
-        assert orari.slot_da_recuperare(cronologia, ADESSO) == ("18:00", "it")
+        assert orari.slot_da_recuperare(cronologia, ADESSO) == (
+            "18:00", "it", "short")
+
+    def test_il_video_lungo_si_recupera_come_video_lungo(self):
+        """Il formato deve viaggiare insieme all'orario: senza, la riserva
+        rifarebbe un quarto Short verticale al posto del video da otto
+        minuti, e nessuno se ne accorgerebbe fino a canale pubblicato."""
+        cronologia = [
+            _voce("14:00", ADESSO.replace(hour=15)),
+            _voce("18:00", ADESSO.replace(hour=19)),
+            _voce("21:00", ADESSO.replace(hour=21, minute=30)),
+        ]
+        assert orari.slot_da_recuperare(cronologia, ADESSO) == (
+            "20:00", "it", "lungo")
 
     def test_l_uscita_inglese_si_recupera_in_inglese(self):
         cronologia = [
             _voce("14:00", ADESSO.replace(hour=15)),
             _voce("18:00", ADESSO.replace(hour=19)),
+            _voce("20:00", ADESSO.replace(hour=20, minute=30)),
         ]
-        assert orari.slot_da_recuperare(cronologia, ADESSO) == ("21:00", "en")
+        assert orari.slot_da_recuperare(cronologia, ADESSO) == (
+            "21:00", "en", "short")
 
     def test_se_ne_mancano_due_si_recupera_la_piu_vecchia(self):
         """Una per volta: nel caso peggiore esce un video in piu', mai tre
         tutti insieme."""
-        assert orari.slot_da_recuperare([], ADESSO) == ("14:00", "it")
+        assert orari.slot_da_recuperare([], ADESSO) == ("14:00", "it", "short")
 
     def test_non_si_recupera_un_uscita_che_deve_ancora_arrivare(self):
         """Altrimenti il video uscirebbe due volte: una adesso e una all'ora
         sua."""
         pomeriggio = ADESSO.replace(hour=16, minute=0)
-        assert orari.slot_da_recuperare([], pomeriggio) == ("14:00", "it")
+        assert orari.slot_da_recuperare([], pomeriggio) == (
+            "14:00", "it", "short")
 
     def test_non_si_recupera_un_uscita_di_ieri(self):
         """Recuperare alle 8 del mattino l'uscita delle 14:00 di ieri vuol
         dire pubblicare una notizia vecchia di un giorno."""
         mattina = ADESSO.replace(day=22, hour=8, minute=0)
         # Alle 8 del 22 nessuna uscita del 22 e' ancora passata, e quelle del
-        # 21 sono tutte oltre le dodici ore tranne le 21:00.
-        assert orari.slot_da_recuperare([], mattina) == ("21:00", "en")
+        # 21 sono tutte oltre le dodici ore tranne le 20:00 e le 21:00: si
+        # recupera la piu' vecchia delle due.
+        assert orari.slot_da_recuperare([], mattina) == ("20:00", "it", "lungo")
 
     def test_a_meta_mattina_non_c_e_piu_niente_da_recuperare(self):
         tardi = ADESSO.replace(day=22, hour=10, minute=0)
