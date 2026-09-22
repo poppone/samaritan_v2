@@ -1,0 +1,151 @@
+name: Samaritan Promo (Instagram)
+
+# Un Reel al giorno sul profilo Instagram di Samaritan: il diario pubblico
+# che racconta i suoi numeri e porta chi lo guarda a scrivere in DM.
+#
+# E' una lavorazione SEPARATA da quella del canale YouTube, di proposito: gira
+# per conto suo, ha un gruppo di concorrenza tutto suo e se fallisce non
+# succede niente ai video del canale.
+
+on:
+  schedule:
+    # Instagram non sa programmare l'uscita: il Reel esce quando la
+    # lavorazione finisce. Con i ritardi di GitHub (da un'ora a tre e mezza)
+    # questo cron fa uscire il Reel fra le 18:30 e le 21:00 italiane, che e'
+    # l'ora in cui la gente sta sul telefono.
+    - cron: '30 15 * * *'
+  workflow_dispatch:
+    inputs:
+      prova:
+        description: 'Monta il Reel ma non lo pubblica'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: samaritan-promo
+  cancel-in-progress: false
+
+jobs:
+  # Il repository e' privato e i minuti di lavorazione su GitHub sono contati:
+  # il solo video lungo del canale ne mangia gia' quasi tutti. Montare un Reel
+  # ogni sera senza avere ancora le chiavi di Instagram vorrebbe dire bruciare
+  # mezz'ora al giorno per un video che nessuno vedra'. Questo controllo dura
+  # pochi secondi e ferma tutto prima che parta.
+  #
+  # Vale solo per le uscite automatiche: il pulsante "Run workflow" monta il
+  # Reel comunque, che e' come si fa la prova prima di collegare Instagram.
+  controllo:
+    runs-on: ubuntu-latest
+    outputs:
+      procedi: ${{ steps.esito.outputs.procedi }}
+    steps:
+      - name: Instagram e' collegato?
+        id: esito
+        env:
+          INSTAGRAM_TOKEN: ${{ secrets.INSTAGRAM_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ] && [ -z "$INSTAGRAM_TOKEN" ]; then
+            echo "Instagram non e' ancora collegato (manca il secret"
+            echo "INSTAGRAM_TOKEN): salto il Reel di oggi invece di montarlo"
+            echo "per niente. Vedi GUIDA_INSTAGRAM.md."
+            echo "procedi=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "procedi=si" >> "$GITHUB_OUTPUT"
+          fi
+
+  reel-promozionale:
+    needs: controllo
+    if: needs.controllo.outputs.procedi == 'si'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Installa FFmpeg e font
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-dejavu-core
+
+      - name: Cache modello Whisper
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/whisper
+          key: whisper-${{ vars.WHISPER_MODEL || 'base' }}
+
+      - name: Installa dipendenze Python
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Produci e pubblica il Reel
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          # ElevenLabs NON si passa: i Reel usano la voce Microsoft e il
+          # credito resta ai video del canale. Vedi voice.py.
+          INSTAGRAM_TOKEN: ${{ secrets.INSTAGRAM_TOKEN }}
+          INSTAGRAM_USER_ID: ${{ secrets.INSTAGRAM_USER_ID }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          NOME_PROMO: ${{ vars.NOME_PROMO || 'Samaritan' }}
+          CONTATTO_PROMO: ${{ vars.CONTATTO_PROMO || 'scrivimi in DM' }}
+          WHISPER_MODEL: ${{ vars.WHISPER_MODEL || 'base' }}
+          GROQ_MODELLI: ${{ vars.GROQ_MODELLI }}
+          LINGUA: 'it'
+          VOCE_TTS: ${{ vars.VOCE_TTS || 'it-IT-DiegoNeural' }}
+        run: |
+          if [ "${{ inputs.prova }}" = "true" ]; then
+            python promo.py --prova
+          else
+            python promo.py
+          fi
+
+      - name: Salva il diario dei Reel
+        if: always()
+        run: |
+          git config --global user.name "Samaritan Bot"
+          git config --global user.email "bot@samaritan.local"
+
+          # Solo il diario dei Reel: la memoria del canale la scrive l'altra
+          # lavorazione, e due workflow che committano lo stesso file
+          # finirebbero per pestarsi i piedi.
+          if [ ! -f promo_cronologia.json ]; then
+            echo "Nessun diario da salvare."
+            exit 0
+          fi
+          git add -- promo_cronologia.json
+
+          if git diff --staged --quiet; then
+            echo "Diario invariato."
+            exit 0
+          fi
+
+          git commit -m "Diario dei Reel Samaritan [skip ci]"
+
+          if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+            exit 0
+          fi
+          echo "Push rifiutato, riallineo sulla base remota e riprovo."
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+
+      - name: Conserva il Reel prodotto
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: samaritan-reel
+          path: output_videos/samaritan_reel.mp4
+          retention-days: 7
+          if-no-files-found: ignore
