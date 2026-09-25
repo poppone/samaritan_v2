@@ -506,5 +506,21 @@
     "fonte_url": "",
     "video_id": null,
     "veste": "fuoco"
+  },
+  {
+    "timestamp": 1790378962,
+    "data": "2026-09-25",
+    "titolo": "Elden Ring: la trappola che ti fa cadere 30 volte ⚔",
+    "lingua": "it",
+    "slot": "14:00",
+    "formato": "short",
+    "estratto_script": "Ecco la scena: un mostro gigante, ti senti al sicuro, poi scoppia…\nLa trappola è nascosta ",
+    "stile": "DOMANDA_AL_PUBBLICO",
+    "gioco": "Elden Ring",
+    "query_video": "elden ring gameplay",
+    "fonte": "",
+    "fonte_url": "",
+    "video_id": null,
+    "veste": "pulito"
   }
 ]
