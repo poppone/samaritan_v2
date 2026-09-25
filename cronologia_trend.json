@@ -490,5 +490,21 @@
     "fonte_url": "https://news.google.com/rss/articles/CBMisAFBVV95cUxPWjZITUdpT2ctdjRfV1VuTC00Tk9FVGNOMl9CUnM1UWtCN1RRSGFFcm5BMGF6NGRiVUVkZUhKMlJGZl9wc2wzazRuVWJGM0J1N3BvQ2gyTnpyUDY3blVDX18xbmtBS1lUX0Znc29pQWhWdW9jUlFycWw2WTlFVXJEdFdWWENfM3RQWDh1eGRmNFRYdi1COHY3bm9JaVlkazQtblBGdTY3dVdvTlFUTGlDRw?oc=5",
     "video_id": null,
     "veste": "ghiaccio"
+  },
+  {
+    "timestamp": 1790362258,
+    "data": "2026-09-25",
+    "titolo": "Cyberpunk 2077: hidden night city secret 🌃",
+    "lingua": "en",
+    "slot": "21:00",
+    "formato": "short",
+    "estratto_script": "What if I told you the neon lights are lying? In Night City, every billboard hides a glitc",
+    "stile": "EASTER_EGG_SECRET",
+    "gioco": "Cyberpunk 2077",
+    "query_video": "cyberpunk hidden glitch gameplay",
+    "fonte": "",
+    "fonte_url": "",
+    "video_id": null,
+    "veste": "fuoco"
   }
 ]
