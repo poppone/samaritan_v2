@@ -66,6 +66,21 @@ ALIAS_GIOCHI = {
     "bg3": "Baldur's Gate 3",
     "pubg": "PUBG: BATTLEGROUNDS",
     "tarkov": "Escape from Tarkov",
+    # Su Steam il primo capitolo si chiama "Part I": senza alias il controllo
+    # dei sequel lo rifiuta e restano solo i giochi dal nome simile.
+    "the last of us": "The Last of Us Part I",
+    "the last of us 2": "The Last of Us Part II Remastered",
+    "the last of us part 2": "The Last of Us Part II Remastered",
+    "the last of us part ii": "The Last of Us Part II Remastered",
+}
+
+# Parole che Steam aggiunge al nome dello stesso gioco: edizioni e ristampe.
+# Qualunque altra parola in piu' nel nome Steam indica un gioco diverso.
+PAROLE_EDIZIONE = {
+    "the", "a", "of", "and", "edition", "remastered", "remaster", "remake",
+    "enhanced", "legacy", "definitive", "complete", "deluxe", "ultimate",
+    "goty", "game", "year", "collection", "anniversary", "hd", "part",
+    "director", "directors", "s", "cut", "tm",
 }
 
 
@@ -157,6 +172,14 @@ def _somiglianza(richiesto, ufficiale):
     # Confronta anche col nome senza sottotitolo, cosi' 'Witcher 3' matcha
     # 'The Witcher 3: Wild Hunt' ma 'Minecraft' non matcha 'Minecraft Dungeons'
     base = _normalizza(re.split(r"[:\-–]", ufficiale)[0])
+
+    # Una parola che il gioco cercato non ha rende il gioco un altro, anche
+    # quando le lettere quasi coincidono. Il 26 settembre 2026 lo Short su
+    # The Last of Us e' uscito col gameplay di 'The Last Kich Of Us', un gioco
+    # sconosciuto, perche' la somiglianza fra i due nomi era 0.85.
+    parole_cercate = set(a.split()) | PAROLE_EDIZIONE
+    if not (set(b.split()) <= parole_cercate or set(base.split()) <= parole_cercate):
+        return 0.0
     return max(
         SequenceMatcher(None, a, b).ratio(),
         SequenceMatcher(None, a, base).ratio(),

@@ -59,6 +59,29 @@ class TestSomiglianza:
         assert punteggio < gameplay.SOGLIA_CORRISPONDENZA
 
 
+    def test_una_parola_in_piu_e_un_altro_gioco(self):
+        # 26 settembre 2026: lo Short su The Last of Us e' uscito col
+        # gameplay di questo gioco, match 0.85.
+        assert gameplay._somiglianza("The Last of Us", "The Last Kich Of Us") == 0.0
+        assert gameplay._somiglianza("Elden Ring", "ELDEN RING NIGHTREIGN") == 0.0
+
+    def test_le_edizioni_sono_lo_stesso_gioco(self):
+        for cercato, ufficiale in [
+            ("Grand Theft Auto V", "Grand Theft Auto V Enhanced"),
+            ("Grand Theft Auto V", "Grand Theft Auto V Legacy"),
+            ("The Last of Us Part I", "The Last of Us™ Part I"),
+            ("The Last of Us Part II Remastered", "The Last of Us™ Part II Remastered"),
+            ("Call of Duty Black Ops 6", "Call of Duty®: Black Ops 6"),
+            ("Counter-Strike 2", "Counter-Strike 2"),
+            ("Hollow Knight Silksong", "Hollow Knight: Silksong"),
+        ]:
+            assert gameplay._somiglianza(cercato, ufficiale) >= gameplay.SOGLIA_CORRISPONDENZA, ufficiale
+
+    def test_the_last_of_us_cerca_la_parte_uno(self):
+        nome = gameplay.ALIAS_GIOCHI[gameplay._normalizza("The Last of Us")]
+        assert gameplay._somiglianza(nome, "The Last of Us™ Part I") >= gameplay.SOGLIA_CORRISPONDENZA
+
+
 class TestVariantiNome:
     def test_toglie_il_sottotitolo(self):
         varianti = gameplay._varianti_nome("Elden Ring: Shadow of the Erdtree")
