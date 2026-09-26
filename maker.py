@@ -38,7 +38,7 @@ from moviepy import (
 
 import config
 import veste
-from voice import genera_voce_samaritan, pulisci_testo
+from voice import genera_voce_samaritan, grafia_canale, pulisci_testo
 
 FALLBACK_QUERY = [
     "video game action",
@@ -560,7 +560,7 @@ def _sottotitoli_a_frase(risultato, stile):
     corpo = max(int(config.VIDEO_H * 0.048), 30)
 
     for segmento in risultato.get("segments", []):
-        testo = (segmento.get("text") or "").strip()
+        testo = grafia_canale(segmento.get("text") or "").strip()
         if not testo:
             continue
         inizio = segmento.get("start", 0)
@@ -599,7 +599,7 @@ def genera_sottotitoli_clips(audio_path, titolo="", gioco="", stile=None):
 
     for segmento in risultato.get("segments", []):
         for info in segmento.get("words", []):
-            parola = info["word"].strip().upper()
+            parola = grafia_canale(info["word"]).strip().upper()
             if not parola:
                 continue
 

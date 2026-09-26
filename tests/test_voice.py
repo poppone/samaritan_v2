@@ -398,3 +398,46 @@ class TestImpostazioni:
 
         assert config.ELEVENLABS_API_KEY is None
         assert config.ELEVENLABS_MODELLO == "eleven_multilingual_v2"
+
+
+class TestPronunciaDelCanale:
+    """Il 26 settembre 2026 popponetv: "ogni video che pronuncia segui poppone
+    tv viene letto male senza accento". La voce italiana legge "Poppone" con
+    l'accento sbagliato e "TV" lettera per lettera all'inglese."""
+
+    def test_il_saluto_finale_si_legge_all_italiana(self, monkeypatch):
+        monkeypatch.setattr(config, "LINGUA", "it")
+        detto = voice.pronuncia("Segui Poppone TV per altre notizie.")
+        assert "Poppóne tivù" in detto
+        assert "TV" not in detto
+
+    def test_anche_con_la_chiocciola_e_senza_spazio(self, monkeypatch):
+        monkeypatch.setattr(config, "LINGUA", "it")
+        assert voice.pronuncia("seguite @PopponeTV") == "seguite Poppóne tivù"
+        assert voice.pronuncia("POPPONE da solo") == "Poppóne da solo"
+
+    def test_la_voce_inglese_resta_com_e(self, monkeypatch):
+        monkeypatch.setattr(config, "LINGUA", "en")
+        testo = "Follow Poppone TV for more."
+        assert voice.pronuncia(testo) == testo
+
+    def test_non_tocca_le_altre_parole(self, monkeypatch):
+        monkeypatch.setattr(config, "LINGUA", "it")
+        testo = "La TV di GTA 6 e il pupazzo Popponeide."
+        assert voice.pronuncia(testo) == testo
+
+    def test_i_sottotitoli_tornano_alla_grafia_del_canale(self):
+        # Whisper trascrive quello che sente: gli accenti messi per la voce
+        # non devono finire scritti sullo schermo.
+        assert voice.grafia_canale("Segui Poppóne tivù!") == "Segui Poppone TV!"
+        assert voice.grafia_canale(" poppone") == " Poppone"
+        assert voice.grafia_canale("tivù") == "TV"
+        assert voice.grafia_canale("Tivoli e la TV") == "Tivoli e la TV"
+
+    def test_il_montaggio_usa_davvero_la_grafia_del_canale(self):
+        import os
+        radice = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        with open(os.path.join(radice, "maker.py"), encoding="utf-8") as f:
+            sorgente = f.read()
+        assert 'grafia_canale(info["word"])' in sorgente
+        assert 'grafia_canale(segmento.get("text")' in sorgente

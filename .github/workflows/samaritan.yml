@@ -114,6 +114,7 @@ jobs:
           echo "$YOUTUBE_TOKEN_B64" | base64 -d > token.pickle
 
       - name: Esegui pipeline Samaritan
+        id: pipeline
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
@@ -158,6 +159,23 @@ jobs:
           # Passato via env e non interpolato nel comando: evita script injection
           TEMA: ${{ inputs.tema }}
         run: python main.py "$TEMA"
+
+      # Samaritan avvisa da solo su Telegram per ogni esito, ma solo se arriva
+      # a partire: una lavorazione che cade prima (installazione, credenziali
+      # mancanti) resterebbe muta. Questo passo copre proprio quel buco.
+      - name: Avvisa su Telegram se la lavorazione cade prima di Samaritan
+        if: failure() && steps.pipeline.outcome != 'failure'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          INDIRIZZO: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
+            exit 0
+          fi
+          curl -sS -o /dev/null "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+            --data-urlencode "text=Samaritan - ERRORE, la lavorazione si e' fermata prima di partire: ${INDIRIZZO}" || true
 
       - name: Cancella le credenziali dal runner
         if: always()

@@ -82,3 +82,40 @@ class TestNotificaPubblicazione:
 
         notifier.notifica_pubblicazione(DATI, None, "/tmp/non-esiste.mp4")
         assert ordine == ["testo", "tiktok"]
+
+
+class TestOgniEsitoArrivaSuTelegram:
+    """Il 26 settembre 2026 popponetv: "mandami sempre le notifiche su
+    telegram". Anche una lavorazione che non fa niente deve dirlo."""
+
+    def test_il_salto_manda_un_messaggio(self, monkeypatch):
+        inviati = []
+        monkeypatch.setattr(notifier, "invia_messaggio",
+                            lambda testo: inviati.append(testo) or True)
+        notifier.notifica_salto("L'uscita delle 21:00 e' gia' coperta <ok>")
+        assert len(inviati) == 1
+        assert "NIENTE DA FARE" in inviati[0]
+        assert "21:00" in inviati[0]
+        assert "&lt;ok&gt;" in inviati[0]
+
+    def test_un_caricamento_fallito_non_si_chiama_pubblicato(self, monkeypatch):
+        inviati = []
+        monkeypatch.setattr(config, "TELEGRAM_ATTIVO", True)
+        monkeypatch.setattr(config, "PRIVACY_STATUS", "public")
+        monkeypatch.setattr(config, "VIDEO_LUNGO", True)
+        monkeypatch.setattr(notifier, "invia_video", lambda percorso, testo: False)
+        monkeypatch.setattr(notifier, "invia_messaggio",
+                            lambda testo: inviati.append(testo) or True)
+        notifier.notifica_pubblicazione(DATI, None, "nessuno.mp4")
+        assert "CARICAMENTO FALLITO" in inviati[0]
+        assert "PUBBLICATO" not in inviati[0].replace("CARICAMENTO FALLITO", "")
+
+    def test_la_pipeline_avvisa_quando_si_ferma(self):
+        import os
+        radice = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        with open(os.path.join(radice, "main.py"), encoding="utf-8") as f:
+            main_py = f.read()
+        inizio = main_py.index("def prepara_uscita")
+        fine = main_py.index("def _scrivi_e_monta")
+        corpo = main_py[inizio:fine]
+        assert corpo.count("return False") == corpo.count("notifier.notifica_salto(")

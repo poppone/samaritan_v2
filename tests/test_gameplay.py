@@ -380,3 +380,55 @@ class TestLeClipMieNelMateriale:
         self._senza_steam(monkeypatch, tmp_path)
         sorgenti, _ = gameplay.procura_materiale("Forza Horizon 6")
         assert all(s["gioco"] is None for s in sorgenti if s.get("mia"))
+
+
+class TestDettagliDeiGiochiPerAdulti:
+    """Il 26 settembre 2026 Cyberpunk 2077 ed Elden Ring non davano ne' trailer
+    ne' screenshot: Steam risponde senza dati ai giochi vietati ai minori
+    finche' non riceve la verifica dell'eta'. Il video ripiegava su Pexels."""
+
+    class _Risposta:
+        def __init__(self, dati):
+            self._dati = dati
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return self._dati
+
+    def _steam(self, monkeypatch, risposte):
+        chiamate = []
+
+        def finto_get(url, params=None, cookies=None, timeout=None):
+            chiamate.append(cookies)
+            return self._Risposta(risposte[len(chiamate) - 1])
+
+        monkeypatch.setattr(gameplay.requests, "get", finto_get)
+        return chiamate
+
+    def test_senza_verifica_riprova_con_l_eta(self, monkeypatch):
+        pieno = {"1091500": {"success": True, "data": {
+            "name": "Cyberpunk 2077", "movies": [{"id": 1}]}}}
+        chiamate = self._steam(monkeypatch, [{"1091500": {"success": False}}, pieno])
+        dati = gameplay.dettagli_gioco(1091500)
+        assert dati["movies"] == [{"id": 1}]
+        assert chiamate[0] is None
+        assert chiamate[1]["birthtime"] == "0"
+
+    def test_un_gioco_normale_basta_la_prima_domanda(self, monkeypatch):
+        pieno = {"10": {"success": True, "data": {"screenshots": [{"id": 1}]}}}
+        chiamate = self._steam(monkeypatch, [pieno])
+        assert gameplay.dettagli_gioco(10)["screenshots"]
+        assert len(chiamate) == 1
+
+    def test_dati_senza_materiale_restano_come_ripiego(self, monkeypatch):
+        vuoto = {"10": {"success": True, "data": {"name": "Solo testo"}}}
+        self._steam(monkeypatch, [vuoto, vuoto, vuoto])
+        assert gameplay.dettagli_gioco(10) == {"name": "Solo testo"}
+
+    def test_steam_irraggiungibile_non_rompe_niente(self, monkeypatch):
+        def rotto(*a, **k):
+            raise ConnectionError("giu'")
+        monkeypatch.setattr(gameplay.requests, "get", rotto)
+        assert gameplay.dettagli_gioco(10) is None
