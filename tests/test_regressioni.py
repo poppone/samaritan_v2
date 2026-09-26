@@ -55,7 +55,10 @@ class TestWorkflowSalvaLaMemoria:
         assert 'git add -- "$file_memoria"' in testo
 
     def test_il_push_viene_ritentato_dopo_un_rifiuto(self, testo):
-        assert "git pull --rebase origin" in testo
+        # Dal 26 settembre 2026 si ritenta unendo sul contenuto, non con il
+        # rebase: vedi tests/test_unisci_memoria.py.
+        assert "for tentativo in" in testo
+        assert "python unisci_memoria.py" in testo
 
 
 class TestPercorsiAncorati:
