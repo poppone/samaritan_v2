@@ -290,6 +290,40 @@ class TestUscitaGiaCoperta:
         ieri = ADESSO.replace(day=20, hour=18, minute=30)
         assert orari.gia_pubblicato("18:00", [_voce("18:00", ieri)], ADESSO) is False
 
+    def test_partire_prima_della_propria_uscita_non_la_confonde_con_ieri(self):
+        """I tre casi veri: una lavorazione partita pochi minuti prima della
+        sua uscita trovava il video di ieri alla stessa ora e si fermava.
+        Le date e gli orari sono quelli delle lavorazioni perse."""
+        casi = [
+            # (slot, partenza della lavorazione, video del giorno prima)
+            ("21:00", datetime(2026, 9, 22, 20, 12, tzinfo=ROMA),
+             datetime(2026, 9, 21, 21, 42, tzinfo=ROMA)),
+            ("21:00", datetime(2026, 9, 24, 20, 34, tzinfo=ROMA),
+             datetime(2026, 9, 23, 20, 35, tzinfo=ROMA)),
+            ("18:00", datetime(2026, 9, 25, 17, 54, tzinfo=ROMA),
+             datetime(2026, 9, 24, 17, 56, tzinfo=ROMA)),
+        ]
+        for slot, partenza, ieri in casi:
+            assert orari.gia_pubblicato(slot, [_voce(slot, ieri)], partenza) is False, (
+                f"{slot} del {partenza:%d/%m} scambiata per gia' coperta")
+
+    def test_partendo_in_anticipo_il_video_di_oggi_la_copre_ancora(self):
+        """Il freno deve restare: se l'uscita di oggi ha gia' il suo video
+        (per esempio fatto dalla riserva o da una prova), chi parte prima
+        dell'orario si ferma lo stesso."""
+        partenza = datetime(2026, 9, 25, 17, 54, tzinfo=ROMA)
+        oggi = datetime(2026, 9, 25, 14, 10, tzinfo=ROMA)
+        assert orari.gia_pubblicato("18:00", [_voce("18:00", oggi)], partenza) is True
+
+    def test_la_partenza_col_cron_puntuale_guarda_l_uscita_di_oggi(self):
+        """Il caso limite: nessun ritardo, la lavorazione parte all'ora del
+        cron, quattro ore e mezza prima d'estate e cinque e mezza d'inverno.
+        Deve comunque ragionare sull'uscita di oggi."""
+        for partenza in (datetime(2026, 9, 25, 13, 30, tzinfo=ROMA),
+                         datetime(2026, 12, 15, 12, 30, tzinfo=ROMA)):
+            ieri = partenza.replace(day=partenza.day - 1, hour=18, minute=0)
+            assert orari.gia_pubblicato("18:00", [_voce("18:00", ieri)], partenza) is False
+
     def test_una_lavorazione_morta_prima_dell_upload_non_copre(self):
         """Senza video_id il video non e' mai arrivato sul canale: se
         contasse come uscita coperta, la riserva non servirebbe proprio nel
@@ -367,6 +401,15 @@ class TestQualeUscitaRecuperare:
         # 21 sono tutte oltre le dodici ore tranne le 20:00 e le 21:00: si
         # recupera la piu' vecchia delle due.
         assert orari.slot_da_recuperare([], mattina) == ("20:00", "it", "lungo")
+
+    def test_la_riserva_non_confonde_un_uscita_di_ieri_con_quella_di_oggi(self):
+        """La riserva guarda solo uscite passate. Se parte cosi' tardi che
+        l'uscita delle 14:00 di oggi e' vicina, deve comunque giudicare quella
+        di ieri sera per quello che e'."""
+        mattina = ADESSO.replace(day=22, hour=8, minute=0)
+        coperte = [_voce("20:00", ADESSO.replace(hour=19, minute=50)),
+                   _voce("21:00", ADESSO.replace(hour=20, minute=40))]
+        assert orari.slot_da_recuperare(coperte, mattina) is None
 
     def test_a_meta_mattina_non_c_e_piu_niente_da_recuperare(self):
         tardi = ADESSO.replace(day=22, hour=10, minute=0)
