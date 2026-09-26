@@ -59,8 +59,11 @@ permissions:
 # precedente, quindi una coda affollata perde uscite. I due passi finali che
 # scrivono sul repository sopportano di girare in parallelo: il push viene
 # riprovato dopo un riallineo.
+# I video lanciati a mano (anche da Telegram, vedi GUIDA_TELEGRAM_COMANDI.md)
+# stanno ciascuno in una coda propria: in coda con gli altri, un comando
+# arrivato mentre un'uscita programmata aspetta il suo turno la cancellerebbe.
 concurrency:
-  group: ${{ ((github.event.schedule == '30 13 * * *') || inputs.lungo) && 'samaritan-lungo' || 'samaritan-publish' }}
+  group: ${{ (github.event_name == 'workflow_dispatch' && !inputs.recupero) && format('samaritan-manuale-{0}', github.run_id) || (((github.event.schedule == '30 13 * * *') || inputs.lungo) && 'samaritan-lungo' || 'samaritan-publish') }}
   cancel-in-progress: false
 
 jobs:
