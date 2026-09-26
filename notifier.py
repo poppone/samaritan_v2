@@ -112,8 +112,13 @@ def notifica_pubblicazione(dati, video_id, percorso_video):
         url = (f"https://youtu.be/{video_id}" if config.VIDEO_LUNGO
                else f"https://youtube.com/shorts/{video_id}")
     else:
-        url = "(upload fallito)"
-    stato = "PUBBLICATO" if config.PRIVACY_STATUS == "public" else "IN ATTESA DI APPROVAZIONE"
+        url = "(upload fallito: il video resta tra gli artefatti della lavorazione)"
+    if not video_id:
+        stato = "CARICAMENTO FALLITO"
+    elif config.PRIVACY_STATUS == "public":
+        stato = "PUBBLICATO"
+    else:
+        stato = "IN ATTESA DI APPROVAZIONE"
 
     testo = (
         f"<b>Samaritan - {stato}</b>\n\n"
@@ -134,3 +139,13 @@ def notifica_pubblicazione(dati, video_id, percorso_video):
 
 def notifica_errore(messaggio):
     invia_messaggio(f"<b>Samaritan - ERRORE</b>\n\n<pre>{messaggio[:1500]}</pre>")
+
+
+def notifica_salto(motivo):
+    """Una lavorazione partita che non produce niente, detto apposta.
+
+    Senza questo messaggio una lavorazione che si ferma perche' l'uscita e'
+    gia' coperta e una che non e' mai partita sembrano uguali dal telefono:
+    silenzio in tutti e due i casi.
+    """
+    invia_messaggio(f"<b>Samaritan - NIENTE DA FARE</b>\n\n{html.escape(motivo, quote=False)}")

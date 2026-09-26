@@ -48,6 +48,40 @@ def pulisci_testo(testo):
     return t.strip()
 
 
+# Come la voce deve DIRE certe parole quando la grafia normale la inganna.
+# Il caso che ha fatto nascere l'elenco: "segui Poppone TV" in chiusura, letto
+# con l'accento sbagliato e "TV" all'inglese. Tocca solo l'audio: titoli,
+# descrizioni e sottotitoli restano scritti giusti (vedi grafia_canale).
+_PRONUNCE_IT = (
+    (re.compile(r"@?\bpoppone\s*tv\b", re.IGNORECASE), "Poppóne tivù"),
+    (re.compile(r"\bpoppone\b", re.IGNORECASE), "Poppóne"),
+)
+
+
+def pronuncia(testo):
+    """Riscrive per la voce italiana le parole che altrimenti legge male."""
+    if (config.LINGUA or "it").lower() != "it":
+        return testo
+    for regola, detto in _PRONUNCE_IT:
+        testo = regola.sub(detto, testo)
+    return testo
+
+
+# Il percorso inverso, per i sottotitoli: Whisper trascrive quello che sente,
+# e dopo pronuncia() sente "Poppóne tivù".
+_GRAFIA_CANALE = (
+    (re.compile(r"\bpop+[oóò]ne\b", re.IGNORECASE), "Poppone"),
+    (re.compile(r"\bt[iì]v[uù]\b", re.IGNORECASE), "TV"),
+)
+
+
+def grafia_canale(testo):
+    """Riporta il nome del canale alla sua grafia nei sottotitoli."""
+    for regola, scritto in _GRAFIA_CANALE:
+        testo = regola.sub(scritto, testo)
+    return testo
+
+
 _API_ELEVENLABS = "https://api.elevenlabs.io/v1"
 # L'id della voce si risolve una volta sola per processo: e' una chiamata di
 # rete in piu' e il nome non cambia a meta' esecuzione.
@@ -263,7 +297,7 @@ def genera_voce_samaritan(testo, output_filename=None, permetti_elevenlabs=True)
     if output_filename is None:
         output_filename = os.path.join(config.DIR_TEMP, "audio.mp3")
 
-    testo_pulito = pulisci_testo(testo)
+    testo_pulito = pronuncia(pulisci_testo(testo))
     if not testo_pulito:
         print("[Errore Voice] Testo vuoto dopo la pulizia.")
         return None

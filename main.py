@@ -48,6 +48,8 @@ def prepara_uscita():
         scelta = orari.slot_da_recuperare(carica_cronologia())
         if not scelta:
             print("[Recupero] Le uscite di oggi sono tutte a posto: non faccio niente.")
+            notifier.notifica_salto("Riserva delle 22:30: le uscite di oggi sono "
+                                    "tutte a posto, non serve recuperare niente.")
             return False
         slot, lingua, formato = scelta
         config.SLOT = slot
@@ -66,6 +68,8 @@ def prepara_uscita():
     if config.SLOT and orari.gia_pubblicato(config.SLOT, carica_cronologia()):
         print(f"[Slot] L'uscita delle {config.SLOT} e' gia' coperta da un video: "
               f"mi fermo qui invece di farne un secondo uguale.")
+        notifier.notifica_salto(f"L'uscita delle {config.SLOT} e' gia' coperta da "
+                                f"un video: questa lavorazione non ne fa un secondo.")
         return False
     return True
 

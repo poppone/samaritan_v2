@@ -305,21 +305,59 @@ def cerca_gioco_steam(nome):
     return None, None
 
 
+# Steam tiene nascosti i dettagli dei giochi vietati ai minori (Cyberpunk 2077,
+# Elden Ring, Dead Space...) a chi non ha superato il controllo dell'eta', e
+# dai server di GitHub la risposta arrivava senza dati: niente trailer, niente
+# screenshot, e il video usciva montato solo con clip di repertorio. Questi
+# sono i cookie che il sito imposta dopo il controllo dell'eta'.
+_COOKIE_ETA = {
+    "birthtime": "0",
+    "lastagecheckage": "1-January-1990",
+    "mature_content": "1",
+    "wants_mature_content": "1",
+}
+
+
 def dettagli_gioco(appid):
-    try:
-        r = requests.get(
-            STEAM_DETAILS,
-            params={"appids": appid, "l": "english"},
-            timeout=20,
-        )
-        r.raise_for_status()
-        blocco = r.json().get(str(appid), {})
-        if not blocco.get("success"):
-            return None
-        return blocco.get("data")
-    except Exception as e:
-        print(f"[Gameplay] Dettagli Steam non disponibili: {e}")
-        return None
+    """I dettagli Steam del gioco (trailer, screenshot, generi), o None.
+
+    Prova prima la richiesta semplice, poi con il controllo dell'eta' superato
+    e il paese esplicito. Ogni fallimento lascia una riga nel log: prima
+    un gioco senza materiale spariva in silenzio e il video ripiegava sulle
+    clip generiche senza che nessuno se ne accorgesse.
+    """
+    tentativi = (
+        ("semplice", {"appids": appid, "l": "english"}, None),
+        ("eta' verificata", {"appids": appid, "l": "english", "cc": "us"}, _COOKIE_ETA),
+        ("eta' verificata, Italia", {"appids": appid, "l": "english", "cc": "it"}, _COOKIE_ETA),
+    )
+    ripiego = None
+    motivi = []
+    for nome, parametri, cookie in tentativi:
+        try:
+            r = requests.get(STEAM_DETAILS, params=parametri, cookies=cookie,
+                             timeout=20)
+            r.raise_for_status()
+            blocco = (r.json() or {}).get(str(appid)) or {}
+        except Exception as e:
+            motivi.append(f"{nome}: {e}")
+            continue
+
+        dati = blocco.get("data") if blocco.get("success") else None
+        if not dati:
+            motivi.append(f"{nome}: Steam risponde senza dati")
+            continue
+        if dati.get("movies") or dati.get("screenshots"):
+            if motivi:
+                print(f"[Gameplay] Dettagli Steam ottenuti al tentativo "
+                      f"'{nome}' (prima: {'; '.join(motivi)}).")
+            return dati
+        motivi.append(f"{nome}: nessun trailer ne' screenshot")
+        ripiego = ripiego or dati
+
+    print(f"[Gameplay] Materiale Steam non disponibile per {appid}: "
+          f"{'; '.join(motivi)}.")
+    return ripiego
 
 
 # ===========================================================================
@@ -398,6 +436,7 @@ def scarica_trailer_steam(appid, dati, quanti=3, salto=0):
     """
     filmati = dati.get("movies", []) or []
     if not filmati:
+        print("[Gameplay] Nessun trailer ufficiale su Steam per questo gioco.")
         return []
 
     # I trailer marcati 'highlight' sono quelli principali scelti dall'editore
@@ -471,7 +510,7 @@ def scarica_screenshot_steam(appid, dati, quanti=4, salto=0):
         except Exception as e:
             print(f"[Gameplay] Screenshot non scaricato: {e}")
 
-    if percorsi:
+    if percorsi or screenshot:
         print(f"[Gameplay] {len(percorsi)} screenshot ufficiali pronti.")
     return percorsi
 
