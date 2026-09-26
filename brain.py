@@ -482,11 +482,16 @@ def _voci_rss(ricerca):
     return voci
 
 
-def recupera_trend_gaming_online(max_notizie=8):
+def recupera_trend_gaming_online(max_notizie=8, tema=None):
     """Scarica notizie gaming fresche e scarta quelle gia' sfruttate.
 
     Ritorna una lista di dict {titolo, fonte, link}: servono strutturate
     perche' lo script deve poter citare la fonte reale.
+
+    Con un tema (un video chiesto a mano, per esempio da Telegram) si cerca
+    prima proprio quello, e le notizie trovate cosi' passano davanti a tutte
+    le altre: senza, il modello riceveva le notizie del giorno e il tema come
+    una riga in fondo, e sceglieva la notizia piu' grossa.
     """
     print("[Samaritan Search] Ricerca trend gaming reali...")
 
@@ -518,7 +523,9 @@ def recupera_trend_gaming_online(max_notizie=8):
     # punteggio. Chiave: l'impronta della notizia, non il titolo, perche'
     # testate diverse la scrivono con parole appena diverse.
     trovate = {}
-    for ricerca in _lingua()["ricerche"]:
+    tema = (tema or "").strip()
+    ricerche = ((tema,) if tema else ()) + tuple(_lingua()["ricerche"])
+    for ricerca in ricerche:
         try:
             voci_rss = _voci_rss(ricerca)
         except Exception as e:
@@ -546,6 +553,7 @@ def recupera_trend_gaming_online(max_notizie=8):
             trovate[impronta] = {
                 "titolo": titolo, "fonte": fonte, "link": link,
                 "apparizioni": 1,
+                "sul_tema": bool(tema) and ricerca == tema,
             }
 
     for voce in trovate.values():
@@ -555,7 +563,8 @@ def recupera_trend_gaming_online(max_notizie=8):
 
     # In ordine di importanza, non a caso: la piu' grossa arriva al modello
     # per prima. A parita' di punteggio l'ordine e' quello di arrivo.
-    notizie = sorted(trovate.values(), key=lambda v: -v["punteggio"])[:max_notizie]
+    notizie = sorted(trovate.values(),
+                     key=lambda v: (not v["sul_tema"], -v["punteggio"]))[:max_notizie]
 
     if notizie:
         print(f"[Samaritan Search] {len(notizie)} notizie fresche non ancora "
@@ -1296,7 +1305,8 @@ def genera_script_samaritan(tema=None):
 
     Ritorna un dict: titolo, script, query_video, descrizione, fonte, stile.
     """
-    notizie = recupera_trend_gaming_online()
+    tema = (tema or "").strip()
+    notizie = recupera_trend_gaming_online(tema=tema)
     formato = scegli_formato(notizie)
 
     cronologia = _stesso_formato(
@@ -1323,7 +1333,10 @@ def genera_script_samaritan(tema=None):
 
     # Il gioco si blocca solo sull'ultimo video, non su tutta la finestra:
     # vedi _doppione_recente per il perche'.
-    gioco_precedente = recenti[-1].get("gioco", "") if recenti else ""
+    # Un tema chiesto a mano vince: se chiede Cyberpunk subito dopo un video
+    # su Cyberpunk, vuole un altro video su Cyberpunk. Il 26 settembre 2026 la
+    # prova su "Cyberpunk 2077" e' stata scartata per questo ed e' uscito GTA VI.
+    gioco_precedente = "" if tema else (recenti[-1].get("gioco", "") if recenti else "")
     giochi_recenti = [gioco_precedente] if gioco_precedente.strip() else []
 
     try:
@@ -1339,7 +1352,11 @@ def genera_script_samaritan(tema=None):
     )
     prompt_base = "Scrivi lo Short di oggi."
     if tema:
-        prompt_base += f" Focus specifico richiesto: {tema}"
+        prompt_base += (
+            f" Il proprietario del canale ha chiesto un video su questo "
+            f"argomento, ed e' obbligatorio: {tema}. Se tra le notizie ce n'e' "
+            f"una su questo argomento, usa quella."
+        )
 
     # Motivo dell'ultimo scarto: senza questo ogni tentativo riparte dallo
     # stesso identico input e rifa' un tiro di dado. Dicendo al modello cosa

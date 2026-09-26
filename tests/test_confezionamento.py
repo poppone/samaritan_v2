@@ -268,7 +268,7 @@ class TestRigenerazioneInformata:
         prompt_visti = []
         monkeypatch.setattr(brain, "client",
                             self._finto_client([scartato, buono], prompt_visti))
-        monkeypatch.setattr(brain, "recupera_trend_gaming_online", lambda: [])
+        monkeypatch.setattr(brain, "recupera_trend_gaming_online", lambda **k: [])
         monkeypatch.setattr(brain, "carica_cronologia", lambda: [])
         monkeypatch.setattr(brain, "salva_in_cronologia", lambda r: None)
 
@@ -408,7 +408,7 @@ class TestAperturaRipetutaDalVivo:
             [risposta(self.RIPETUTO), risposta(self.NUOVO)], prompt_visti
         )
         monkeypatch.setattr(brain, "client", finto)
-        monkeypatch.setattr(brain, "recupera_trend_gaming_online", lambda: [])
+        monkeypatch.setattr(brain, "recupera_trend_gaming_online", lambda **k: [])
         monkeypatch.setattr(brain, "carica_cronologia", lambda: cronologia)
         monkeypatch.setattr(brain, "salva_in_cronologia", lambda r: None)
 
@@ -572,7 +572,7 @@ class TestCodaTroncata:
         prompt_visti = []
         finto = TestRigenerazioneInformata()._finto_client([risposta], prompt_visti)
         monkeypatch.setattr(brain, "client", finto)
-        monkeypatch.setattr(brain, "recupera_trend_gaming_online", lambda: [])
+        monkeypatch.setattr(brain, "recupera_trend_gaming_online", lambda **k: [])
         monkeypatch.setattr(brain, "carica_cronologia", lambda: [])
         monkeypatch.setattr(brain, "salva_in_cronologia", lambda r: None)
 
@@ -784,7 +784,7 @@ class TestSchemaApertura:
             [risposta(ripetuto), risposta(nuovo)], prompt_visti
         )
         monkeypatch.setattr(brain, "client", finto)
-        monkeypatch.setattr(brain, "recupera_trend_gaming_online", lambda: [])
+        monkeypatch.setattr(brain, "recupera_trend_gaming_online", lambda **k: [])
         monkeypatch.setattr(brain, "carica_cronologia", lambda: cronologia)
         monkeypatch.setattr(brain, "salva_in_cronologia", lambda r: None)
 
@@ -862,7 +862,7 @@ class TestUltimaSpiaggia:
             [self._risposta()] * 4, prompt_visti
         )
         monkeypatch.setattr(brain, "client", finto)
-        monkeypatch.setattr(brain, "recupera_trend_gaming_online", lambda: [])
+        monkeypatch.setattr(brain, "recupera_trend_gaming_online", lambda **k: [])
         monkeypatch.setattr(brain, "carica_cronologia", self._cronologia)
         monkeypatch.setattr(brain, "salva_in_cronologia", lambda r: None)
 
@@ -880,7 +880,7 @@ class TestUltimaSpiaggia:
         )
         monkeypatch.setattr(brain, "client", finto)
         monkeypatch.setattr(brain.config, "GROQ_MODELLI", ["openai/gpt-oss-120b"])
-        monkeypatch.setattr(brain, "recupera_trend_gaming_online", lambda: [])
+        monkeypatch.setattr(brain, "recupera_trend_gaming_online", lambda **k: [])
         monkeypatch.setattr(brain, "carica_cronologia", self._cronologia)
         monkeypatch.setattr(brain, "salva_in_cronologia", lambda r: None)
 
@@ -1214,3 +1214,70 @@ class TestDidascaliaTikTok:
         assert "@PopponeTV" in descrizione
         assert DATI_GTA["fonte_url"] in descrizione
         assert "#perte" not in descrizione
+
+
+class TestTemaChiestoAMano:
+    """Il 26 settembre 2026 la prova lanciata a mano su "Cyberpunk 2077" e'
+    uscita su GTA VI: il video precedente parlava gia' di Cyberpunk, la regola
+    anti-ripetizione l'ha scartato e il tema era solo una riga in fondo al
+    prompt. Con il comando da Telegram quello che lui chiede deve uscire."""
+
+    def test_le_notizie_sul_tema_passano_davanti(self, monkeypatch):
+        viste = []
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: [])
+        monkeypatch.setattr(brain.requests, "get",
+                            TestNotiziaPiuGrossa()._rss_per_ricerca({
+                                "Cyberpunk": ["Cyberpunk 2077 riceve la patch 2.3"],
+                                "videogiochi": ["GTA 6 ha finalmente una data"],
+                            }, viste))
+
+        notizie = brain.recupera_trend_gaming_online(tema="Cyberpunk 2077")
+
+        assert notizie[0]["titolo"] == "Cyberpunk 2077 riceve la patch 2.3"
+        assert "Cyberpunk" in viste[0]
+        assert len(viste) == len(brain._lingua()["ricerche"]) + 1
+
+    def test_senza_tema_le_ricerche_restano_quelle(self, monkeypatch):
+        viste = []
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: [])
+        monkeypatch.setattr(brain.requests, "get",
+                            TestNotiziaPiuGrossa()._rss_per_ricerca({}, viste))
+        brain.recupera_trend_gaming_online(tema="")
+        assert len(viste) == len(brain._lingua()["ricerche"])
+
+    def _genera(self, monkeypatch, tema):
+        import json as _json
+        risposta = _json.dumps({
+            "titolo": "Cyberpunk 2077: il segreto dietro la cascata",
+            "script": TestRigenerazioneInformata._SCRIPT,
+            "gioco": "Cyberpunk 2077", "query_video": "cyberpunk gameplay",
+            "descrizione": "Un segreto.", "indice_notizia": -1,
+        })
+        prompt_visti = []
+        monkeypatch.setattr(brain, "client", TestRigenerazioneInformata()._finto_client(
+            [risposta] * 8, prompt_visti))
+        chiesti = []
+        monkeypatch.setattr(brain, "recupera_trend_gaming_online",
+                            lambda **k: chiesti.append(k.get("tema")) or [])
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: [
+            {"titolo": "Cyberpunk 2077: la patch", "gioco": "Cyberpunk 2077",
+             "lingua": "it"}])
+        monkeypatch.setattr(brain, "salva_in_cronologia", lambda r: None)
+        try:
+            risultato = brain.genera_script_samaritan(tema)
+        except RuntimeError:
+            # Senza tema lo stesso gioco viene scartato a ogni tentativo.
+            risultato = None
+        return risultato, prompt_visti, chiesti
+
+    def test_il_gioco_del_video_prima_non_blocca_il_tema(self, monkeypatch):
+        risultato, prompt_visti, chiesti = self._genera(monkeypatch, "Cyberpunk 2077")
+        assert risultato["gioco"] == "Cyberpunk 2077"
+        assert len(prompt_visti) == 1
+        assert "obbligatorio: Cyberpunk 2077" in prompt_visti[0]
+        assert chiesti == ["Cyberpunk 2077"]
+
+    def test_senza_tema_la_regola_resta(self, monkeypatch):
+        _, prompt_visti, _ = self._genera(monkeypatch, None)
+        assert len(prompt_visti) > 1
+        assert "come il video precedente" in prompt_visti[1]

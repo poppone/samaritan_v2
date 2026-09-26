@@ -208,14 +208,44 @@ jobs:
 
           git commit -m "Aggiornamento memoria Samaritan [skip ci]"
 
-          # Il push puo' essere rifiutato se il branch e' avanzato nel
-          # frattempo: riallineo e riprovo una volta sola.
           if git push origin "HEAD:${GITHUB_REF_NAME}"; then
             exit 0
           fi
-          echo "Push rifiutato, riallineo sulla base remota e riprovo."
-          git pull --rebase origin "${GITHUB_REF_NAME}"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+
+          # Rifiutato: un'altra lavorazione ha salvato nel frattempo. Niente
+          # rebase: sui due JSON git vede un conflitto dove ci sono solo due
+          # aggiunte, e il 26 settembre 2026 una memoria e' andata persa
+          # proprio cosi'. Riparto dalla versione remota e ci unisco la nostra
+          # sul contenuto (unisci_memoria.py).
+          copia="$RUNNER_TEMP/memoria-nostra"
+          mkdir -p "$copia"
+          for file_memoria in cronologia_trend.json performance.json; do
+            if [ -f "$file_memoria" ]; then
+              cp -- "$file_memoria" "$copia/"
+            fi
+          done
+          for tentativo in 1 2 3 4; do
+            echo "Push rifiutato, unisco la memoria a quella remota (tentativo $tentativo)."
+            sleep $((RANDOM % 10 + 2))
+            git fetch origin "${GITHUB_REF_NAME}"
+            git reset --hard "origin/${GITHUB_REF_NAME}"
+            python unisci_memoria.py "$copia/cronologia_trend.json" "$copia/performance.json"
+            for file_memoria in cronologia_trend.json performance.json; do
+              if [ -f "$file_memoria" ]; then
+                git add -- "$file_memoria"
+              fi
+            done
+            if git diff --staged --quiet; then
+              echo "La memoria remota contiene gia' tutto."
+              exit 0
+            fi
+            git commit -m "Aggiornamento memoria Samaritan [skip ci]"
+            if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              exit 0
+            fi
+          done
+          echo "::error::Memoria non salvata dopo quattro tentativi."
+          exit 1
 
       - name: Conserva il video prodotto
         if: always()

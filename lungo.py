@@ -268,7 +268,7 @@ def genera_video_lungo(tema=None):
     query_video, descrizione, fonte, fonte_url, stile) piu' 'sezioni', che e'
     quello che serve a produrre audio e capitoli.
     """
-    notizie = brain.recupera_trend_gaming_online()
+    notizie = brain.recupera_trend_gaming_online(tema=tema)
 
     # Solo i video lunghi gia' usciti: quello che ha detto uno Short da mezzo
     # minuto non vincola un video da otto.
@@ -280,11 +280,15 @@ def genera_video_lungo(tema=None):
         (v.get("gioco") or "").strip()
         for v in cronologia[-6:] if (v.get("gioco") or "").strip()
     })
+    if tema:
+        # Un argomento chiesto a mano vince sulla regola anti-ripetizione.
+        giochi_recenti = []
 
     system = _prompt_scaletta(notizie, titoli_recenti, giochi_recenti)
     utente = "Prepara la scaletta del video di oggi."
     if tema:
-        utente += f" Argomento richiesto: {tema}"
+        utente += (f" Il proprietario del canale ha chiesto un video su questo "
+                   f"argomento, ed e' obbligatorio: {tema}.")
 
     grezza = _chiedi(system, utente, schema=_SCHEMA_SCALETTA, max_tokens=2500)
     if not grezza:
