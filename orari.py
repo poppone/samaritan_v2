@@ -107,6 +107,26 @@ def _ultima_occorrenza(slot, adesso):
     return quando
 
 
+def _occorrenza_da_coprire(slot, adesso):
+    """L'uscita che una lavorazione partita adesso sta coprendo.
+
+    Non e' sempre l'ultima passata. Le lavorazioni partono PRIMA della loro
+    uscita (il cron e' quattro ore e mezza prima, di piu' d'inverno), e se
+    GitHub e' puntuale l'uscita di oggi non e' ancora arrivata: guardando solo
+    all'indietro la lavorazione si confrontava con il video di IERI alla
+    stessa ora, lo trovava e si fermava. Cosi' si sono perse le 21:00 del 22 e
+    del 24 settembre 2026 e le 18:00 del 25.
+
+    Quindi: se l'uscita di oggi arriva entro ANTICIPO_MASSIMO_ORE e' quella
+    che si sta coprendo, altrimenti e' l'ultima passata.
+    """
+    ultima = _ultima_occorrenza(slot, adesso)
+    prossima = ultima + timedelta(days=1)
+    if (prossima - adesso).total_seconds() <= ANTICIPO_MASSIMO_ORE * 3600:
+        return prossima
+    return ultima
+
+
 def gia_pubblicato(slot, cronologia, adesso=None):
     """Questa uscita e' gia' stata coperta da un video?
 
@@ -122,10 +142,14 @@ def gia_pubblicato(slot, cronologia, adesso=None):
     if not slot:
         return False
     try:
-        occorrenza = _ultima_occorrenza(slot, adesso or datetime.now(_fuso()))
+        occorrenza = _occorrenza_da_coprire(slot, adesso or datetime.now(_fuso()))
     except ValueError:
         return False
+    return _coperta(slot, occorrenza, cronologia)
 
+
+def _coperta(slot, occorrenza, cronologia):
+    """C'e' in cronologia un video caricato per QUESTA occorrenza dell'uscita?"""
     inizio = occorrenza.timestamp() - ANTICIPO_MASSIMO_ORE * 3600
     fine = occorrenza.timestamp() + RITARDO_MASSIMO_ORE * 3600
     for voce in cronologia or []:
@@ -167,7 +191,9 @@ def slot_da_recuperare(cronologia, adesso=None):
             continue
         if (adesso - occorrenza).total_seconds() > RITARDO_MASSIMO_ORE * 3600:
             continue
-        if gia_pubblicato(slot, cronologia, adesso):
+        # La riserva ragiona solo su uscite gia' passate, quindi controlla
+        # quella precisa occorrenza e non l'uscita "da coprire" adesso.
+        if _coperta(slot, occorrenza, cronologia):
             continue
         mancanti.append((occorrenza, slot, lingua, formato))
     if not mancanti:
