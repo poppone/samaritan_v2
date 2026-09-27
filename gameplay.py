@@ -13,6 +13,8 @@ sostituito dalla voce sintetica. L'audio e' il canale su cui il Content ID
 rivendica nel 90% dei casi, quindi il rischio residuo e' basso.
 
 Catena delle fonti:
+  0. Trailer dalla pagina ufficiale dell'editore, per i giochi che su Steam
+     non ci sono (GTA VI, vedi PAGINE_UFFICIALI)
   1. Trailer ufficiali Steam del gioco esatto  (gameplay vero)
   2. Screenshot ufficiali Steam animati in Ken Burns  (gioco esatto, statico)
   3. Pexels  (stock generico, solo se il gioco non e' identificabile)
@@ -416,8 +418,15 @@ def _scegli_variante_hls(url_master):
     return scelta[1]
 
 
-def _estrai_mp4(url_stream, destinazione, salta=SALTA_INTRO_SEC, durata=None):
-    """Usa ffmpeg per trasformare lo stream HLS in un mp4 locale SENZA AUDIO."""
+def _estrai_mp4(url_stream, destinazione, salta=SALTA_INTRO_SEC, durata=None,
+                a_1080=False):
+    """Usa ffmpeg per trasformare lo stream HLS in un mp4 locale SENZA AUDIO.
+
+    `a_1080` riduce a 1080 righe invece di copiare: i trailer di Rockstar sono
+    4K in mpeg4 quasi senza compressione, circa 400 MB ogni 45 secondi, e
+    tre cosi' a video peserebbero sul montaggio senza dare niente in piu' a
+    uno Short verticale.
+    """
     durata = config.SECONDI_TRAILER if durata is None else durata
     comando = [
         _ffmpeg(), "-y", "-loglevel", "error",
@@ -428,6 +437,10 @@ def _estrai_mp4(url_stream, destinazione, salta=SALTA_INTRO_SEC, durata=None):
         "-c:v", "copy",
         destinazione,
     ]
+    if a_1080:
+        comando[comando.index("copy")] = "libx264"
+        comando[-1:-1] = ["-vf", "scale=-2:1080", "-preset", "veryfast",
+                          "-crf", "20", "-pix_fmt", "yuv420p"]
     # I tempi massimi seguono la durata richiesta: con 45 secondi bastavano
     # fissi, ma un trailer intero da quattro minuti si scarica in piu' tempo e
     # un limite fisso lo farebbe fallire sempre.
@@ -435,6 +448,10 @@ def _estrai_mp4(url_stream, destinazione, salta=SALTA_INTRO_SEC, durata=None):
         subprocess.run(comando, check=True, timeout=max(180, durata * 3),
                        stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
     except Exception as e:
+        if a_1080:
+            # Era gia' una ricodifica: non c'e' un piano B diverso da provare.
+            print(f"[Gameplay] Ricodifica fallita: {e}")
+            return False
         print(f"[Gameplay] Remux fallito ({e}), riprovo con ricodifica...")
         comando[comando.index("copy")] = "libx264"
         comando.insert(-1, "-preset")
@@ -507,6 +524,91 @@ def scarica_trailer_steam(appid, dati, quanti=3, salto=0):
     return percorsi
 
 
+# ===========================================================================
+# GIOCHI CHE SU STEAM NON CI SONO: LA PAGINA UFFICIALE DELL'EDITORE
+# ===========================================================================
+# GTA VI e' l'argomento che porta piu' pubblico (8 video sugli ultimi 20 al
+# 27 settembre 2026) e su Steam non esiste: finiva sempre su clip Pexels
+# generiche. Rockstar pubblica i trailer come mp4 scaricabili nella pagina
+# Downloads del sito ufficiale, verificato dai server di GitHub il 27
+# settembre 2026. E' materiale dell'editore come i trailer Steam, e come
+# quelli si prende senza audio.
+PAGINE_UFFICIALI = {
+    "gta6": {
+        "nome": "Grand Theft Auto VI",
+        "pagina": "https://www.rockstargames.com/VI/downloads",
+        "schema": r"https://media-rockstargames-com\.akamaized\.net/VI/downloads/videos/[^\"'\s<>\\]+\.mp4",
+        # Se la pagina cambia forma, questi restano validi finche' Rockstar
+        # non li toglie.
+        "riserva": [
+            "https://media-rockstargames-com.akamaized.net/VI/downloads/videos/GTAVI_Trailer_2/GTAVI_Trailer_2.mp4",
+            "https://media-rockstargames-com.akamaized.net/VI/downloads/videos/GTAVI_Trailer_1/GTAVI_Trailer_1.mp4",
+            "https://media-rockstargames-com.akamaized.net/VI/downloads/videos/GTAVI_An_Extended_Look/GTAVI_An_Extended_Look.mp4",
+        ],
+    },
+}
+
+# La copertina animata e' un'immagine che si muove appena, non gameplay.
+_NON_GAMEPLAY = ("cover_art", "coverart", "logo")
+
+
+def gioco_con_pagina_ufficiale(gioco):
+    """La chiave di PAGINE_UFFICIALI per questo gioco, o None.
+
+    Il modello scrive il nome in tanti modi ('GTA 6', 'GTA VI', 'gta6',
+    'Grand Theft Auto VI'); GTA V e San Andreas restano fuori.
+    """
+    nome = _normalizza(gioco or "")
+    if re.search(r"\bgta\s*(6|vi)\b", nome):
+        return "gta6"
+    if "grand theft auto" in nome and _numero_sequel(nome) == 6:
+        return "gta6"
+    return None
+
+
+def trailer_dalla_pagina_ufficiale(chiave):
+    """Gli mp4 dei trailer elencati nella pagina ufficiale, in ordine."""
+    voce = PAGINE_UFFICIALI[chiave]
+    trovati = []
+    try:
+        r = requests.get(voce["pagina"], timeout=20,
+                         headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"})
+        r.raise_for_status()
+        trovati = re.findall(voce["schema"], r.text)
+    except Exception as e:
+        print(f"[Gameplay] Pagina ufficiale di {voce['nome']} non raggiungibile: {e}")
+
+    elenco = []
+    for url in trovati or voce["riserva"]:
+        if url not in elenco and not any(p in url.lower() for p in _NON_GAMEPLAY):
+            elenco.append(url)
+    return elenco
+
+
+def scarica_trailer_ufficiali(chiave, quanti=3, salto=0):
+    """Come scarica_trailer_steam, ma dagli mp4 della pagina dell'editore."""
+    elenco = ruota(trailer_dalla_pagina_ufficiale(chiave), salto)
+    # Stesso criterio di Steam per variare il punto di taglio fra un video e
+    # il successivo sullo stesso gioco.
+    inizio = SALTA_INTRO_SEC + (salto % 4) * 20
+    tentativi = [inizio] + ([SALTA_INTRO_SEC] if inizio != SALTA_INTRO_SEC else []) + [0]
+
+    percorsi = []
+    for url in elenco:
+        if len(percorsi) >= quanti:
+            break
+        nome_file = os.path.basename(url.split("?")[0])
+        destinazione = os.path.join(config.DIR_TEMP, f"ufficiale_{chiave}_{nome_file}")
+        print(f"[Gameplay] Scarico trailer ufficiale dall'editore: {nome_file}")
+        for salta in tentativi:
+            if _estrai_mp4(url, destinazione, salta=salta, a_1080=True):
+                percorsi.append(destinazione)
+                break
+
+    print(f"[Gameplay] {len(percorsi)} trailer ufficiali pronti.")
+    return percorsi
+
+
 def scarica_screenshot_steam(appid, dati, quanti=4, salto=0):
     """Screenshot ufficiali in 1920x1080: usati come inserti animati.
 
@@ -552,7 +654,17 @@ def procura_materiale(gioco=None, query_pexels="gameplay", minimo=3):
     dati_gioco = None
     salto = video_gia_fatti(gioco)
 
-    if gioco and config.USA_STEAM:
+    pagina_ufficiale = gioco_con_pagina_ufficiale(gioco) if config.USA_STEAM else None
+    if pagina_ufficiale:
+        nome_ufficiale = PAGINE_UFFICIALI[pagina_ufficiale]["nome"]
+        if salto:
+            print(f"[Gameplay] Short numero {salto + 1} su "
+                  f"'{nome_ufficiale}': cambio materiale.")
+        for percorso in scarica_trailer_ufficiali(
+                pagina_ufficiale, config.STEAM_MAX_TRAILER, salto):
+            sorgenti.append({"tipo": "video", "path": percorso,
+                             "gioco": nome_ufficiale})
+    elif gioco and config.USA_STEAM:
         appid, nome_ufficiale = cerca_gioco_steam(gioco)
         if appid:
             dati = dettagli_gioco(appid)
