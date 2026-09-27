@@ -418,8 +418,15 @@ def _scegli_variante_hls(url_master):
     return scelta[1]
 
 
-def _estrai_mp4(url_stream, destinazione, salta=SALTA_INTRO_SEC, durata=None):
-    """Usa ffmpeg per trasformare lo stream HLS in un mp4 locale SENZA AUDIO."""
+def _estrai_mp4(url_stream, destinazione, salta=SALTA_INTRO_SEC, durata=None,
+                a_1080=False):
+    """Usa ffmpeg per trasformare lo stream HLS in un mp4 locale SENZA AUDIO.
+
+    `a_1080` riduce a 1080 righe invece di copiare: i trailer di Rockstar sono
+    4K in mpeg4 quasi senza compressione, circa 400 MB ogni 45 secondi, e
+    tre cosi' a video peserebbero sul montaggio senza dare niente in piu' a
+    uno Short verticale.
+    """
     durata = config.SECONDI_TRAILER if durata is None else durata
     comando = [
         _ffmpeg(), "-y", "-loglevel", "error",
@@ -430,6 +437,10 @@ def _estrai_mp4(url_stream, destinazione, salta=SALTA_INTRO_SEC, durata=None):
         "-c:v", "copy",
         destinazione,
     ]
+    if a_1080:
+        comando[comando.index("copy")] = "libx264"
+        comando[-1:-1] = ["-vf", "scale=-2:1080", "-preset", "veryfast",
+                          "-crf", "20", "-pix_fmt", "yuv420p"]
     # I tempi massimi seguono la durata richiesta: con 45 secondi bastavano
     # fissi, ma un trailer intero da quattro minuti si scarica in piu' tempo e
     # un limite fisso lo farebbe fallire sempre.
@@ -437,6 +448,10 @@ def _estrai_mp4(url_stream, destinazione, salta=SALTA_INTRO_SEC, durata=None):
         subprocess.run(comando, check=True, timeout=max(180, durata * 3),
                        stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
     except Exception as e:
+        if a_1080:
+            # Era gia' una ricodifica: non c'e' un piano B diverso da provare.
+            print(f"[Gameplay] Ricodifica fallita: {e}")
+            return False
         print(f"[Gameplay] Remux fallito ({e}), riprovo con ricodifica...")
         comando[comando.index("copy")] = "libx264"
         comando.insert(-1, "-preset")
@@ -586,7 +601,7 @@ def scarica_trailer_ufficiali(chiave, quanti=3, salto=0):
         destinazione = os.path.join(config.DIR_TEMP, f"ufficiale_{chiave}_{nome_file}")
         print(f"[Gameplay] Scarico trailer ufficiale dall'editore: {nome_file}")
         for salta in tentativi:
-            if _estrai_mp4(url, destinazione, salta=salta):
+            if _estrai_mp4(url, destinazione, salta=salta, a_1080=True):
                 percorsi.append(destinazione)
                 break
 

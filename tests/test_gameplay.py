@@ -511,7 +511,8 @@ class TestGtaViDalSitoRockstar:
                             lambda *a, **k: self._Risposta(self.PAGINA))
         scaricati = []
 
-        def finto(url, destinazione, salta=0, durata=None):
+        def finto(url, destinazione, salta=0, durata=None, a_1080=False):
+            assert a_1080, "i trailer Rockstar sono 4K: vanno ridotti"
             scaricati.append(url)
             open(destinazione, "wb").close()
             return True
