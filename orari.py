@@ -32,7 +32,7 @@ import config
 SLOT_GIORNALIERI = (
     ("14:00", "it", "short"),
     ("18:00", "it", "short"),
-    ("20:00", "it", "lungo"),
+    ("20:00", "en", "short"),   # fino al 27 settembre 2026 il video lungo
     ("21:00", "en", "short"),
 )
 
