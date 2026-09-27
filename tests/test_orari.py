@@ -209,27 +209,32 @@ class TestWorkflowCollegato:
         for orario, _, _ in orari.SLOT_GIORNALIERI:
             assert f"'{orario}'" in riga[0], orario
 
-    def test_il_video_lungo_ha_il_suo_interruttore_nel_workflow(self):
-        """Senza VIDEO_LUNGO la lavorazione delle 20:00 produrrebbe un
-        quarto Short verticale invece del video da otto minuti, e la porta
-        delle 4.000 ore resterebbe chiusa."""
+    def test_ogni_uscita_in_inglese_ha_lingua_e_voce_inglesi(self):
+        """Senza, l'uscita delle 20:00 diventata inglese il 27 settembre 2026
+        uscirebbe in italiano, e la memoria anti-ripetizione la metterebbe
+        fra quelle italiane."""
+        import re
+        testo = self._workflow()
+        righe = testo.splitlines()
+        slot_riga = [r for r in righe if r.strip().startswith("SLOT:")][0]
+        lingua = [r for r in righe if r.strip().startswith("LINGUA:")][0]
+        voce = [r for r in righe if r.strip().startswith("VOCE_TTS:")][0]
+        for orario, lingua_slot, _ in orari.SLOT_GIORNALIERI:
+            cron = re.search(
+                r"\(github\.event\.schedule == '([^']+)' && '"
+                + re.escape(orario) + r"'\)", slot_riga).group(1)
+            assert (cron in lingua) == (lingua_slot == "en"), (orario, lingua)
+            assert (cron in voce) == (lingua_slot == "en"), (orario, voce)
+
+    def test_nessuna_uscita_programmata_fa_il_video_lungo(self):
+        """I tre video lunghi usciti alle 20:00 hanno fatto 6, 0 e 0
+        visualizzazioni: il lungo si lancia solo a mano."""
         testo = self._workflow()
         riga = [r for r in testo.splitlines()
-                if r.strip().startswith("VIDEO_LUNGO:")]
-        assert riga, "il workflow non passa VIDEO_LUNGO"
-        orario_lungo = [s for s in orari.SLOT_GIORNALIERI if s[2] == "lungo"]
-        assert len(orario_lungo) == 1, orari.SLOT_GIORNALIERI
-        # Lo stesso cron che imposta quell'orario deve accendere il formato.
-        slot_riga = [r for r in testo.splitlines()
-                     if r.strip().startswith("SLOT:")][0]
-        import re
-        cron_lungo = re.search(
-            r"\(github\.event\.schedule == '([^']+)' && '"
-            + re.escape(orario_lungo[0][0]) + r"'\)",
-            slot_riga,
-        )
-        assert cron_lungo, slot_riga
-        assert cron_lungo.group(1) in riga[0], (cron_lungo.group(1), riga[0])
+                if r.strip().startswith("VIDEO_LUNGO:")][0]
+        assert "schedule" not in riga, riga
+        assert "inputs.lungo" in riga, riga
+        assert all(formato == "short" for _, _, formato in orari.SLOT_GIORNALIERI)
 
     def test_la_riserva_ha_tutt_e_due_le_voci(self):
         """Sceglie la lingua a lavorazione iniziata, quindi non puo' contare
@@ -360,17 +365,16 @@ class TestQualeUscitaRecuperare:
         assert orari.slot_da_recuperare(cronologia, ADESSO) == (
             "18:00", "it", "short")
 
-    def test_il_video_lungo_si_recupera_come_video_lungo(self):
-        """Il formato deve viaggiare insieme all'orario: senza, la riserva
-        rifarebbe un quarto Short verticale al posto del video da otto
-        minuti, e nessuno se ne accorgerebbe fino a canale pubblicato."""
+    def test_le_20_si_recuperano_in_inglese(self):
+        """Lingua e formato viaggiano insieme all'orario: la riserva rifa'
+        l'uscita come l'uscita la voleva."""
         cronologia = [
             _voce("14:00", ADESSO.replace(hour=15)),
             _voce("18:00", ADESSO.replace(hour=19)),
             _voce("21:00", ADESSO.replace(hour=21, minute=30)),
         ]
         assert orari.slot_da_recuperare(cronologia, ADESSO) == (
-            "20:00", "it", "lungo")
+            "20:00", "en", "short")
 
     def test_l_uscita_inglese_si_recupera_in_inglese(self):
         cronologia = [
@@ -400,7 +404,7 @@ class TestQualeUscitaRecuperare:
         # Alle 8 del 22 nessuna uscita del 22 e' ancora passata, e quelle del
         # 21 sono tutte oltre le dodici ore tranne le 20:00 e le 21:00: si
         # recupera la piu' vecchia delle due.
-        assert orari.slot_da_recuperare([], mattina) == ("20:00", "it", "lungo")
+        assert orari.slot_da_recuperare([], mattina) == ("20:00", "en", "short")
 
     def test_la_riserva_non_confonde_un_uscita_di_ieri_con_quella_di_oggi(self):
         """La riserva guarda solo uscite passate. Se parte cosi' tardi che

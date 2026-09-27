@@ -1,7 +1,8 @@
 # Samaritan
 
 Sistema automatico di produzione e pubblicazione di video gaming su YouTube:
-tre Short verticali al giorno e un video lungo 16:9 da otto minuti.
+quattro Short verticali al giorno, due in italiano e due in inglese, e a
+richiesta un video lungo 16:9 da otto minuti.
 
 Non e' solo un generatore: misura la retention reale dei video pubblicati e
 usa quei dati per decidere cosa produrre dopo.
@@ -34,8 +35,11 @@ ne puo' aprire una sola:
 
 Le ore guardate sugli Short **non contano** per la soglia delle 4.000 ore. Su
 questi numeri la prima porta e' fuori portata di due ordini di grandezza e la
-seconda no: per questo dal 22 settembre 2026 esce anche un video lungo al
-giorno, alle 20:00 italiane.
+seconda no: per questo dal 22 settembre 2026 usciva anche un video lungo al
+giorno, alle 20:00 italiane. **Dal 27 settembre 2026 non esce piu' da solo**:
+i tre pubblicati hanno fatto 6, 0 e 0 visualizzazioni, quindi zero ore verso
+la soglia. Si lancia a mano (`lungo` dal pulsante Run workflow, o `/lungo`
+da Telegram).
 
 Come e' fatto (`lungo.py`):
 
@@ -285,9 +289,10 @@ Stampa i valori base64 da incollare in **Settings > Secrets and variables > Acti
 sempre, anche quando cambia l'ora legale.
 
 - 14:00 e 18:00: Short in italiano.
-- **20:00: il video lungo**, 16:9 da otto minuti, in italiano.
-- **21:00: Short in inglese**, stesso canale, pubblico diverso, per misurare
-  se l'inglese rende piu' dell'italiano invece di deciderlo a naso.
+- **20:00 e 21:00: Short in inglese**, stesso canale, pubblico diverso.
+  Fino al 27 settembre 2026 alle 20:00 usciva il video lungo; i tre usciti
+  hanno fatto 6, 0 e 0 visualizzazioni, e l'inglese rendeva almeno quanto
+  l'italiano. Il lungo resta lanciabile a mano.
 
 La lingua la passa il workflow con `LINGUA` e il formato con `VIDEO_LUNGO`;
 una run lanciata a mano li sceglie dal menu.
