@@ -455,3 +455,74 @@ class TestDettagliDeiGiochiPerAdulti:
             raise ConnectionError("giu'")
         monkeypatch.setattr(gameplay.requests, "get", rotto)
         assert gameplay.dettagli_gioco(10) is None
+
+
+class TestGtaViDalSitoRockstar:
+    """GTA VI su Steam non c'e': fino al 27 settembre 2026 ogni video su GTA VI
+    usciva con clip Pexels generiche. I trailer arrivano dalla pagina
+    Downloads di Rockstar."""
+
+    PAGINA = (
+        '<a href="https://media-rockstargames-com.akamaized.net/VI/downloads/videos/GTAVI_Trailer_1/GTAVI_Trailer_1.mp4">'
+        '"https://media-rockstargames-com.akamaized.net/VI/downloads/videos/GTAVI_Trailer_2/GTAVI_Trailer_2.mp4"'
+        ' https://media-rockstargames-com.akamaized.net/VI/downloads/videos/GTAVI_Trailer_1/GTAVI_Trailer_1.mp4'
+        ' https://media-rockstargames-com.akamaized.net/VI/downloads/videos/GTAVI_Official_Cover_Art_Landscape/GTAVI_Official_Cover_Art_Landscape.mp4'
+    )
+
+    class _Risposta:
+        def __init__(self, testo, errore=None):
+            self.text = testo
+            self._errore = errore
+
+        def raise_for_status(self):
+            if self._errore:
+                raise self._errore
+
+    def test_riconosce_tutti_i_modi_di_scrivere_gta_vi(self):
+        for nome in ("GTA 6", "GTA VI", "gta6", "Grand Theft Auto VI",
+                     "Grand Theft Auto 6"):
+            assert gameplay.gioco_con_pagina_ufficiale(nome) == "gta6", nome
+
+    def test_gli_altri_gta_restano_a_steam(self):
+        for nome in ("GTA V", "Grand Theft Auto V", "GTA San Andreas",
+                     "Grand Theft Auto IV", "Cyberpunk 2077", "", None):
+            assert gameplay.gioco_con_pagina_ufficiale(nome) is None, nome
+
+    def test_legge_i_trailer_dalla_pagina_senza_la_copertina(self, monkeypatch):
+        monkeypatch.setattr(gameplay.requests, "get",
+                            lambda *a, **k: self._Risposta(self.PAGINA))
+        elenco = gameplay.trailer_dalla_pagina_ufficiale("gta6")
+        assert [u.rsplit("/", 1)[1] for u in elenco] == [
+            "GTAVI_Trailer_1.mp4", "GTAVI_Trailer_2.mp4"]
+
+    def test_se_la_pagina_non_risponde_usa_gli_indirizzi_noti(self, monkeypatch):
+        def rotta(*a, **k):
+            raise gameplay.requests.ConnectionError("giu'")
+        monkeypatch.setattr(gameplay.requests, "get", rotta)
+        assert gameplay.trailer_dalla_pagina_ufficiale("gta6") == \
+            gameplay.PAGINE_UFFICIALI["gta6"]["riserva"]
+
+    def test_il_video_su_gta_vi_monta_i_trailer_ufficiali(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(config, "USA_STEAM", True)
+        monkeypatch.setattr(config, "DIR_TEMP", str(tmp_path))
+        monkeypatch.setattr(config, "STEAM_MAX_TRAILER", 3)
+        monkeypatch.setattr(config, "FILE_CRONOLOGIA", str(tmp_path / "niente.json"))
+        monkeypatch.setattr(gameplay.requests, "get",
+                            lambda *a, **k: self._Risposta(self.PAGINA))
+        scaricati = []
+
+        def finto(url, destinazione, salta=0, durata=None):
+            scaricati.append(url)
+            open(destinazione, "wb").close()
+            return True
+        monkeypatch.setattr(gameplay, "_estrai_mp4", finto)
+
+        def steam_vietato(*a, **k):
+            raise AssertionError("GTA VI non va cercato su Steam")
+        monkeypatch.setattr(gameplay, "cerca_gioco_steam", steam_vietato)
+
+        sorgenti, nome = gameplay.procura_materiale("GTA 6", minimo=2)
+        assert nome == "Grand Theft Auto VI"
+        assert len(scaricati) == 2
+        assert all(s["gioco"] == "Grand Theft Auto VI" for s in sorgenti)
+        assert all("akamaized.net/VI/downloads/videos/" in u for u in scaricati)

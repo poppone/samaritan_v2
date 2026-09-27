@@ -4,7 +4,7 @@ name: Sonda Rockstar
 on:
   push:
     branches: [claude/project-thread-1sanb4]
-    paths: ['.github/workflows/sonda-rockstar.yml', 'sonda_rockstar.py']
+    paths: ['.github/workflows/sonda-rockstar.yml', 'sonda_rockstar.py', 'gameplay.py']
 permissions:
   contents: read
 jobs:
@@ -13,4 +13,6 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - run: pip install -q requests python-dotenv
       - run: python3 sonda_rockstar.py
