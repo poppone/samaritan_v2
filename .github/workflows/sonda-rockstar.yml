@@ -1,0 +1,16 @@
+# TEMPORANEO: capire come il sito Rockstar serve trailer e foto di GTA VI.
+# Da togliere prima di unire su main.
+name: Sonda Rockstar
+on:
+  push:
+    branches: [claude/project-thread-1sanb4]
+    paths: ['.github/workflows/sonda-rockstar.yml', 'sonda_rockstar.py']
+permissions:
+  contents: read
+jobs:
+  sonda:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 sonda_rockstar.py
