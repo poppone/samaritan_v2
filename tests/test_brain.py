@@ -233,12 +233,12 @@ class TestDettagliInventati:
     def test_il_prompt_dice_che_della_notizia_si_sa_solo_il_titolo(self):
         prompt = brain._costruisci_system_prompt(
             "VIRAL_HOOK_NEWS", [self.NOTIZIA], [], [])
-        assert "SOLO IL TITOLO" in prompt
+        assert "SOLO TITOLO E SOMMARIO" in prompt
         assert "senza pagare" in prompt
 
     def test_senza_notizie_la_regola_non_occupa_spazio(self):
         prompt = brain._costruisci_system_prompt("EASTER_EGG_SECRET", [], [], [])
-        assert "SOLO IL TITOLO" not in prompt
+        assert "SOLO TITOLO E SOMMARIO" not in prompt
 
     def test_lo_script_che_inventa_viene_rifatto_con_i_dettagli_da_togliere(self, monkeypatch):
         inventato = ('{"dettagli_inventati": ["a glitch skipped the purchase", '
@@ -259,13 +259,28 @@ class TestDettagliInventati:
         assert len(prompt_visti) == 1
         assert risultato["script"] == self.SCRIPT
 
-    def test_all_ultimo_tentativo_la_verifica_si_spegne(self, monkeypatch):
+    def test_la_verifica_vale_anche_all_ultimo_tentativo(self, monkeypatch):
+        # Con la verifica spenta sull'ultimo tentativo, nella prova del 28
+        # settembre 2026 e' passato uno Short su GTA 6 nato da una notizia su
+        # un altro gioco. Meglio un video saltato, che la riserva recupera.
         inventato = '{"dettagli_inventati": ["Microsoft patched it within hours"]}'
-        risultato, prompt_visti, verifiche = self._genera(
-            monkeypatch, [self._risposta()] * 4, [inventato] * 3)
-        assert len(prompt_visti) == 4
-        assert len(verifiche) == 3
-        assert risultato["script"] == self.SCRIPT
+        with pytest.raises(RuntimeError):
+            self._genera(monkeypatch, [self._risposta()] * 4, [inventato] * 4)
+
+    def test_il_sommario_arriva_al_modello_e_alla_verifica(self, monkeypatch):
+        sommario = ("GTA VI could be yours for free, or at least for a big "
+                    "discount, using a few tricks that Xbox offers.")
+        prompt_visti, verifiche = [], []
+        monkeypatch.setattr(brain, "client", self._finto_client(
+            [self._risposta()], ['{"dettagli_inventati": []}'],
+            prompt_visti, verifiche))
+        monkeypatch.setattr(brain, "recupera_trend_gaming_online",
+                            lambda **k: [dict(self.NOTIZIA, sommario=sommario)])
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: [])
+        monkeypatch.setattr(brain, "salva_in_cronologia", lambda r: None)
+        brain.genera_script_samaritan()
+        assert "Sommario: " + sommario in prompt_visti[0][0]
+        assert "SOMMARIO: " + sommario in verifiche[0]
 
     def test_gli_script_evergreen_non_vengono_verificati(self, monkeypatch):
         import json as _json
@@ -275,3 +290,75 @@ class TestDettagliInventati:
             monkeypatch, [_json.dumps(evergreen)], [])
         assert len(prompt_visti) == 1
         assert verifiche == []
+
+
+# conftest spegne _sommario_bing in tutti i test perche' va in rete: qui serve
+# quello vero, preso all'import del modulo, prima che la fixture lo sostituisca.
+_SOMMARIO_BING_VERO = brain._sommario_bing
+
+
+class TestSommarioBing:
+    """Google News da' solo il titolo: il sommario arriva da Bing News."""
+
+    TITOLO = "These Xbox Players Got GTA 6 For Free The Hard Way"
+
+    def _feed(self, *voci):
+        items = "".join(
+            f"<item><title>{t}</title><description>{d}</description></item>"
+            for t, d in voci)
+        return f"<rss><channel>{items}</channel></rss>".encode()
+
+    def _con_feed(self, monkeypatch, contenuto, visti=None):
+        vero = _SOMMARIO_BING_VERO
+
+        class Risposta:
+            content = contenuto
+
+            def raise_for_status(self):
+                pass
+
+        def finto_get(url, **kw):
+            if visti is not None:
+                visti.append(url)
+            return Risposta()
+        monkeypatch.setattr(brain.requests, "get", finto_get)
+        return vero
+
+    def test_prende_il_sommario_della_stessa_notizia(self, monkeypatch):
+        visti = []
+        sommario = self._con_feed(monkeypatch, self._feed(
+            ("Rockstar reveals new GTA 6 artwork", "Jason and Lucia."),
+            ("These Xbox players got GTA 6 for free the hard way",
+             "GTA VI could be yours for free using a few tricks that Xbox offers."),
+        ), visti)(self.TITOLO)
+        assert sommario.startswith("GTA VI could be yours for free")
+        assert "format=rss" in visti[0]
+
+    def test_non_prende_il_sommario_di_un_altra_notizia(self, monkeypatch):
+        sommario = self._con_feed(monkeypatch, self._feed(
+            ("Rockstar reveals new GTA 6 artwork of Jason and Lucia",
+             "A 14-page feature arrives September 29."),
+        ))(self.TITOLO)
+        assert sommario == ""
+
+    def test_scarta_il_sommario_che_ripete_il_titolo(self, monkeypatch):
+        sommario = self._con_feed(monkeypatch, self._feed(
+            (self.TITOLO, self.TITOLO + "."),
+        ))(self.TITOLO)
+        assert sommario == ""
+
+    def test_taglia_i_sommari_lunghi(self, monkeypatch):
+        lungo = "parola " * 200
+        sommario = self._con_feed(monkeypatch, self._feed(
+            (self.TITOLO, lungo),
+        ))(self.TITOLO)
+        assert len(sommario) <= brain.MAX_CARATTERI_SOMMARIO + 3
+        assert sommario.endswith("...")
+
+    def test_se_bing_non_risponde_la_notizia_resta_senza_sommario(self, monkeypatch):
+        def rotto(titolo):
+            raise ConnectionError("rete giu'")
+        monkeypatch.setattr(brain, "_sommario_bing", rotto)
+        notizie = [{"titolo": self.TITOLO}]
+        brain._aggiungi_sommari(notizie)
+        assert notizie[0]["sommario"] == ""

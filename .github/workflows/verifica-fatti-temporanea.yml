@@ -14,25 +14,29 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
       - run: pip install -r requirements.txt
-      - name: Sonda sommari
+      - name: Prova
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          PEXELS_API_KEY: x
         run: |
-          python - <<'PY'
-          import requests, re, html
-          import xml.etree.ElementTree as ET
-          H = {"User-Agent": "Mozilla/5.0"}
-          for nome, url in (("GOOGLE", "https://news.google.com/rss/search?q=GTA%206&hl=en-US&gl=US&ceid=US:en"),
-                            ("BING", "https://www.bing.com/news/search?q=GTA+6&format=rss&setlang=en-US"),
-                            ("BING_IT", "https://www.bing.com/news/search?q=GTA+6&format=rss&setlang=it-IT&cc=IT")):
+          for L in en it; do
+          LINGUA=$L python - <<'PY'
+          import time, brain
+          brain.salva_in_cronologia = lambda r: None
+          if brain._lingua()["nome"] == "English":
+              t = "These Xbox Players Got GTA 6 For Free The Hard Way"
+              som = brain._sommario_bing(t)
+              print("SOMMARIO BING ->", som, flush=True)
+              cattivo = ("Only two Xbox gamers cracked the system and scored GTA VI without paying. "
+                         "They used a glitch that skipped the purchase screen. Microsoft shut it down "
+                         "within hours. Crazy gaming hacks like this never last. Follow Poppone TV.")
+              print("CATTIVO ->", brain._dettagli_inventati(t, cattivo, som), flush=True)
+          for i in range(2):
               try:
-                  r = requests.get(url, headers=H, timeout=10)
-                  print("====", nome, r.status_code, len(r.content), flush=True)
-                  root = ET.fromstring(r.content)
-                  for it in root.findall("./channel/item")[:4]:
-                      d = it.findtext("description") or ""
-                      print("T:", it.findtext("title"))
-                      print("L:", (it.findtext("link") or "")[:160])
-                      print("D:", html.unescape(re.sub("<[^>]+>", " ", d))[:400])
-                      print("-", flush=True)
+                  r = brain.genera_script_samaritan()
+                  print("=" * 40); print(r["titolo"]); print(r["fonte"]); print(r["script"]); print("=" * 40, flush=True)
               except Exception as e:
-                  print(nome, "ERRORE", e, flush=True)
+                  print("FALLITO:", e, flush=True)
+              time.sleep(45)
           PY
+          done
