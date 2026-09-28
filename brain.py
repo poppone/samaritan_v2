@@ -1344,11 +1344,15 @@ def _dettagli_inventati(titolo_notizia, script):
         "SOLO il titolo. Elenca i dettagli sull'EVENTO della notizia che lo "
         "script afferma come fatti ma che il titolo non dice: come e' "
         "successo, quando, quanti, quanto e' durato, chi ha reagito, come e' "
-        "finita, citazioni, numeri. NON elencare: opinioni, domande al "
-        "pubblico, inviti a iscriversi, descrizioni generali e note da "
-        "sempre del gioco, riformulazioni del titolo. Nel dubbio non "
-        "elencare. Rispondi in JSON con la chiave 'dettagli_inventati' (una "
-        "lista di frasi brevi, vuota se non c'e' niente)."
+        "finita, citazioni, numeri, caratteristiche del gioco (modalita', "
+        "mappa, prezzo, contenuti). NON elencare: opinioni, domande al "
+        "pubblico, inviti a iscriversi, frasi generiche su fan e community, "
+        "fatti noti da sempre sul gioco, e riformulazioni o deduzioni "
+        "ovvie del titolo (per esempio 'appena annunciato' per una notizia "
+        "di oggi, 'enorme' o 'spettacolare' per un titolo che dice che il "
+        "mondo 'looks wild'). Nel dubbio non elencare. Rispondi in JSON con "
+        "la chiave 'dettagli_inventati' (una lista di frasi brevi, vuota se "
+        "non c'e' niente)."
     )
     try:
         risposta = client.chat.completions.create(

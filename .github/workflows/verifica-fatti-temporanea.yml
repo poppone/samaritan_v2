@@ -30,6 +30,13 @@ jobs:
           buono = ("Two Xbox players got GTA 6 without paying, but the headline says they did it "
                    "the hard way. What does the hard way mean for the biggest game of the decade? "
                    "Would you grind for it or buy it on day one? Tell me below.")
+          t2 = "Free-to-play GTA 6 rival Ananta has a release date and its open world looks wild"
+          parafrasi = ("Ananta just got a release date, and it wants GTA 6's crown for free. "
+                       "Its open world looks huge and wild. Would you try a free rival? Tell me below.")
+          inventa = ("Ananta launches with no microtransactions and dynamic weather across the whole map. "
+                     "It is the first free game to challenge GTA 6. Would you try it?")
+          print("PARAFRASI ->", brain._dettagli_inventati(t2, parafrasi), flush=True)
+          print("INVENTA ->", brain._dettagli_inventati(t2, inventa), flush=True)
           for nome, s in (("CATTIVO", cattivo), ("BUONO", buono)):
               print(nome, "->", brain._dettagli_inventati(t, s), flush=True)
           for i in range(2):
