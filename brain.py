@@ -1444,28 +1444,36 @@ def _dettagli_inventati(titolo_notizia, script, sommario="", testata=""):
         notizia += f"\nTESTATA: {testata}"
     if sommario:
         notizia += f"\nSOMMARIO: {sommario}"
-    try:
-        risposta = client.chat.completions.create(
-            model=modello,
-            messages=[
-                {"role": "system", "content": istruzioni},
-                {"role": "user", "content": f"{notizia}\n\nSCRIPT: {script}"},
-            ],
-            temperature=0,
-            max_tokens=1500,
-            response_format={"type": "json_schema",
-                             "json_schema": _SCHEMA_VERIFICA},
-            **({"reasoning_effort": "medium"} if "gpt-oss" in modello else {}),
-        )
-        dati = _estrai_json(risposta.choices[0].message.content)
-        dettagli = dati.get("dettagli_inventati", [])
-        if not isinstance(dettagli, list):
-            return []
-        return [str(d).strip() for d in dettagli if str(d).strip()][:4]
-    except Exception as e:
-        print(f"[Samaritan Brain] Verifica dei fatti non riuscita ({e}): "
-              f"lo script passa senza.")
-        return []
+    # Due prove: il 28 settembre 2026 la prima e' tornata 400
+    # json_validate_failed con failed_generation vuota, cioe' il
+    # ragionamento aveva mangiato tutto max_tokens, e uno script gia'
+    # scartato una volta per dettagli inventati e' uscito senza verifica.
+    # La seconda ragiona meno e lascia piu' spazio alla risposta.
+    for ragionamento in ("medium", "low"):
+        try:
+            risposta = client.chat.completions.create(
+                model=modello,
+                messages=[
+                    {"role": "system", "content": istruzioni},
+                    {"role": "user", "content": f"{notizia}\n\nSCRIPT: {script}"},
+                ],
+                temperature=0,
+                max_tokens=3000,
+                response_format={"type": "json_schema",
+                                 "json_schema": _SCHEMA_VERIFICA},
+                **({"reasoning_effort": ragionamento} if "gpt-oss" in modello else {}),
+            )
+            dati = _estrai_json(risposta.choices[0].message.content)
+            dettagli = dati.get("dettagli_inventati", [])
+            if not isinstance(dettagli, list):
+                return []
+            return [str(d).strip() for d in dettagli if str(d).strip()][:4]
+        except Exception as e:
+            print(f"[Samaritan Brain] Verifica dei fatti non riuscita "
+                  f"(ragionamento {ragionamento}): {e}")
+    print("[Samaritan Brain] Verifica dei fatti non disponibile: lo script "
+          "passa senza.")
+    return []
 
 
 def _estrai_json(testo):

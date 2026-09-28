@@ -255,9 +255,25 @@ class TestDettagliInventati:
 
     def test_se_la_verifica_non_risponde_il_video_esce(self, monkeypatch):
         risultato, prompt_visti, _ = self._genera(
-            monkeypatch, [self._risposta()], [RuntimeError("503 da Groq")])
+            monkeypatch, [self._risposta()],
+            [RuntimeError("503 da Groq"), RuntimeError("503 da Groq")])
         assert len(prompt_visti) == 1
         assert risultato["script"] == self.SCRIPT
+
+    def test_se_la_verifica_fallisce_una_volta_riprova(self, monkeypatch):
+        """28 settembre 2026: un 400 json_validate_failed della verifica ha
+        fatto uscire senza controllo uno script gia' scartato una volta."""
+        import json as _json
+        pulito = self.SCRIPT.replace("Two Xbox", "Some Xbox")
+        risultato, prompt_visti, verifiche = self._genera(
+            monkeypatch, [self._risposta(), self._risposta(pulito)],
+            [RuntimeError("400 json_validate_failed"),
+             _json.dumps({"dettagli_inventati": ["un glitch che salta l'acquisto"]}),
+             _json.dumps({"dettagli_inventati": []})])
+        assert len(verifiche) == 3
+        assert len(prompt_visti) == 2
+        assert "un glitch che salta l'acquisto" in prompt_visti[1][1]
+        assert risultato["script"] == pulito
 
     def test_la_verifica_vale_anche_all_ultimo_tentativo(self, monkeypatch):
         # Con la verifica spenta sull'ultimo tentativo, nella prova del 28
