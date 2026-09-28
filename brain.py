@@ -1398,7 +1398,7 @@ _SCHEMA_VERIFICA = {
 }
 
 
-def _dettagli_inventati(titolo_notizia, script, sommario=""):
+def _dettagli_inventati(titolo_notizia, script, sommario="", testata=""):
     """I dettagli di cronaca che lo script aggiunge al titolo della notizia.
 
     Una seconda lettura, fatta da un modello che non ha scritto lo script e
@@ -1427,7 +1427,9 @@ def _dettagli_inventati(titolo_notizia, script, sommario=""):
         "come e' "
         "successo, quando, quanti, quanto e' durato, chi ha reagito, come e' "
         "finita, citazioni, numeri, caratteristiche del gioco (modalita', "
-        "mappa, prezzo, contenuti). NON elencare: opinioni, domande al "
+        "mappa, prezzo, contenuti). NON elencare: il nome della TESTATA che "
+        "ha dato la notizia (dire che l'ha scritto o contato lei e' "
+        "corretto), opinioni, domande al "
         "pubblico, inviti a iscriversi, frasi generiche su fan e community, "
         "fatti noti da sempre sul gioco, e riformulazioni o deduzioni "
         "ovvie del titolo (per esempio 'appena annunciato' per una notizia "
@@ -1438,6 +1440,8 @@ def _dettagli_inventati(titolo_notizia, script, sommario=""):
     )
     modello = config.GROQ_MODELLI[-1]
     notizia = f"TITOLO: {titolo_notizia}"
+    if testata:
+        notizia += f"\nTESTATA: {testata}"
     if sommario:
         notizia += f"\nSOMMARIO: {sommario}"
     try:
@@ -1519,6 +1523,15 @@ def genera_script_samaritan(tema=None):
     # prova su "Cyberpunk 2077" e' stata scartata per questo ed e' uscito GTA VI.
     gioco_precedente = "" if tema else (recenti[-1].get("gioco", "") if recenti else "")
     giochi_recenti = [gioco_precedente] if gioco_precedente.strip() else []
+
+    # Le notizie sul gioco del video precedente vanno in fondo alla lista.
+    # Il prompt dice di scegliere la [0], la regola dei doppioni la scarta:
+    # il 28 settembre 2026 la [0] era su GTA 6 dopo un video su GTA VI, e le
+    # uscite delle 14:00 e delle 18:00 sono saltate con tre tentativi su
+    # quattro bruciati cosi'. L'ordine resta stabile per tutto il resto.
+    if gioco_precedente.strip():
+        notizie = sorted(
+            notizie, key=lambda n: _gioco_nel_titolo(n["titolo"], gioco_precedente))
 
     try:
         from analyst import migliori_hook
@@ -1642,7 +1655,8 @@ def genera_script_samaritan(tema=None):
                 if ok and fonte:
                     inventati = _dettagli_inventati(
                         notizie[idx]["titolo"], script,
-                        notizie[idx].get("sommario", ""))
+                        notizie[idx].get("sommario", ""),
+                        notizie[idx].get("fonte", ""))
                     if inventati:
                         ok = False
                         motivo = ("aggiunge alla notizia dettagli che il titolo "
@@ -1692,6 +1706,10 @@ def genera_script_samaritan(tema=None):
     # stesso, generico e slegato da qualsiasi notizia, e nessuno se ne
     # accorgeva perche' la pipeline chiudeva verde. Meglio saltare il video:
     # l'eccezione fa fallire il workflow, cosi' il problema si vede subito.
+    if motivo_scarto:
+        raise RuntimeError(
+            "Tutti i tentativi sono stati scartati, l'ultimo perche' "
+            f"{motivo_scarto}. Salto il video: lo recupera la riserva.")
     raise RuntimeError(
         "Nessun modello Groq ha risposto: "
         f"provati {', '.join(modelli)}. "
