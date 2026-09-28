@@ -14,32 +14,25 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
       - run: pip install -r requirements.txt
-      - name: Prova
-        env:
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          PEXELS_API_KEY: x
-          LINGUA: en
+      - name: Sonda sommari
         run: |
           python - <<'PY'
-          import brain
-          brain.salva_in_cronologia = lambda r: None
-          t = "These Xbox Players Got GTA 6 For Free The Hard Way"
-          cattivo = ("Only two Xbox gamers cracked the system and scored GTA VI without paying. "
-                     "They used a glitch that skipped the purchase screen. Microsoft shut it down "
-                     "within hours. Crazy gaming hacks like this never last. Follow Poppone TV.")
-          buono = ("Two Xbox players got GTA 6 without paying, but the headline says they did it "
-                   "the hard way. What does the hard way mean for the biggest game of the decade? "
-                   "Would you grind for it or buy it on day one? Tell me below.")
-          t2 = "Free-to-play GTA 6 rival Ananta has a release date and its open world looks wild"
-          parafrasi = ("Ananta just got a release date, and it wants GTA 6's crown for free. "
-                       "Its open world looks huge and wild. Would you try a free rival? Tell me below.")
-          inventa = ("Ananta launches with no microtransactions and dynamic weather across the whole map. "
-                     "It is the first free game to challenge GTA 6. Would you try it?")
-          print("PARAFRASI ->", brain._dettagli_inventati(t2, parafrasi), flush=True)
-          print("INVENTA ->", brain._dettagli_inventati(t2, inventa), flush=True)
-          for nome, s in (("CATTIVO", cattivo), ("BUONO", buono)):
-              print(nome, "->", brain._dettagli_inventati(t, s), flush=True)
-          for i in range(2):
-              r = brain.genera_script_samaritan()
-              print("=" * 40); print(r["titolo"]); print(r["fonte"]); print(r["script"]); print("=" * 40, flush=True)
+          import requests, re, html
+          import xml.etree.ElementTree as ET
+          H = {"User-Agent": "Mozilla/5.0"}
+          for nome, url in (("GOOGLE", "https://news.google.com/rss/search?q=GTA%206&hl=en-US&gl=US&ceid=US:en"),
+                            ("BING", "https://www.bing.com/news/search?q=GTA+6&format=rss&setlang=en-US"),
+                            ("BING_IT", "https://www.bing.com/news/search?q=GTA+6&format=rss&setlang=it-IT&cc=IT")):
+              try:
+                  r = requests.get(url, headers=H, timeout=10)
+                  print("====", nome, r.status_code, len(r.content), flush=True)
+                  root = ET.fromstring(r.content)
+                  for it in root.findall("./channel/item")[:4]:
+                      d = it.findtext("description") or ""
+                      print("T:", it.findtext("title"))
+                      print("L:", (it.findtext("link") or "")[:160])
+                      print("D:", html.unescape(re.sub("<[^>]+>", " ", d))[:400])
+                      print("-", flush=True)
+              except Exception as e:
+                  print(nome, "ERRORE", e, flush=True)
           PY
