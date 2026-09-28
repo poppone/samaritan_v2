@@ -362,3 +362,83 @@ class TestSommarioBing:
         notizie = [{"titolo": self.TITOLO}]
         brain._aggiungi_sommari(notizie)
         assert notizie[0]["sommario"] == ""
+
+
+class TestNotiziaSulGiocoPrecedente:
+    """Il 28 settembre 2026 le uscite delle 14:00 e delle 18:00 sono saltate:
+    la notizia [0] era su GTA 6 dopo un video su GTA VI, il modello la
+    sceglieva perche' il prompt dice di scegliere la [0], e la regola dei
+    doppioni la scartava."""
+
+    def test_le_notizie_sul_gioco_precedente_vanno_in_fondo(self, monkeypatch):
+        import json as _json
+        notizie = [
+            {"titolo": "GTA 6, la lista aggiornata delle auto confermate",
+             "fonte": "Everyeye.it", "link": "", "sommario": ""},
+            {"titolo": "Elden Ring Nightreign ha una nuova modalita'",
+             "fonte": "Multiplayer", "link": "", "sommario": ""},
+        ]
+        visti = []
+        risposta = _json.dumps({
+            "titolo": "Elden Ring: la modalita' nuova", "script":
+            TestDettagliInventati.SCRIPT, "gioco": "Elden Ring",
+            "query_video": "elden ring gameplay", "descrizione": "Ci giochi?",
+            "indice_notizia": -1})
+
+        class FinteCompletions:
+            @staticmethod
+            def create(**kw):
+                visti.append(kw["messages"][0]["content"])
+
+                class Scelta:
+                    class message:
+                        content = risposta
+
+                class Risposta:
+                    choices = [Scelta()]
+                return Risposta()
+
+        class FintoClient:
+            class chat:
+                completions = FinteCompletions()
+
+        monkeypatch.setattr(brain, "client", FintoClient())
+        monkeypatch.setattr(brain, "recupera_trend_gaming_online", lambda **k: notizie)
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: [{
+            "titolo": "Grand Theft Auto VI: la box da 400 euro",
+            "gioco": "Grand Theft Auto VI", "lingua": "it"}])
+        monkeypatch.setattr(brain, "salva_in_cronologia", lambda r: None)
+        try:
+            brain.genera_script_samaritan()
+        except RuntimeError:
+            pass
+        prompt = visti[0]
+        assert prompt.index("[0] Elden Ring") < prompt.index("[1] GTA 6")
+
+
+class TestTestataNellaVerifica:
+    def test_la_testata_arriva_alla_verifica(self, monkeypatch):
+        visti = []
+
+        class FinteCompletions:
+            @staticmethod
+            def create(**kw):
+                visti.append(kw["messages"][1]["content"])
+
+                class Scelta:
+                    class message:
+                        content = '{"dettagli_inventati": []}'
+
+                class Risposta:
+                    choices = [Scelta()]
+                return Risposta()
+
+        class FintoClient:
+            class chat:
+                completions = FinteCompletions()
+
+        monkeypatch.setattr(brain, "client", FintoClient())
+        assert brain._dettagli_inventati(
+            "GTA 6, ce ne sono quasi 90", "Everyeye ne ha contate quasi 90.",
+            testata="Everyeye.it") == []
+        assert "TESTATA: Everyeye.it" in visti[0]
