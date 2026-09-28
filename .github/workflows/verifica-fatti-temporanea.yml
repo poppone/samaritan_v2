@@ -1,0 +1,38 @@
+# TEMPORANEO: prova la verifica dei fatti con Groq vero. Da togliere prima
+# di unire la PR.
+name: Verifica fatti (temporanea)
+on:
+  push:
+    branches: [claude/project-thread-1sanb4]
+jobs:
+  prova:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r requirements.txt
+      - name: Prova
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          PEXELS_API_KEY: x
+          LINGUA: en
+        run: |
+          python - <<'PY'
+          import brain
+          brain.salva_in_cronologia = lambda r: None
+          t = "These Xbox Players Got GTA 6 For Free The Hard Way"
+          cattivo = ("Only two Xbox gamers cracked the system and scored GTA VI without paying. "
+                     "They used a glitch that skipped the purchase screen. Microsoft shut it down "
+                     "within hours. Crazy gaming hacks like this never last. Follow Poppone TV.")
+          buono = ("Two Xbox players got GTA 6 without paying, but the headline says they did it "
+                   "the hard way. What does the hard way mean for the biggest game of the decade? "
+                   "Would you grind for it or buy it on day one? Tell me below.")
+          for nome, s in (("CATTIVO", cattivo), ("BUONO", buono)):
+              print(nome, "->", brain._dettagli_inventati(t, s), flush=True)
+          for i in range(2):
+              r = brain.genera_script_samaritan()
+              print("=" * 40); print(r["titolo"]); print(r["fonte"]); print(r["script"]); print("=" * 40, flush=True)
+          PY

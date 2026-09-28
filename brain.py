@@ -1120,6 +1120,31 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti,
         "Imposta 'indice_notizia' a -1.\n"
     )
 
+    # Della notizia il modello riceve solo il titolo di Google News, e un
+    # titolo non basta a riempire 25 secondi: il modello completava la storia
+    # di fantasia. Il 27 settembre 2026 da "These Xbox Players Got GTA 6 For
+    # Free The Hard Way" (Engadget) e' uscito uno Short su un glitch che
+    # saltava l'acquisto, chiuso da Microsoft in poche ore: niente di tutto
+    # questo stava nel titolo. Vale per ogni formato, perche' anche quelli
+    # che non richiedono una notizia a volte se ne prendono una.
+    vincolo_titolo = (
+        "SOLO IL TITOLO: di ogni notizia conosci SOLO il titolo scritto qui "
+        "sopra. Se lo Short usa una notizia, puo' affermare come fatto solo "
+        "cio' che quel titolo dice. Come e' successo, quando, quante persone, "
+        "quanto e' durato, chi ha reagito e come e' andata a finire NON li "
+        "sai: non scriverli, nemmeno per rendere la storia piu' forte. Il "
+        "resto dei secondi riempilo con il perche' la notizia conta per chi "
+        "gioca, con quello che e' noto da sempre su quel gioco e con una "
+        "domanda al pubblico. Se il titolo lascia un dubbio, trasformalo in "
+        "domanda invece di risolverlo inventando. Esempio di errore da non "
+        "ripetere: dal titolo 'These Xbox Players Got GTA 6 For Free The Hard "
+        "Way' uno script si e' inventato un glitch che saltava l'acquisto e "
+        "Microsoft che lo chiudeva in poche ore.\n"
+        "MAI suggerire glitch, hack o trucchi per avere giochi o contenuti a "
+        "pagamento senza pagare: e' contenuto ingannevole per YouTube.\n"
+        if notizie else ""
+    )
+
     # Le regole 11 e 12 compaiono solo quando c'e' davvero qualcosa da evitare:
     # al primo video della vita del canale una lista vuota sarebbe rumore che
     # occupa contesto e non dice niente.
@@ -1169,6 +1194,7 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti,
         f"scegli quella, e passa a una successiva solo se con la [0] non si "
         f"riesce a scrivere niente di sensato):\n{blocco_notizie}\n\n"
         f"{vincolo_fatti}"
+        f"{vincolo_titolo}"
         f"{blocco_hook}\n"
         "REGOLE TASSATIVE:\n"
         "1. PRIMA FRASE = HOOK. Deve bloccare lo scroll in 3 secondi. "
@@ -1281,6 +1307,73 @@ def _cronaca_senza_fonte(script, fonte):
         return False
     testo = (script or "").lower()
     return any(spia in testo for spia in _SPIE_DI_CRONACA)
+
+
+_SCHEMA_VERIFICA = {
+    "name": "verifica_fatti",
+    "strict": True,
+    "schema": {
+        "type": "object",
+        "properties": {
+            "dettagli_inventati": {"type": "array", "items": {"type": "string"}},
+        },
+        "required": ["dettagli_inventati"],
+        "additionalProperties": False,
+    },
+}
+
+
+def _dettagli_inventati(titolo_notizia, script):
+    """I dettagli di cronaca che lo script aggiunge al titolo della notizia.
+
+    Una seconda lettura, fatta da un modello che non ha scritto lo script e
+    ha davanti solo il titolo: e' il controllo che mancava il 27 settembre
+    2026, quando uno Short su GTA 6 ha raccontato un glitch e una chiusura in
+    poche ore che la notizia non diceva. Le parole spia di
+    `_cronaca_senza_fonte` qui non servono: il testo inventato non usava
+    nessuna di quelle parole.
+
+    Lista vuota se non trova niente o se la verifica non riesce: un errore di
+    Groq qui non deve costare il video.
+    """
+    if not titolo_notizia or not script:
+        return []
+    istruzioni = (
+        "Sei un fact-checker. Ricevi il TITOLO di una notizia gaming e lo "
+        "SCRIPT di uno Short che la racconta. Di quella notizia si conosce "
+        "SOLO il titolo. Elenca i dettagli sull'EVENTO della notizia che lo "
+        "script afferma come fatti ma che il titolo non dice: come e' "
+        "successo, quando, quanti, quanto e' durato, chi ha reagito, come e' "
+        "finita, citazioni, numeri. NON elencare: opinioni, domande al "
+        "pubblico, inviti a iscriversi, descrizioni generali e note da "
+        "sempre del gioco, riformulazioni del titolo. Nel dubbio non "
+        "elencare. Rispondi in JSON con la chiave 'dettagli_inventati' (una "
+        "lista di frasi brevi, vuota se non c'e' niente)."
+    )
+    try:
+        risposta = client.chat.completions.create(
+            model=config.GROQ_MODELLI[0],
+            messages=[
+                {"role": "system", "content": istruzioni},
+                {"role": "user", "content":
+                    f"TITOLO: {titolo_notizia}\n\nSCRIPT: {script}"},
+            ],
+            temperature=0,
+            max_tokens=1500,
+            response_format={"type": "json_schema",
+                             "json_schema": _SCHEMA_VERIFICA},
+            **({"reasoning_effort": "medium"}
+               if "gpt-oss" in config.GROQ_MODELLI[0] else {}),
+        )
+        dati = _estrai_json(risposta.choices[0].message.content)
+        dettagli = dati.get("dettagli_inventati", [])
+        if not isinstance(dettagli, list):
+            return []
+        return [str(d).strip() for d in dettagli if str(d).strip()][:4]
+    except Exception as e:
+        print(f"[Samaritan Brain] Verifica dei fatti non riuscita ({e}): "
+              f"lo script passa senza.")
+        return []
 
 
 def _estrai_json(testo):
@@ -1453,6 +1546,16 @@ def genera_script_samaritan(tema=None):
                 if ok and _cronaca_senza_fonte(script, fonte):
                     ok = False
                     motivo = "afferma fatti di cronaca senza citare una notizia"
+                # All'ultimo tentativo la verifica si spegne come le regole
+                # anti-ripetizione: la regola nel prompt resta, e a quel punto
+                # un video vale piu' di un buco nella pubblicazione.
+                if ok and fonte and not ultima_spiaggia:
+                    inventati = _dettagli_inventati(notizie[idx]["titolo"], script)
+                    if inventati:
+                        ok = False
+                        motivo = ("aggiunge alla notizia dettagli che il titolo "
+                                  "non dice (" + "; ".join(inventati) + "). "
+                                  "Racconta solo quello che dice il titolo")
                 if ok:
                     doppione = _doppione_recente(
                         gioco, fonte, gioco_precedente, fonti_recenti
