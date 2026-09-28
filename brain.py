@@ -129,6 +129,15 @@ SECONDA_PERSONA = frozenset((
 # Quante voci leggere da ogni ricerca prima di filtrare.
 VOCI_PER_RICERCA = 15
 
+# Il sommario di una notizia arriva da Bing News, che nel feed RSS scrive una
+# o due frasi dell'articolo. Google News invece da' solo il titolo, e con il
+# solo titolo il modello riempiva 25 secondi di dettagli inventati (vedi
+# _costruisci_system_prompt). Il titolo trovato su Bing deve somigliare a
+# quello di Google almeno per questa quota di parole, se no il sommario e' di
+# un'altra notizia.
+SOGLIA_STESSA_NOTIZIA = 0.5
+MAX_CARATTERI_SOMMARIO = 400
+
 # I giochi e le piattaforme che muovono pubblico da soli. E' una lista scritta
 # a mano e va tenuta aggiornata: non esiste un modo di dedurla dai feed, e
 # sbagliarla per difetto costa poco (la notizia resta in lista, solo piu' in
@@ -157,6 +166,7 @@ LINGUE = {
         "aperture_vietate": APERTURE_VIETATE,
         "seconda_persona": SECONDA_PERSONA,
         "rss": "hl=it&gl=IT&ceid=IT:it",
+        "bing": "setlang=it-IT&cc=IT",
         "ricerche": (
             "videogiochi",
             "videogiochi quando esce aggiornamento",
@@ -184,6 +194,7 @@ LINGUE = {
             "you", "your", "youre", "youve", "yours", "yourself",
         )),
         "rss": "hl=en-US&gl=US&ceid=US:en",
+        "bing": "setlang=en-US&cc=US",
         "ricerche": (
             "video games",
             "video game release date OR free OR leak",
@@ -482,6 +493,63 @@ def _voci_rss(ricerca):
     return voci
 
 
+def _parole_significative(testo):
+    return {p for p in _impronta_notizia(testo).split() if len(p) > 3}
+
+
+def _stessa_notizia(a, b):
+    """Vero se due titoli parlano della stessa notizia.
+
+    Non si confrontano per intero: Bing e Google riprendono la stessa
+    notizia da testate diverse, con parole appena diverse.
+    """
+    pa, pb = _parole_significative(a), _parole_significative(b)
+    if not pa or not pb:
+        return False
+    return len(pa & pb) / len(pa | pb) >= SOGLIA_STESSA_NOTIZIA
+
+
+def _sommario_bing(titolo):
+    """Una o due frasi dell'articolo, cercate su Bing News. Vuoto se non c'e'.
+
+    Il 28 settembre 2026, per la notizia da cui era nato il video inventato
+    del giorno prima, Bing dava: "GTA VI could be yours for free, or at
+    least for a big discount, using a few tricks that Xbox offers". Col solo
+    titolo il modello aveva raccontato un glitch.
+    """
+    url = ("https://www.bing.com/news/search?q=" + quote(titolo)
+           + "&format=rss&" + _lingua()["bing"])
+    risposta = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=8)
+    risposta.raise_for_status()
+    radice = ET.fromstring(risposta.content)
+    for item in radice.findall("./channel/item")[:5]:
+        if not _stessa_notizia(html.unescape(item.findtext("title") or ""), titolo):
+            continue
+        testo = re.sub(r"<[^>]+>", " ", item.findtext("description") or "")
+        testo = " ".join(html.unescape(testo).split())
+        # Un sommario che ripete il titolo non aggiunge niente.
+        if testo and _impronta_notizia(testo) != _impronta_notizia(titolo):
+            if len(testo) > MAX_CARATTERI_SOMMARIO:
+                testo = testo[:MAX_CARATTERI_SOMMARIO].rsplit(" ", 1)[0] + "..."
+            return testo
+    return ""
+
+
+def _aggiungi_sommari(notizie):
+    """Mette a ogni notizia il campo 'sommario', vuoto se non si trova."""
+    for notizia in notizie:
+        try:
+            notizia["sommario"] = _sommario_bing(notizia["titolo"])
+        except Exception as e:
+            print(f"[Warning Search] Sommario non trovato per "
+                  f"'{notizia['titolo']}' ({e}).")
+            notizia["sommario"] = ""
+    if notizie:
+        print(f"[Samaritan Search] Sommario dell'articolo trovato per "
+              f"{sum(1 for n in notizie if n['sommario'])} notizie su "
+              f"{len(notizie)}.")
+
+
 def recupera_trend_gaming_online(max_notizie=8, tema=None):
     """Scarica notizie gaming fresche e scarta quelle gia' sfruttate.
 
@@ -565,6 +633,8 @@ def recupera_trend_gaming_online(max_notizie=8, tema=None):
     # per prima. A parita' di punteggio l'ordine e' quello di arrivo.
     notizie = sorted(trovate.values(),
                      key=lambda v: (not v["sul_tema"], -v["punteggio"]))[:max_notizie]
+
+    _aggiungi_sommari(notizie)
 
     if notizie:
         print(f"[Samaritan Search] {len(notizie)} notizie fresche non ancora "
@@ -1097,8 +1167,11 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti,
 
     blocco_notizie = "NESSUNA notizia fresca disponibile."
     if notizie:
-        righe = [f"  [{i}] {n['titolo']}  (fonte: {n['fonte']})"
-                 for i, n in enumerate(notizie)]
+        righe = []
+        for i, n in enumerate(notizie):
+            righe.append(f"  [{i}] {n['titolo']}  (fonte: {n['fonte']})")
+            if n.get("sommario"):
+                righe.append(f"      Sommario: {n['sommario']}")
         blocco_notizie = "\n".join(righe)
 
     blocco_hook = ""
@@ -1118,6 +1191,33 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti,
         "VINCOLO DI VERIDICITA': usa solo fatti gaming storici e verificabili. "
         "Se non sei certo di un dettaglio, NON inserirlo. Meglio generico che falso. "
         "Imposta 'indice_notizia' a -1.\n"
+    )
+
+    # Della notizia il modello riceve il titolo di Google News e, quando Bing
+    # lo ha, un sommario di una o due frasi. Col solo titolo il modello
+    # completava la storia di fantasia. Il 27 settembre 2026 da "These Xbox Players Got GTA 6 For
+    # Free The Hard Way" (Engadget) e' uscito uno Short su un glitch che
+    # saltava l'acquisto, chiuso da Microsoft in poche ore: niente di tutto
+    # questo stava nel titolo. Vale per ogni formato, perche' anche quelli
+    # che non richiedono una notizia a volte se ne prendono una.
+    vincolo_titolo = (
+        "SOLO TITOLO E SOMMARIO: di ogni notizia conosci SOLO il titolo e, "
+        "quando c'e', il sommario scritti qui sopra. Se lo Short usa una "
+        "notizia, puo' affermare come fatto solo cio' che titolo e sommario "
+        "dicono. Parla del gioco di cui parla la notizia, non di un altro "
+        "gioco nominato solo come paragone. Come e' successo, quando, quante persone, "
+        "quanto e' durato, chi ha reagito e come e' andata a finire NON li "
+        "sai: non scriverli, nemmeno per rendere la storia piu' forte. Il "
+        "resto dei secondi riempilo con il perche' la notizia conta per chi "
+        "gioca, con quello che e' noto da sempre su quel gioco e con una "
+        "domanda al pubblico. Se il titolo lascia un dubbio, trasformalo in "
+        "domanda invece di risolverlo inventando. Esempio di errore da non "
+        "ripetere: dal titolo 'These Xbox Players Got GTA 6 For Free The Hard "
+        "Way' uno script si e' inventato un glitch che saltava l'acquisto e "
+        "Microsoft che lo chiudeva in poche ore.\n"
+        "MAI suggerire glitch, hack o trucchi per avere giochi o contenuti a "
+        "pagamento senza pagare: e' contenuto ingannevole per YouTube.\n"
+        if notizie else ""
     )
 
     # Le regole 11 e 12 compaiono solo quando c'e' davvero qualcosa da evitare:
@@ -1169,6 +1269,7 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti,
         f"scegli quella, e passa a una successiva solo se con la [0] non si "
         f"riesce a scrivere niente di sensato):\n{blocco_notizie}\n\n"
         f"{vincolo_fatti}"
+        f"{vincolo_titolo}"
         f"{blocco_hook}\n"
         "REGOLE TASSATIVE:\n"
         "1. PRIMA FRASE = HOOK. Deve bloccare lo scroll in 3 secondi. "
@@ -1281,6 +1382,86 @@ def _cronaca_senza_fonte(script, fonte):
         return False
     testo = (script or "").lower()
     return any(spia in testo for spia in _SPIE_DI_CRONACA)
+
+
+_SCHEMA_VERIFICA = {
+    "name": "verifica_fatti",
+    "strict": True,
+    "schema": {
+        "type": "object",
+        "properties": {
+            "dettagli_inventati": {"type": "array", "items": {"type": "string"}},
+        },
+        "required": ["dettagli_inventati"],
+        "additionalProperties": False,
+    },
+}
+
+
+def _dettagli_inventati(titolo_notizia, script, sommario=""):
+    """I dettagli di cronaca che lo script aggiunge al titolo della notizia.
+
+    Una seconda lettura, fatta da un modello che non ha scritto lo script e
+    ha davanti solo il titolo: e' il controllo che mancava il 27 settembre
+    2026, quando uno Short su GTA 6 ha raccontato un glitch e una chiusura in
+    poche ore che la notizia non diceva. Le parole spia di
+    `_cronaca_senza_fonte` qui non servono: il testo inventato non usava
+    nessuna di quelle parole.
+
+    Gira sull'ultimo modello dell'elenco, non sul primo: il primo e' quello
+    che scrive, e il 28 settembre 2026 scrittura e verifica sullo stesso
+    modello hanno sforato il limite di token al minuto di Groq.
+
+    Lista vuota se non trova niente o se la verifica non riesce: un errore di
+    Groq qui non deve costare il video.
+    """
+    if not titolo_notizia or not script:
+        return []
+    istruzioni = (
+        "Sei un fact-checker. Ricevi il TITOLO di una notizia gaming, a "
+        "volte il suo SOMMARIO, e lo SCRIPT di uno Short che la racconta. "
+        "Della notizia si conosce SOLO cio' che dicono titolo e sommario. "
+        "Elenca i dettagli sull'EVENTO della notizia che lo script afferma "
+        "come fatti ma che titolo e sommario non dicono, compreso "
+        "attribuire la notizia a un gioco diverso da quello di cui parla: "
+        "come e' "
+        "successo, quando, quanti, quanto e' durato, chi ha reagito, come e' "
+        "finita, citazioni, numeri, caratteristiche del gioco (modalita', "
+        "mappa, prezzo, contenuti). NON elencare: opinioni, domande al "
+        "pubblico, inviti a iscriversi, frasi generiche su fan e community, "
+        "fatti noti da sempre sul gioco, e riformulazioni o deduzioni "
+        "ovvie del titolo (per esempio 'appena annunciato' per una notizia "
+        "di oggi, 'enorme' o 'spettacolare' per un titolo che dice che il "
+        "mondo 'looks wild'). Nel dubbio non elencare. Rispondi in JSON con "
+        "la chiave 'dettagli_inventati' (una lista di frasi brevi, vuota se "
+        "non c'e' niente)."
+    )
+    modello = config.GROQ_MODELLI[-1]
+    notizia = f"TITOLO: {titolo_notizia}"
+    if sommario:
+        notizia += f"\nSOMMARIO: {sommario}"
+    try:
+        risposta = client.chat.completions.create(
+            model=modello,
+            messages=[
+                {"role": "system", "content": istruzioni},
+                {"role": "user", "content": f"{notizia}\n\nSCRIPT: {script}"},
+            ],
+            temperature=0,
+            max_tokens=1500,
+            response_format={"type": "json_schema",
+                             "json_schema": _SCHEMA_VERIFICA},
+            **({"reasoning_effort": "medium"} if "gpt-oss" in modello else {}),
+        )
+        dati = _estrai_json(risposta.choices[0].message.content)
+        dettagli = dati.get("dettagli_inventati", [])
+        if not isinstance(dettagli, list):
+            return []
+        return [str(d).strip() for d in dettagli if str(d).strip()][:4]
+    except Exception as e:
+        print(f"[Samaritan Brain] Verifica dei fatti non riuscita ({e}): "
+              f"lo script passa senza.")
+        return []
 
 
 def _estrai_json(testo):
@@ -1453,6 +1634,20 @@ def genera_script_samaritan(tema=None):
                 if ok and _cronaca_senza_fonte(script, fonte):
                     ok = False
                     motivo = "afferma fatti di cronaca senza citare una notizia"
+                # Vale anche all'ultimo tentativo, a differenza delle regole
+                # anti-ripetizione: nella prova del 28 settembre 2026, con la
+                # verifica spenta sull'ultimo tentativo, e' passato uno Short
+                # su "GTA 6" nato da una notizia su un altro gioco. Un video
+                # saltato lo recupera la riserva, una notizia falsa resta.
+                if ok and fonte:
+                    inventati = _dettagli_inventati(
+                        notizie[idx]["titolo"], script,
+                        notizie[idx].get("sommario", ""))
+                    if inventati:
+                        ok = False
+                        motivo = ("aggiunge alla notizia dettagli che il titolo "
+                                  "non dice (" + "; ".join(inventati) + "). "
+                                  "Racconta solo quello che dice il titolo")
                 if ok:
                     doppione = _doppione_recente(
                         gioco, fonte, gioco_precedente, fonti_recenti
