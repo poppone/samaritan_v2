@@ -37,17 +37,13 @@ from moviepy import (
 )
 
 import config
+import profilo
 import veste
 from voice import genera_voce_samaritan, grafia_canale, pulisci_testo
 
-FALLBACK_QUERY = [
-    "video game action",
-    "fps shooter gameplay",
-    "esports tournament",
-    "racing game",
-    "arcade neon gaming",
-    "gamer playing console",
-]
+# Le ricerche Pexels di riserva, quando quella del video trova troppo poco,
+# stanno nel profilo del canale (voce 'query_stock_riserva'): per Poppone TV
+# sono scene di gioco, per un canale di cucina sarebbero pentole e fornelli.
 
 # Colore di riserva del testo, usato solo da chi chiama queste funzioni senza
 # passare una veste: i colori veri stanno in veste.py.
@@ -134,7 +130,8 @@ def scarica_clip_sfondo(query, quante=None):
     quante = quante or config.NUM_CLIP_SFONDO
     os.makedirs(config.DIR_TEMP, exist_ok=True)
 
-    query_da_provare = [query] + random.sample(FALLBACK_QUERY, len(FALLBACK_QUERY))
+    riserva = list(profilo.attivo().query_stock_riserva)
+    query_da_provare = [query] + random.sample(riserva, len(riserva))
     percorsi, gia_scaricati = [], set()
 
     for q in query_da_provare:
