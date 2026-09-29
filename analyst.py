@@ -43,6 +43,16 @@ PAROLE_VUOTE_RICERCA = frozenset((
     "gaming", "game", "games", "gioco", "giochi", "videogiochi", "canale",
     "nuovo", "nuova", "come", "cosa", "quando", "dove", "perche", "with",
     "that", "this", "from", "your", "what", "when", "best", "top",
+    # Articoli, preposizioni e verbi ausiliari: il 29 settembre 2026 dalla
+    # ricerca "chi e' che ha perso un sandalo" uscivano "ha" e "un", e la
+    # notizia piu' grossa del giorno risultava cercata dal pubblico perche'
+    # nel titolo c'era "ha un prezzo".
+    "il", "lo", "la", "gli", "le", "un", "una", "uno", "di", "da", "in",
+    "con", "su", "per", "tra", "fra", "ha", "ho", "hai", "hanno", "che",
+    "chi", "non", "si", "mi", "ti", "ci", "del", "della", "dei", "degli",
+    "delle", "al", "alla", "ai", "nel", "nella", "sul", "sulla", "ed",
+    "the", "an", "of", "to", "on", "for", "and", "is", "it", "how", "why",
+    "who", "are", "was", "can",
 ))
 
 

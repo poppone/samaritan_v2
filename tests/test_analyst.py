@@ -300,6 +300,12 @@ class TestParoleCercate:
         self._con_termini(monkeypatch, ["poppone tv"], tmp_path)
         assert analyst.parole_cercate() == frozenset()
 
+    def test_butta_articoli_e_verbi_ausiliari(self, monkeypatch, tmp_path):
+        """29 settembre 2026: 'ha' e 'un' facevano sembrare cercata dal
+        pubblico qualunque notizia con 'ha un' nel titolo."""
+        self._con_termini(monkeypatch, ["chi è che ha perso un sandalo"], tmp_path)
+        assert analyst.parole_cercate() == frozenset({"perso", "sandalo"})
+
     def test_butta_i_numeri_da_soli(self, monkeypatch, tmp_path):
         self._con_termini(monkeypatch, ["gta 6"], tmp_path)
         assert analyst.parole_cercate() == frozenset({"gta"})
