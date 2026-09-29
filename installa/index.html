@@ -1,0 +1,829 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Installa Samaritan</title>
+<meta name="description" content="Configura la tua copia di Samaritan: canale, chiavi, YouTube e prima prova. Tutto resta nel tuo browser.">
+<style>
+  :root {
+    --sfondo: #f6f5f2; --carta: #ffffff; --testo: #1c1c1a; --tenue: #5f5d57;
+    --bordo: #dcd9d1; --accento: #0f6b5c; --accento-testo: #ffffff;
+    --errore: #a4281b; --errore-sfondo: #fbeae7; --ok: #1d6b2e; --ok-sfondo: #e7f4e9;
+    --avviso-sfondo: #fff5d6; --codice: #efede8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --sfondo: #161615; --carta: #1f1f1d; --testo: #ecebe6; --tenue: #a9a69d;
+      --bordo: #3a3935; --accento: #4fb8a4; --accento-testo: #0b1f1b;
+      --errore: #f19a8d; --errore-sfondo: #3a1c18; --ok: #8fd19c; --ok-sfondo: #1a3320;
+      --avviso-sfondo: #3a3219; --codice: #2a2a27;
+    }
+  }
+  :root[data-theme="dark"] {
+    --sfondo: #161615; --carta: #1f1f1d; --testo: #ecebe6; --tenue: #a9a69d;
+    --bordo: #3a3935; --accento: #4fb8a4; --accento-testo: #0b1f1b;
+    --errore: #f19a8d; --errore-sfondo: #3a1c18; --ok: #8fd19c; --ok-sfondo: #1a3320;
+    --avviso-sfondo: #3a3219; --codice: #2a2a27;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--sfondo); color: var(--testo);
+    font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 1.7rem; margin: 0 0 4px; }
+  h2 { font-size: 1.2rem; margin: 0 0 8px; }
+  h3 { font-size: 1rem; margin: 16px 0 6px; }
+  p { margin: 8px 0; }
+  .sottotitolo { color: var(--tenue); margin-top: 0; }
+  section {
+    background: var(--carta); border: 1px solid var(--bordo); border-radius: 10px;
+    padding: 18px 16px; margin: 16px 0;
+  }
+  .numero {
+    display: inline-block; min-width: 1.7em; height: 1.7em; line-height: 1.7em;
+    text-align: center; border-radius: 50%; background: var(--accento);
+    color: var(--accento-testo); font-weight: 600; margin-right: 6px; font-size: .9em;
+  }
+  label { display: block; font-weight: 600; margin: 12px 0 4px; }
+  .nota { font-weight: 400; color: var(--tenue); font-size: .92em; }
+  input[type=text], input[type=password], input[type=time], select, textarea {
+    width: 100%; padding: 9px 10px; border: 1px solid var(--bordo); border-radius: 6px;
+    background: var(--sfondo); color: var(--testo); font: inherit;
+  }
+  textarea { min-height: 88px; resize: vertical; }
+  button {
+    font: inherit; font-weight: 600; padding: 10px 16px; border-radius: 6px; border: 0;
+    background: var(--accento); color: var(--accento-testo); cursor: pointer; margin-top: 12px;
+  }
+  button[disabled] { opacity: .5; cursor: not-allowed; }
+  a { color: var(--accento); }
+  code, pre { background: var(--codice); border-radius: 4px; font-size: .9em; }
+  code { padding: 1px 4px; word-break: break-all; }
+  pre { padding: 10px; overflow-x: auto; white-space: pre-wrap; word-break: break-word; }
+  .esito { margin-top: 10px; padding: 8px 10px; border-radius: 6px; display: none; }
+  .esito.errore { display: block; background: var(--errore-sfondo); color: var(--errore); }
+  .esito.ok { display: block; background: var(--ok-sfondo); color: var(--ok); }
+  .avviso { background: var(--avviso-sfondo); padding: 8px 10px; border-radius: 6px; }
+  .riga { display: grid; grid-template-columns: auto 1fr 1fr; gap: 8px; align-items: center; margin: 6px 0; }
+  .riga input[type=checkbox] { width: 20px; height: 20px; }
+  .due { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 520px) { .due { grid-template-columns: 1fr; } }
+  ol li, ul li { margin: 4px 0; }
+  details { margin-top: 12px; }
+  summary { cursor: pointer; font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Installa Samaritan</h1>
+  <p class="sottotitolo">Sei passi per far partire Samaritan sul tuo canale YouTube, senza terminale e senza toccare il codice.</p>
+  <p class="avviso"><strong>Privacy.</strong> Questa pagina gira tutta nel tuo browser e parla solo con
+    <code>api.github.com</code> e con i server di accesso di Google (<code>accounts.google.com</code>,
+    <code>oauth2.googleapis.com</code>). Scarica solo una libreria di cifratura da <code>cdn.jsdelivr.net</code>.
+    Token e chiavi restano in memoria finche' la pagina e' aperta e finiscono solo nei Secrets del
+    <em>tuo</em> repository GitHub. La pagina non ti chiede mai la password di Google o di YouTube.</p>
+
+  <!-- 1 -->
+  <section id="passo-copia">
+    <h2><span class="numero">1</span>Copia Samaritan sul tuo GitHub</h2>
+    <ol>
+      <li>Se non hai un account GitHub, <a href="https://github.com/signup" target="_blank" rel="noopener">crealo qui</a>.</li>
+      <li>Apri <a id="link-template" href="#" target="_blank" rel="noopener">la pagina di copia di Samaritan</a>.</li>
+      <li>Scegli un nome (per esempio <code>samaritan</code>), seleziona <strong>Private</strong> e premi <strong>Create repository</strong>.</li>
+      <li>Copia l'indirizzo della tua copia: ti serve al passo 2.</li>
+    </ol>
+  </section>
+
+  <!-- 2 -->
+  <section id="passo-github">
+    <h2><span class="numero">2</span>Dai a questa pagina l'accesso alla tua copia</h2>
+    <p>Crea un <strong>token fine-grained</strong> da
+      <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com/settings/personal-access-tokens/new</a>:</p>
+    <ul>
+      <li><strong>Repository access</strong>: <em>Only select repositories</em>, e scegli solo la tua copia di Samaritan.</li>
+      <li><strong>Repository permissions</strong>: <em>Contents</em> Read and write, <em>Secrets</em> Read and write,
+        <em>Actions</em> Read and write. <em>Metadata</em> Read-only si aggiunge da solo. Nient'altro.</li>
+      <li>Scadenza: bastano 7 giorni. Finita l'installazione puoi cancellarlo.</li>
+    </ul>
+    <label for="repo">Indirizzo della tua copia <span class="nota">(per esempio https://github.com/mario/samaritan)</span></label>
+    <input type="text" id="repo" autocomplete="off" spellcheck="false">
+    <label for="token">Token GitHub <span class="nota">(resta solo in questa pagina, mai salvato)</span></label>
+    <input type="password" id="token" autocomplete="off" spellcheck="false">
+    <button id="verifica-github">Verifica l'accesso</button>
+    <div class="esito" id="esito-github"></div>
+  </section>
+
+  <!-- 3 -->
+  <section id="passo-canale">
+    <h2><span class="numero">3</span>Descrivi il tuo canale</h2>
+    <p>Da qui nasce il file <code>canale.json</code> nella tua copia. Al primo salvataggio Samaritan cancella anche la
+      memoria e le clip del canale da cui e' stato copiato, che non sono tue. I salvataggi dopo cambiano solo
+      <code>canale.json</code>.</p>
+    <div class="due">
+      <div><label for="nome_canale">Nome del canale</label><input type="text" id="nome_canale" placeholder="Il mio canale"></div>
+      <div><label for="handle">Handle YouTube</label><input type="text" id="handle" placeholder="@IlMioCanale" spellcheck="false"></div>
+    </div>
+    <label for="tipo">Di cosa parla</label>
+    <select id="tipo">
+      <option value="gaming">Videogiochi</option>
+      <option value="altro">Altro argomento</option>
+    </select>
+    <div id="campi-altro" hidden>
+      <div class="due">
+        <div><label for="argomento">L'argomento, come si dice dopo "notizie" <span class="nota">(es. di cucina)</span></label>
+          <input type="text" id="argomento" placeholder="di cucina"></div>
+        <div><label for="soggetto">Di cosa parla ogni video, al singolare <span class="nota">(es. ricetta)</span></label>
+          <input type="text" id="soggetto" placeholder="ricetta"></div>
+      </div>
+      <details>
+        <summary>Grammatica (facoltativa)</summary>
+        <div class="due">
+          <div><label for="soggetto_plurale">Plurale <span class="nota">(obbligatorio se sono piu' parole)</span></label><input type="text" id="soggetto_plurale"></div>
+          <div><label for="genere">Genere</label>
+            <select id="genere"><option value="">Lo capisce da solo</option><option value="m">Maschile (il, del)</option><option value="f">Femminile (la, della)</option></select></div>
+        </div>
+      </details>
+      <p class="nota">Senza Steam: le immagini dei video saranno clip senza diritti di Pexels. Samaritan non usa mai video di altri.</p>
+    </div>
+
+    <h3>Ricerche di notizie</h3>
+    <p class="nota">Una ricerca per riga, come le scriveresti su Google News. Per i videogiochi puoi lasciarle vuote: si usano quelle gia' pronte.</p>
+    <div class="due">
+      <div><label for="ricerche_it">In italiano</label><textarea id="ricerche_it" placeholder="ricette&#10;chef OR ristorante"></textarea></div>
+      <div><label for="ricerche_en">In inglese</label><textarea id="ricerche_en" placeholder="recipes&#10;food trend"></textarea></div>
+    </div>
+
+    <h3>Uscite della giornata</h3>
+    <p class="nota">Da 1 a 4. Il video si prepara di notte e YouTube lo pubblica da solo all'ora esatta.</p>
+    <div id="uscite"></div>
+    <label for="fuso">Fuso orario</label>
+    <input type="text" id="fuso" value="Europe/Rome" spellcheck="false">
+    <p class="nota" id="finestre"></p>
+
+    <label for="categoria_youtube">Categoria YouTube</label>
+    <select id="categoria_youtube">
+      <option value="">Scegli da sola in base all'argomento</option>
+      <option value="20">Gaming</option><option value="26">Stile e consigli (cucina, casa)</option>
+      <option value="17">Sport</option><option value="24">Intrattenimento</option>
+      <option value="27">Istruzione</option><option value="28">Scienza e tecnologia</option>
+      <option value="22">Persone e blog</option>
+    </select>
+
+    <details>
+      <summary>Campi facoltativi</summary>
+      <label for="tag_fissi">Tag su ogni video <span class="nota">(separati da virgola)</span></label><input type="text" id="tag_fissi">
+      <label for="hashtag_canale">Hashtag del canale <span class="nota">(senza #)</span></label><input type="text" id="hashtag_canale">
+      <label for="esempi_soggetto">Esempi di soggetto <span class="nota">(separati da virgola, es. Carbonara, Tiramisu)</span></label><input type="text" id="esempi_soggetto">
+      <label for="query_stock_riserva">Ricerche di riserva per le clip, in inglese <span class="nota">(separate da virgola)</span></label><input type="text" id="query_stock_riserva">
+      <label for="nomi_grossi">Nomi che attirano pubblico <span class="nota">(separati da virgola)</span></label><input type="text" id="nomi_grossi">
+    </details>
+
+    <button id="salva-canale" disabled>Salva il canale nel repository</button>
+    <div class="esito" id="esito-canale"></div>
+    <details><summary>Anteprima di canale.json</summary><pre id="anteprima"></pre></details>
+  </section>
+
+  <!-- 4 -->
+  <section id="passo-chiavi">
+    <h2><span class="numero">4</span>Chiavi dei servizi</h2>
+    <p>Finiscono cifrate nei Secrets della tua copia: nemmeno GitHub le mostra piu'.</p>
+    <div id="chiavi"></div>
+    <button id="salva-chiavi" disabled>Salva le chiavi</button>
+    <div class="esito" id="esito-chiavi"></div>
+  </section>
+
+  <!-- 5 -->
+  <section id="passo-youtube">
+    <h2><span class="numero">5</span>Collega YouTube</h2>
+    <ol>
+      <li>Apri la <a href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener">Google Cloud Console</a> con l'account del canale e crea un progetto.</li>
+      <li>In <em>API e servizi &gt; Libreria</em> attiva <strong>YouTube Data API v3</strong> e <strong>YouTube Analytics API</strong>.</li>
+      <li>In <em>Schermata di consenso OAuth</em> scegli <em>Esterno</em>, compila i campi obbligatori e poi premi
+        <strong>Pubblica app</strong>. Deve risultare <strong>In produzione</strong>: in modalita' <em>Test</em> Google spegne
+        l'autorizzazione dopo 7 giorni e i video smettono di uscire. L'avviso "app non verificata" che vedrai dopo e' normale:
+        l'app e' tua e la usi solo tu.</li>
+      <li>In <em>Credenziali</em> crea un <strong>ID client OAuth</strong> di tipo <strong>Applicazione web</strong>, e in
+        <em>URI di reindirizzamento autorizzati</em> incolla esattamente: <code id="redirect-uri"></code></li>
+      <li>Copia qui sotto ID client e client secret.</li>
+    </ol>
+    <p class="avviso" id="avviso-protocollo" hidden>Questa pagina e' aperta da file: Google accetta solo indirizzi https.
+      Aprila dall'indirizzo web indicato nella guida.</p>
+    <label for="google_id">ID client</label><input type="text" id="google_id" spellcheck="false" autocomplete="off">
+    <label for="google_segreto">Client secret</label><input type="password" id="google_segreto" spellcheck="false" autocomplete="off">
+    <button id="autorizza-google">Autorizza con Google</button>
+    <button id="salva-youtube" disabled>Salva il collegamento</button>
+    <div class="esito" id="esito-youtube"></div>
+  </section>
+
+  <!-- 6 -->
+  <section id="passo-prova">
+    <h2><span class="numero">6</span>Prova</h2>
+    <p>Samaritan prepara un video <strong>privato</strong>: lo vedi solo tu, in YouTube Studio. Ci mette dai 10 ai 20 minuti.</p>
+    <button id="lancia-prova" disabled>Fai il video di prova</button>
+    <div class="esito" id="esito-prova"></div>
+  </section>
+</main>
+
+<script>
+"use strict";
+// ===========================================================================
+// COSTANTI. Il repository modello e' l'unico valore da cambiare se Samaritan
+// cambia casa.
+// ===========================================================================
+const TEMPLATE_REPO = "poppone/samaritan_v2";
+const WORKFLOW = "samaritan.yml";
+const API = "https://api.github.com";
+
+// Gli stessi permessi di uploader.SCOPES: un test li confronta.
+const SCOPES = [
+  "https://www.googleapis.com/auth/youtube.upload",
+  "https://www.googleapis.com/auth/yt-analytics.readonly",
+];
+
+// Copie di profilo.py (CRON_USCITE, MARGINE_MINIMO_ORE, ANTICIPO_PARTENZA_ORE,
+// LINGUE). Un test controlla che dicano la stessa cosa.
+const CRON_USCITE = [[1, 17], [3, 17], [5, 17], [6, 17]];
+const MARGINE_MINIMO_ORE = 8;
+const ANTICIPO_PARTENZA_ORE = 16;
+const LINGUE = ["it", "en"];
+
+// La libreria che cifra i Secrets come chiede GitHub (sealed box). Si
+// scarica solo quando serve, con l'impronta: se il file cambiasse, il
+// browser si rifiuterebbe di eseguirlo.
+const NACL_URL = "https://cdn.jsdelivr.net/npm/tweetnacl@1.0.3/nacl-fast.min.js";
+const NACL_SRI = "sha384-05+sicyRJQ56XpL4U9HJ8YbtSzFDvAg7apPKOGV6A0JsAJKFM68jp5oLnUjG5mEp";
+
+const CHIAVI = [
+  { nome: "GROQ_API_KEY", obbligatoria: true, dove: "https://console.groq.com/keys", testo: "Scrive i testi. Gratuita, da console.groq.com." },
+  { nome: "PEXELS_API_KEY", obbligatoria: true, dove: "https://www.pexels.com/api/", testo: "Clip video senza diritti. Gratuita, da pexels.com/api." },
+  { nome: "ELEVENLABS_API_KEY", obbligatoria: false, dove: "https://elevenlabs.io/app/settings/api-keys", testo: "Voce piu' realistica, a pagamento. Senza, si usa una voce gratuita." },
+  { nome: "TELEGRAM_BOT_TOKEN", obbligatoria: false, dove: "https://t.me/BotFather", testo: "Avvisi su Telegram: il token del bot, da @BotFather." },
+  { nome: "TELEGRAM_CHAT_ID", obbligatoria: false, dove: "https://t.me/userinfobot", testo: "Il tuo chat id, da @userinfobot." },
+];
+
+// Tutto lo stato vive qui, in memoria: niente localStorage.
+const stato = { token: "", owner: "", repo: "", ramo: "", youtube: null };
+
+// ===========================================================================
+// FUNZIONI PURE: profilo, orari, validazione. Rispecchiano profilo.py.
+// ===========================================================================
+function lista(testo, separatore) {
+  return (testo || "").split(separatore).map((s) => s.trim()).filter(Boolean);
+}
+
+function minuti(orario) {
+  const [h, m] = orario.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function inOrario(m) {
+  m = ((m % 1440) + 1440) % 1440;
+  return String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
+}
+
+// Gli scostamenti da UTC del fuso nell'anno, in minuti (uno o due con l'ora
+// legale). null se il fuso non esiste.
+function scostamenti(fuso) {
+  let formato;
+  try {
+    formato = new Intl.DateTimeFormat("en-US", { timeZone: fuso, timeZoneName: "longOffset" });
+  } catch (e) {
+    return null;
+  }
+  const anno = new Date().getUTCFullYear();
+  const valori = new Set();
+  for (const mese of [0, 6]) {
+    const parte = formato.formatToParts(new Date(Date.UTC(anno, mese, 15, 12)))
+      .find((p) => p.type === "timeZoneName").value;          // "GMT+02:00" o "GMT"
+    const m = parte.match(/GMT([+-])(\d{2}):?(\d{2})?/);
+    valori.add(m ? (m[1] === "-" ? -1 : 1) * (Number(m[2]) * 60 + Number(m[3] || 0)) : 0);
+  }
+  return [...valori].sort((a, b) => a - b);
+}
+
+function cronAdatto(orario, indice, offs) {
+  const partenza = CRON_USCITE[indice][0] * 60 + CRON_USCITE[indice][1];
+  return offs.every((o) => {
+    const margine = (((minuti(orario) - o - partenza) % 1440) + 1440) % 1440;
+    return margine >= MARGINE_MINIMO_ORE * 60 && margine <= ANTICIPO_PARTENZA_ORE * 60;
+  });
+}
+
+function finestre(offs) {
+  return CRON_USCITE.map(([h, m]) => {
+    const partenza = h * 60 + m;
+    return [inOrario(partenza + MARGINE_MINIMO_ORE * 60 + Math.max(...offs)),
+            inOrario(partenza + ANTICIPO_PARTENZA_ORE * 60 + Math.min(...offs))];
+  });
+}
+
+function permutazioni(elementi, k) {
+  if (k === 0) return [[]];
+  const risultato = [];
+  elementi.forEach((e, i) => {
+    const resto = elementi.slice(0, i).concat(elementi.slice(i + 1));
+    for (const p of permutazioni(resto, k - 1)) risultato.push([e, ...p]);
+  });
+  return risultato;
+}
+
+// Come profilo.abbina_cron: la prima assegnazione uscite -> partenze che
+// rispetta i margini, o null.
+function abbinaCron(uscite, fuso) {
+  const offs = scostamenti(fuso);
+  if (!offs) return null;
+  const ordine = uscite.map((_, i) => i).sort((a, b) => (uscite[a].orario < uscite[b].orario ? -1 : 1));
+  for (const scelta of permutazioni(CRON_USCITE.map((_, i) => i), uscite.length)) {
+    if (ordine.every((u, k) => cronAdatto(uscite[u].orario, scelta[k], offs))) {
+      const abbinamento = new Array(uscite.length);
+      ordine.forEach((u, k) => { abbinamento[u] = scelta[k]; });
+      return abbinamento;
+    }
+  }
+  return null;
+}
+
+// I valori del modulo, come oggetto semplice: leggiModulo() li prende dalla
+// pagina, i test li passano a mano.
+function leggiModulo() {
+  const v = (id) => document.getElementById(id).value;
+  const uscite = [];
+  document.querySelectorAll("#uscite .riga").forEach((r) => {
+    if (r.querySelector(".attiva").checked) {
+      uscite.push({ orario: r.querySelector(".orario").value, lingua: r.querySelector(".lingua").value });
+    }
+  });
+  return {
+    nome_canale: v("nome_canale"), handle: v("handle"), tipo: v("tipo"),
+    argomento: v("argomento"), soggetto: v("soggetto"),
+    soggetto_plurale: v("soggetto_plurale"), genere: v("genere"),
+    ricerche_it: v("ricerche_it"), ricerche_en: v("ricerche_en"),
+    uscite, fuso: v("fuso"), categoria_youtube: v("categoria_youtube"),
+    tag_fissi: v("tag_fissi"), hashtag_canale: v("hashtag_canale"),
+    esempi_soggetto: v("esempi_soggetto"), query_stock_riserva: v("query_stock_riserva"),
+    nomi_grossi: v("nomi_grossi"),
+  };
+}
+
+// Il contenuto di canale.json. Scrive solo quello che serve: i campi vuoti li
+// ricava profilo.py (e per i videogiochi li eredita da Poppone TV).
+function costruisciProfilo(m) {
+  const gaming = m.tipo !== "altro";
+  const p = {
+    nome_canale: (m.nome_canale || "").trim(),
+    handle: (m.handle || "").trim(),
+    argomento: gaming ? "gaming" : (m.argomento || "").trim(),
+  };
+  if (!gaming) {
+    p.soggetto = (m.soggetto || "").trim();
+    if ((m.soggetto_plurale || "").trim()) p.soggetto_plurale = m.soggetto_plurale.trim();
+    if (m.genere) p.genere = m.genere;
+  }
+  // Steam ha solo videogiochi: per ogni altro argomento solo clip stock.
+  p.materiale = gaming ? "steam" : "stock";
+  const ricerche = {};
+  for (const lingua of LINGUE) {
+    const voci = lista(m["ricerche_" + lingua], /\n/);
+    if (voci.length) ricerche[lingua] = voci;
+  }
+  if (Object.keys(ricerche).length || !gaming) p.ricerche = ricerche;
+  p.uscite = (m.uscite || []).map((u) => ({ orario: u.orario, lingua: u.lingua }));
+  p.fuso = (m.fuso || "").trim();
+  if (m.categoria_youtube) p.categoria_youtube = m.categoria_youtube;
+  for (const campo of ["tag_fissi", "esempi_soggetto", "query_stock_riserva", "nomi_grossi"]) {
+    const voci = lista(m[campo], ",");
+    if (voci.length) p[campo] = campo === "nomi_grossi" ? voci.map((x) => x.toLowerCase()) : voci;
+  }
+  if ((m.hashtag_canale || "").trim()) p.hashtag_canale = m.hashtag_canale.trim().replace(/^#/, "");
+  return p;
+}
+
+// Gli errori del profilo, in italiano. Vuota = valido. Stesse regole di
+// profilo.py per tutto quello che questo modulo puo' produrre.
+function validaProfilo(p) {
+  const errori = [];
+  if (!p.nome_canale) errori.push("Scrivi il nome del canale.");
+  if (!p.handle || !p.handle.startsWith("@")) errori.push("L'handle YouTube comincia con @, per esempio @IlMioCanale.");
+  if (!p.argomento) errori.push("Scrivi di cosa parla il canale.");
+  const gaming = (p.argomento || "").toLowerCase() === "gaming";
+  if (!gaming) {
+    if (!p.soggetto) errori.push("Scrivi di cosa parla ogni video, per esempio ricetta.");
+    else if (/\s/.test(p.soggetto) && !p.soggetto_plurale) errori.push("Il soggetto e' di piu' parole: scrivi anche il plurale.");
+    if (!p.ricerche || !Object.keys(p.ricerche).length) errori.push("Serve almeno una ricerca di notizie.");
+    if (p.materiale === "steam") errori.push("Steam vale solo per i videogiochi.");
+  }
+  if (p.genere && !["m", "f"].includes(p.genere)) errori.push("Il genere e' m o f.");
+  if (p.categoria_youtube && !/^\d+$/.test(p.categoria_youtube)) errori.push("La categoria YouTube e' un numero.");
+  const offs = scostamenti(p.fuso || "");
+  if (!offs) errori.push(`'${p.fuso}' non e' un fuso orario conosciuto: si scrive come Europe/Rome.`);
+  const uscite = p.uscite || [];
+  if (uscite.length < 1 || uscite.length > CRON_USCITE.length) errori.push("Scegli da 1 a 4 uscite al giorno.");
+  const visti = new Set();
+  for (const u of uscite) {
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(u.orario || "")) errori.push(`Orario '${u.orario}' non valido: si scrive HH:MM.`);
+    else if (visti.has(u.orario)) errori.push(`Due uscite alle ${u.orario}.`);
+    visti.add(u.orario);
+    if (!LINGUE.includes(u.lingua)) errori.push(`Lingua '${u.lingua}' non gestita.`);
+  }
+  if (!errori.length && !abbinaCron(uscite, p.fuso)) {
+    const spiegazione = finestre(offs).map(([da, a], i) => `partenza ${i + 1} dalle ${da} alle ${a}`).join("; ");
+    errori.push(`Gli orari non stanno nelle partenze notturne: ogni uscita deve cadere fra ${MARGINE_MINIMO_ORE} e ` +
+      `${ANTICIPO_PARTENZA_ORE} ore dopo la sua partenza. Con il fuso ${p.fuso}: ${spiegazione}.`);
+  }
+  return errori;
+}
+
+// BLAKE2b (RFC 7693), solo senza chiave: serve al nonce del sealed box. Un
+// test la confronta con hashlib.blake2b di Python.
+const B2B_IV = new Uint32Array([0xF3BCC908, 0x6A09E667, 0x84CAA73B, 0xBB67AE85, 0xFE94F82B, 0x3C6EF372,
+  0x5F1D36F1, 0xA54FF53A, 0xADE682D1, 0x510E527F, 0x2B3E6C1F, 0x9B05688C, 0xFB41BD6B, 0x1F83D9AB,
+  0x137E2179, 0x5BE0CD19]);
+const B2B_SIGMA = new Uint8Array([
+  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3,
+  11, 8, 12, 0, 5, 2, 15, 13, 10, 14, 3, 6, 7, 1, 9, 4, 7, 9, 3, 1, 13, 12, 11, 14, 2, 6, 5, 10, 4, 0, 15, 8,
+  9, 0, 5, 7, 2, 4, 10, 15, 14, 1, 11, 12, 6, 8, 3, 13, 2, 12, 6, 10, 0, 11, 8, 3, 4, 13, 7, 5, 15, 14, 1, 9,
+  12, 5, 1, 15, 14, 13, 4, 10, 0, 7, 6, 3, 9, 2, 8, 11, 13, 11, 7, 14, 12, 1, 3, 9, 5, 0, 15, 4, 8, 6, 2, 10,
+  6, 15, 14, 9, 11, 3, 0, 8, 12, 2, 13, 7, 1, 4, 10, 5, 10, 2, 8, 4, 7, 6, 1, 5, 15, 11, 9, 14, 3, 12, 13, 0,
+  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3,
+].map((x) => x * 2));
+
+function blake2b(input, outlen) {
+  const v = new Uint32Array(32), m = new Uint32Array(32);
+  const h = new Uint32Array(B2B_IV), b = new Uint8Array(128);
+  h[0] ^= 0x01010000 ^ outlen;
+  let t = 0, c = 0;
+  const add = (a, x0, x1) => {            // v[a] += (x1:x0), a 64 bit
+    const o0 = v[a] + x0;
+    let o1 = v[a + 1] + x1;
+    if (o0 >= 0x100000000) o1++;
+    v[a] = o0; v[a + 1] = o1;
+  };
+  const g = (a, bb, cc, d, ix, iy) => {
+    add(a, v[bb], v[bb + 1]); add(a, m[ix], m[ix + 1]);
+    let x0 = v[d] ^ v[a], x1 = v[d + 1] ^ v[a + 1];
+    v[d] = x1; v[d + 1] = x0;
+    add(cc, v[d], v[d + 1]);
+    x0 = v[bb] ^ v[cc]; x1 = v[bb + 1] ^ v[cc + 1];
+    v[bb] = (x0 >>> 24) ^ (x1 << 8); v[bb + 1] = (x1 >>> 24) ^ (x0 << 8);
+    add(a, v[bb], v[bb + 1]); add(a, m[iy], m[iy + 1]);
+    x0 = v[d] ^ v[a]; x1 = v[d + 1] ^ v[a + 1];
+    v[d] = (x0 >>> 16) ^ (x1 << 16); v[d + 1] = (x1 >>> 16) ^ (x0 << 16);
+    add(cc, v[d], v[d + 1]);
+    x0 = v[bb] ^ v[cc]; x1 = v[bb + 1] ^ v[cc + 1];
+    v[bb] = (x1 >>> 31) ^ (x0 << 1); v[bb + 1] = (x0 >>> 31) ^ (x1 << 1);
+  };
+  const comprimi = (ultimo) => {
+    for (let i = 0; i < 16; i++) { v[i] = h[i]; v[i + 16] = B2B_IV[i]; }
+    v[24] ^= t; v[25] ^= t / 0x100000000;
+    if (ultimo) { v[28] = ~v[28]; v[29] = ~v[29]; }
+    for (let i = 0; i < 32; i++) m[i] = b[4 * i] ^ (b[4 * i + 1] << 8) ^ (b[4 * i + 2] << 16) ^ (b[4 * i + 3] << 24);
+    for (let r = 0; r < 12; r++) {
+      const s = B2B_SIGMA.subarray(r * 16, r * 16 + 16);
+      g(0, 8, 16, 24, s[0], s[1]); g(2, 10, 18, 26, s[2], s[3]);
+      g(4, 12, 20, 28, s[4], s[5]); g(6, 14, 22, 30, s[6], s[7]);
+      g(0, 10, 20, 30, s[8], s[9]); g(2, 12, 22, 24, s[10], s[11]);
+      g(4, 14, 16, 26, s[12], s[13]); g(6, 8, 18, 28, s[14], s[15]);
+    }
+    for (let i = 0; i < 16; i++) h[i] ^= v[i] ^ v[i + 16];
+  };
+  for (let i = 0; i < input.length; i++) {
+    if (c === 128) { t += c; comprimi(false); c = 0; }
+    b[c++] = input[i];
+  }
+  t += c;
+  while (c < 128) b[c++] = 0;
+  comprimi(true);
+  const out = new Uint8Array(outlen);
+  for (let i = 0; i < outlen; i++) out[i] = h[i >> 2] >> (8 * (i & 3));
+  return out;
+}
+
+function daBase64(testo) { return Uint8Array.from(atob(testo), (c) => c.charCodeAt(0)); }
+function aBase64(byte) { let s = ""; byte.forEach((x) => { s += String.fromCharCode(x); }); return btoa(s); }
+function unisci(a, b) { const u = new Uint8Array(a.length + b.length); u.set(a); u.set(b, a.length); return u; }
+function base64url(byte) { return aBase64(byte).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
+function casuale(n) { return base64url(crypto.getRandomValues(new Uint8Array(n))); }
+
+// Sealed box di libsodium con tweetnacl: chiave effimera, nonce =
+// BLAKE2b(chiave effimera || chiave del repository, 24 byte). E' il formato
+// che GitHub si aspetta per i Secrets.
+function sigilla(nacl, chiavePubblicaB64, valore) {
+  const pk = daBase64(chiavePubblicaB64);
+  const effimera = nacl.box.keyPair();
+  const nonce = blake2b(unisci(effimera.publicKey, pk), 24);
+  const cifrato = nacl.box(new TextEncoder().encode(valore), nonce, pk, effimera.secretKey);
+  return aBase64(unisci(effimera.publicKey, cifrato));
+}
+
+function leggiRepository(testo) {
+  const m = (testo || "").trim().replace(/\.git$/, "").replace(/\/+$/, "")
+    .match(/^(?:https?:\/\/github\.com\/)?([A-Za-z0-9-]+)\/([A-Za-z0-9._-]+)$/);
+  return m ? { owner: m[1], repo: m[2] } : null;
+}
+
+function indirizzoPagina() { return location.origin + location.pathname; }
+
+// ===========================================================================
+// RETE. Solo api.github.com e Google, una funzione per chiamata.
+// ===========================================================================
+async function gh(metodo, percorso, corpo) {
+  const r = await fetch(API + percorso, {
+    method: metodo,
+    headers: {
+      Authorization: "Bearer " + stato.token,
+      Accept: "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+      ...(corpo ? { "Content-Type": "application/json" } : {}),
+    },
+    body: corpo ? JSON.stringify(corpo) : undefined,
+  });
+  if (!r.ok) {
+    const dettaglio = await r.json().catch(() => ({}));
+    const errore = new Error(`GitHub ha risposto ${r.status}: ${dettaglio.message || r.statusText}`);
+    errore.stato = r.status;
+    throw errore;
+  }
+  return r.status === 204 ? null : r.json();
+}
+
+let naclPronta = null;
+function caricaNacl() {
+  if (window.nacl) return Promise.resolve(window.nacl);
+  naclPronta = naclPronta || new Promise((ok, ko) => {
+    const s = document.createElement("script");
+    s.src = NACL_URL; s.integrity = NACL_SRI; s.crossOrigin = "anonymous";
+    s.onload = () => ok(window.nacl);
+    s.onerror = () => { naclPronta = null; ko(new Error("Libreria di cifratura non scaricata: controlla la connessione.")); };
+    document.head.appendChild(s);
+  });
+  return naclPronta;
+}
+
+async function salvaSegreti(valori) {
+  const nacl = await caricaNacl();
+  const chiave = await gh("GET", `/repos/${stato.owner}/${stato.repo}/actions/secrets/public-key`);
+  for (const [nome, valore] of Object.entries(valori)) {
+    await gh("PUT", `/repos/${stato.owner}/${stato.repo}/actions/secrets/${nome}`,
+      { encrypted_value: sigilla(nacl, chiave.key, valore), key_id: chiave.key_id });
+  }
+}
+
+// Un solo commit con canale.json. La prima volta (canale.json non c'e'
+// ancora) anche memoria vuota e niente clip di chi ha fatto il modello: sono
+// sue, non tue, e Samaritan non usa video di altri. Dopo, chi cambia un
+// orario non deve perdere la memoria del suo canale. Torna true se ha azzerato.
+async function salvaCanale(profiloJson) {
+  const base = `/repos/${stato.owner}/${stato.repo}`;
+  const ref = await gh("GET", `${base}/git/ref/heads/${stato.ramo}`);
+  const commit = await gh("GET", `${base}/git/commits/${ref.object.sha}`);
+  const albero = await gh("GET", `${base}/git/trees/${commit.tree.sha}?recursive=1`);
+  const primaVolta = !albero.tree.some((f) => f.path === "canale.json");
+  const voci = [{ path: "canale.json", mode: "100644", type: "blob", content: profiloJson + "\n" }];
+  if (primaVolta) {
+    voci.push({ path: "cronologia_trend.json", mode: "100644", type: "blob", content: "[]\n" });
+    for (const f of albero.tree) {
+      const daTogliere = f.type === "blob" && (f.path === "performance.json" ||
+        (f.path.startsWith("clip_mie/") && /\.(mp4|mov|webm)$/i.test(f.path)));
+      if (daTogliere) voci.push({ path: f.path, mode: f.mode, type: "blob", sha: null });
+    }
+  }
+  const nuovoAlbero = await gh("POST", `${base}/git/trees`, { base_tree: commit.tree.sha, tree: voci });
+  const nuovo = await gh("POST", `${base}/git/commits`, {
+    message: primaVolta ? "Samaritan: profilo del canale e memoria da zero" : "Samaritan: profilo del canale aggiornato",
+    tree: nuovoAlbero.sha, parents: [commit.sha],
+  });
+  await gh("PATCH", `${base}/git/refs/heads/${stato.ramo}`, { sha: nuovo.sha });
+  // I Reel che pubblicizzano Samaritan su Instagram sono del suo autore.
+  if (primaVolta) await gh("PUT", `${base}/actions/workflows/promo.yml/disable`).catch(() => {});
+  return primaVolta;
+}
+
+async function lanciaProva() {
+  const base = `/repos/${stato.owner}/${stato.repo}/actions/workflows/${WORKFLOW}`;
+  await gh("POST", `${base}/dispatches`, { ref: stato.ramo, inputs: { privacy: "private" } });
+  await new Promise((ok) => setTimeout(ok, 4000));
+  const corse = await gh("GET", `${base}/runs?event=workflow_dispatch&per_page=1`);
+  return (corse.workflow_runs[0] || {}).html_url || `https://github.com/${stato.owner}/${stato.repo}/actions`;
+}
+
+async function autorizzaGoogle(clientId, clientSecret) {
+  const verificatore = casuale(48);
+  const sfida = base64url(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verificatore))));
+  const statoOauth = casuale(24);
+  // Solo quello che serve dopo il ritorno da Google, e si cancella appena
+  // letto. Il token GitHub NON ci va: al ritorno lo si reincolla.
+  sessionStorage.setItem("samaritan-oauth", JSON.stringify({
+    stato: statoOauth, verificatore, clientId, clientSecret, owner: stato.owner, repo: stato.repo,
+  }));
+  const parametri = new URLSearchParams({
+    client_id: clientId, redirect_uri: indirizzoPagina(), response_type: "code",
+    scope: SCOPES.join(" "), access_type: "offline", prompt: "consent",
+    state: statoOauth, code_challenge: sfida, code_challenge_method: "S256",
+  });
+  location.assign("https://accounts.google.com/o/oauth2/v2/auth?" + parametri);
+}
+
+async function scambiaCodice(codice, salvato) {
+  const r = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      code: codice, client_id: salvato.clientId, client_secret: salvato.clientSecret,
+      redirect_uri: indirizzoPagina(), grant_type: "authorization_code", code_verifier: salvato.verificatore,
+    }),
+  });
+  const dati = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(`Google ha risposto ${r.status}: ${dati.error_description || dati.error || ""}`);
+  if (!dati.refresh_token) throw new Error("Google non ha dato il refresh token: riprova l'autorizzazione.");
+  return dati.refresh_token;
+}
+
+// ===========================================================================
+// PAGINA
+// ===========================================================================
+function esito(id, testo, ok) {
+  const el = document.getElementById(id);
+  el.className = "esito " + (ok ? "ok" : "errore");
+  el.textContent = testo;
+}
+
+function collegato() { return Boolean(stato.token && stato.ramo); }
+
+function aggiornaPulsanti() {
+  document.getElementById("salva-canale").disabled = !collegato();
+  document.getElementById("salva-chiavi").disabled = !collegato();
+  document.getElementById("salva-youtube").disabled = !(collegato() && stato.youtube);
+  document.getElementById("lancia-prova").disabled = !collegato();
+}
+
+function aggiornaAnteprima() {
+  const altro = document.getElementById("tipo").value === "altro";
+  document.getElementById("campi-altro").hidden = !altro;
+  const p = costruisciProfilo(leggiModulo());
+  document.getElementById("anteprima").textContent = JSON.stringify(p, null, 2);
+  const offs = scostamenti(p.fuso);
+  document.getElementById("finestre").textContent = offs
+    ? "Orari possibili, ora locale: " + finestre(offs).map(([da, a], i) => `partenza ${i + 1} ${da}-${a}`).join(", ") +
+      ". Ogni partenza copre una sola uscita."
+    : "";
+}
+
+function preparaModulo() {
+  const righe = [["14:00", "it", true], ["18:00", "it", true], ["20:00", "en", false], ["21:00", "en", false]];
+  const contenitore = document.getElementById("uscite");
+  righe.forEach(([orario, lingua, attiva], i) => {
+    const riga = document.createElement("div");
+    riga.className = "riga";
+    riga.innerHTML = `<input type="checkbox" class="attiva" aria-label="Uscita ${i + 1} attiva">` +
+      `<input type="time" class="orario" aria-label="Orario uscita ${i + 1}">` +
+      `<select class="lingua" aria-label="Lingua uscita ${i + 1}"><option value="it">Italiano</option><option value="en">Inglese</option></select>`;
+    riga.querySelector(".attiva").checked = attiva;
+    riga.querySelector(".orario").value = orario;
+    riga.querySelector(".lingua").value = lingua;
+    contenitore.appendChild(riga);
+  });
+  const chiavi = document.getElementById("chiavi");
+  for (const c of CHIAVI) {
+    const blocco = document.createElement("div");
+    blocco.innerHTML = `<label for="k-${c.nome}"></label><input type="password" id="k-${c.nome}" autocomplete="off" spellcheck="false">`;
+    const etichetta = blocco.querySelector("label");
+    etichetta.textContent = c.nome + (c.obbligatoria ? " " : " (facoltativa) ");
+    const nota = document.createElement("span");
+    nota.className = "nota";
+    nota.append(c.testo + " ");
+    const link = document.createElement("a");
+    link.href = c.dove; link.target = "_blank"; link.rel = "noopener"; link.textContent = "Dove si trova";
+    nota.append(link);
+    etichetta.append(nota);
+    chiavi.appendChild(blocco);
+  }
+  document.querySelectorAll("#passo-canale input, #passo-canale select, #passo-canale textarea")
+    .forEach((el) => el.addEventListener("input", aggiornaAnteprima));
+  aggiornaAnteprima();
+}
+
+async function onVerifica() {
+  const indirizzo = leggiRepository(document.getElementById("repo").value);
+  stato.token = document.getElementById("token").value.trim();
+  stato.ramo = "";
+  if (!indirizzo) return esito("esito-github", "Indirizzo non valido: incolla quello della tua copia, per esempio https://github.com/mario/samaritan.", false);
+  if (`${indirizzo.owner}/${indirizzo.repo}`.toLowerCase() === TEMPLATE_REPO.toLowerCase()) {
+    return esito("esito-github", "Questo e' il modello di Samaritan, non la tua copia: fai prima il passo 1.", false);
+  }
+  if (!stato.token) return esito("esito-github", "Incolla il token GitHub.", false);
+  Object.assign(stato, indirizzo);
+  try {
+    const repo = await gh("GET", `/repos/${stato.owner}/${stato.repo}`);
+    stato.ramo = repo.default_branch;
+    esito("esito-github", `Collegato a ${repo.full_name}${repo.private ? " (privato)" : ""}.`, true);
+  } catch (e) {
+    const spiegazione = e.stato === 401 ? "il token non e' valido o e' scaduto."
+      : e.stato === 404 ? "il repository non esiste o il token non puo' vederlo (controlla 'Only select repositories')."
+      : e.message;
+    esito("esito-github", "Accesso non riuscito: " + spiegazione, false);
+  }
+  aggiornaPulsanti();
+}
+
+async function onSalvaCanale() {
+  const p = costruisciProfilo(leggiModulo());
+  const errori = validaProfilo(p);
+  if (errori.length) return esito("esito-canale", errori.join(" "), false);
+  try {
+    const azzerata = await salvaCanale(JSON.stringify(p, null, 2));
+    esito("esito-canale", azzerata ? "canale.json salvato, memoria azzerata." : "canale.json aggiornato.", true);
+  } catch (e) { esito("esito-canale", e.message, false); }
+}
+
+async function onSalvaChiavi() {
+  const valori = {};
+  for (const c of CHIAVI) {
+    const valore = document.getElementById("k-" + c.nome).value.trim();
+    if (valore) valori[c.nome] = valore;
+    else if (c.obbligatoria) return esito("esito-chiavi", `Manca ${c.nome}.`, false);
+  }
+  try {
+    await salvaSegreti(valori);
+    esito("esito-chiavi", `Salvate: ${Object.keys(valori).join(", ")}.`, true);
+  } catch (e) { esito("esito-chiavi", e.message, false); }
+}
+
+async function onAutorizza() {
+  const id = document.getElementById("google_id").value.trim();
+  const segreto = document.getElementById("google_segreto").value.trim();
+  if (!id.endsWith(".apps.googleusercontent.com") || !segreto) {
+    return esito("esito-youtube", "Incolla ID client (finisce con .apps.googleusercontent.com) e client secret.", false);
+  }
+  await autorizzaGoogle(id, segreto);
+}
+
+async function onSalvaYoutube() {
+  try {
+    await salvaSegreti({
+      YOUTUBE_CLIENT_ID: stato.youtube.clientId,
+      YOUTUBE_CLIENT_SECRET: stato.youtube.clientSecret,
+      YOUTUBE_REFRESH_TOKEN: stato.youtube.refreshToken,
+    });
+    stato.youtube = null;
+    esito("esito-youtube", "YouTube collegato e salvato nei Secrets.", true);
+  } catch (e) { esito("esito-youtube", e.message, false); }
+  aggiornaPulsanti();
+}
+
+async function onProva() {
+  try {
+    const link = await lanciaProva();
+    const el = document.getElementById("esito-prova");
+    esito("esito-prova", "Video di prova avviato. Segui la lavorazione: ", true);
+    const a = document.createElement("a");
+    a.href = link; a.target = "_blank"; a.rel = "noopener"; a.textContent = link;
+    el.append(a);
+  } catch (e) { esito("esito-prova", e.message, false); }
+}
+
+// Ritorno da Google: il codice si scambia subito e i dati salvati per il
+// viaggio si cancellano prima di fare qualunque altra cosa.
+async function ritornoDaGoogle() {
+  const parametri = new URLSearchParams(location.search);
+  if (!parametri.has("code") && !parametri.has("error")) return;
+  const salvato = JSON.parse(sessionStorage.getItem("samaritan-oauth") || "null");
+  sessionStorage.removeItem("samaritan-oauth");
+  history.replaceState(null, "", indirizzoPagina());
+  document.getElementById("passo-youtube").scrollIntoView();
+  if (parametri.has("error")) return esito("esito-youtube", "Google ha rifiutato: " + parametri.get("error"), false);
+  if (!salvato || salvato.stato !== parametri.get("state")) {
+    return esito("esito-youtube", "Risposta di Google non riconosciuta: ripeti l'autorizzazione.", false);
+  }
+  try {
+    const refreshToken = await scambiaCodice(parametri.get("code"), salvato);
+    stato.youtube = { clientId: salvato.clientId, clientSecret: salvato.clientSecret, refreshToken };
+    if (salvato.owner) document.getElementById("repo").value = `https://github.com/${salvato.owner}/${salvato.repo}`;
+    esito("esito-youtube", "Autorizzazione riuscita. Reincolla il token GitHub al passo 2, premi Verifica e poi Salva il collegamento.", true);
+  } catch (e) { esito("esito-youtube", e.message, false); }
+  aggiornaPulsanti();
+}
+
+function avvia() {
+  document.getElementById("link-template").href = `https://github.com/${TEMPLATE_REPO}/generate`;
+  document.getElementById("redirect-uri").textContent = indirizzoPagina();
+  document.getElementById("avviso-protocollo").hidden = location.protocol === "https:" || location.hostname === "localhost";
+  preparaModulo();
+  document.getElementById("verifica-github").addEventListener("click", onVerifica);
+  document.getElementById("salva-canale").addEventListener("click", onSalvaCanale);
+  document.getElementById("salva-chiavi").addEventListener("click", onSalvaChiavi);
+  document.getElementById("autorizza-google").addEventListener("click", onAutorizza);
+  document.getElementById("salva-youtube").addEventListener("click", onSalvaYoutube);
+  document.getElementById("lancia-prova").addEventListener("click", onProva);
+  ritornoDaGoogle();
+}
+
+// Per i test: le funzioni pure, chiamabili da fuori.
+window.Samaritan = { costruisciProfilo, validaProfilo, leggiModulo, abbinaCron, finestre, scostamenti,
+  blake2b, sigilla, leggiRepository, costanti: { CRON_USCITE, MARGINE_MINIMO_ORE, ANTICIPO_PARTENZA_ORE, LINGUE, SCOPES } };
+
+avvia();
+</script>
+</body>
+</html>

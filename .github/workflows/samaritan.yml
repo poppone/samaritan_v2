@@ -8,17 +8,21 @@ on:
     # arrivate tardi. Quindi la pipeline parte di notte, dieci-tredici ore
     # prima, e il video esce all'ora giusta perche' YouTube lo pubblica da
     # solo (publishAt, vedi orari.py). Il minuto 17 e' voluto: allo scoccare
-    # dell'ora GitHub e' piu' carico e ritarda di piu'. Cambiando questi cron
-    # si sposta solo il margine; per cambiare l'ora di uscita si cambia
-    # ORARIO_USCITA piu' sotto.
-    - cron: '17 1 * * *'          # per l'uscita delle 14:00 italiane
-    - cron: '17 3 * * *'          # per l'uscita delle 18:00 italiane
-    # Fino al 27 settembre 2026 alle 20:00 usciva il video lungo 16:9: i tre
-    # pubblicati hanno fatto 6, 0 e 0 visualizzazioni. Da allora e' un secondo
-    # Short in inglese. Il lungo resta lanciabile a mano (lungo, o /lungo da
-    # Telegram).
-    - cron: '17 5 * * *'          # per l'uscita delle 20:00, in inglese
-    - cron: '17 6 * * *'          # per l'uscita delle 21:00, in inglese
+    # dell'ora GitHub e' piu' carico e ritarda di piu'.
+    #
+    # Sono quattro PARTENZE, non quattro uscite: gli orari e le lingue delle
+    # uscite stanno nel profilo del canale (canale.json, voce 'uscite') e
+    # profilo.abbina_cron decide quale uscita tocca a ciascuna partenza. Una
+    # partenza senza uscita si ferma in pochi secondi (job 'uscita' qui
+    # sotto). Questi cron sono copiati in profilo.CRON_USCITE, che li usa per
+    # controllare i margini: un test tiene allineate le due copie.
+    # Per Poppone TV, senza canale.json: 14:00, 18:00 in italiano e 20:00,
+    # 21:00 in inglese (fino al 27 settembre 2026 alle 20:00 usciva il video
+    # lungo 16:9, che ora si lancia solo a mano).
+    - cron: '17 1 * * *'          # partenza 1 (Poppone TV: 14:00 italiane)
+    - cron: '17 3 * * *'          # partenza 2 (Poppone TV: 18:00 italiane)
+    - cron: '17 5 * * *'          # partenza 3 (Poppone TV: 20:00, in inglese)
+    - cron: '17 6 * * *'          # partenza 4 (Poppone TV: 21:00, in inglese)
     # La riserva di fine giornata. Non produce un video suo: guarda quali
     # delle quattro uscite di oggi sono rimaste scoperte e rifa' la piu'
     # vecchia, una sola, nel formato che quell'uscita voleva. Se sono tutte a
@@ -43,11 +47,10 @@ on:
         type: choice
         options: [it, en]
       slot:
-        description: 'Copri questa uscita, pubblicando all orario giusto (vuoto = pubblica subito)'
+        description: 'Copri un uscita del profilo, pubblicando all orario giusto: il suo numero (1-4) o il suo orario (es. 18:00). Vuoto = pubblica subito'
         required: false
         default: ''
-        type: choice
-        options: ['', '14:00', '18:00', '20:00', '21:00']
+        type: string
       recupero:
         description: 'Recupera un video saltato invece di farne uno nuovo'
         required: false
@@ -62,7 +65,8 @@ on:
 permissions:
   contents: write
 
-# L'uscita delle 20:00 e il video lungo lanciato a mano hanno una coda loro.
+# La partenza 3 (per Poppone TV l'uscita delle 20:00) e il video lungo lanciato
+# a mano hanno una coda loro.
 # Non e' un capriccio: GitHub tiene UNA sola lavorazione in attesa per coda e
 # cancella la precedente, e con partenze in ritardo di ore le uscite delle
 # 18:00, 20:00 e 21:00 si ritrovano spesso in attesa insieme: in una coda sola
@@ -78,7 +82,30 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Decide in pochi secondi se questa partenza ha qualcosa da fare. Un canale
+  # con due uscite al giorno lascia libere due partenze notturne su quattro, e
+  # senza questo controllo ognuna installerebbe FFmpeg e le dipendenze per
+  # niente. Usa solo la libreria standard: niente setup-python, niente pip.
+  # Legge anche canale.json, quindi un profilo scritto male ferma tutto qui,
+  # con il messaggio in chiaro, invece che a meta' montaggio.
+  uscita:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      attiva: ${{ steps.decidi.outputs.attiva }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Questa partenza ha un uscita da coprire?
+        id: decidi
+        env:
+          USCITA_CRON: ${{ (github.event.schedule == '17 1 * * *' && '1') || (github.event.schedule == '17 3 * * *' && '2') || (github.event.schedule == '17 5 * * *' && '3') || (github.event.schedule == '17 6 * * *' && '4') || '' }}
+        run: python3 profilo.py decidi >> "$GITHUB_OUTPUT"
+
   produci-e-pubblica:
+    needs: uscita
+    if: needs.uscita.outputs.attiva == 'true'
     runs-on: ubuntu-latest
     # Otto minuti in 1080p non si montano nei 45 minuti che bastano a uno
     # Short da mezzo minuto. La riserva rientra nel tempo lungo perche' puo'
@@ -113,19 +140,32 @@ jobs:
           pip install -r requirements.txt
 
       # Le credenziali OAuth NON stanno nel repository (sono in .gitignore).
-      # Arrivano dai Secrets come base64 e vivono solo per la durata del job.
+      # Due modi di averle, entrambi dai Secrets:
+      #   - client_secret.json e token.pickle in base64 (setup_secrets.py),
+      #     il modo di sempre: se ci sono, vincono;
+      #   - YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET e YOUTUBE_REFRESH_TOKEN,
+      #     scritti dalla pagina di installazione (installa/index.html): non
+      #     c'e' niente da ripristinare su disco, li legge uploader.py.
       - name: Ripristina credenziali YouTube
         env:
           CLIENT_SECRET_B64: ${{ secrets.CLIENT_SECRET_B64 }}
           YOUTUBE_TOKEN_B64: ${{ secrets.YOUTUBE_TOKEN_B64 }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
         run: |
-          if [ -z "$CLIENT_SECRET_B64" ] || [ -z "$YOUTUBE_TOKEN_B64" ]; then
-            echo "::error::Mancano i secret CLIENT_SECRET_B64 e/o YOUTUBE_TOKEN_B64."
-            echo "Generali in locale con: python setup_secrets.py"
-            exit 1
+          if [ -n "$CLIENT_SECRET_B64" ] && [ -n "$YOUTUBE_TOKEN_B64" ]; then
+            echo "$CLIENT_SECRET_B64" | base64 -d > client_secret.json
+            echo "$YOUTUBE_TOKEN_B64" | base64 -d > token.pickle
+            exit 0
           fi
-          echo "$CLIENT_SECRET_B64" | base64 -d > client_secret.json
-          echo "$YOUTUBE_TOKEN_B64" | base64 -d > token.pickle
+          if [ -n "$YOUTUBE_CLIENT_ID" ] && [ -n "$YOUTUBE_CLIENT_SECRET" ] && [ -n "$YOUTUBE_REFRESH_TOKEN" ]; then
+            echo "Credenziali YouTube dai secret YOUTUBE_CLIENT_ID/SECRET/REFRESH_TOKEN."
+            exit 0
+          fi
+          echo "::error::Mancano le credenziali YouTube: servono CLIENT_SECRET_B64 e YOUTUBE_TOKEN_B64, oppure YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET e YOUTUBE_REFRESH_TOKEN."
+          echo "Si preparano con la pagina installa/index.html, oppure in locale con: python setup_secrets.py"
+          exit 1
 
       - name: Esegui pipeline Samaritan
         id: pipeline
@@ -135,36 +175,39 @@ jobs:
           ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
           PRIVACY_STATUS: ${{ inputs.privacy || 'public' }}
-          # Un orario di uscita per ciascun cron. La riserva e le run lanciate
-          # a mano non programmano niente: escono subito, com'e' giusto sia
-          # per una prova sia per un'uscita gia' saltata. Una run lanciata a
-          # mano con 'slot' fa invece le veci del cron di quell'uscita.
-          ORARIO_USCITA: ${{ (github.event.schedule == '17 1 * * *' && '14:00') || (github.event.schedule == '17 3 * * *' && '18:00') || (github.event.schedule == '17 5 * * *' && '20:00') || (github.event.schedule == '17 6 * * *' && '21:00') || inputs.slot || '' }}
-          FUSO_USCITA: 'Europe/Rome'
-          # Quale uscita sta coprendo questa lavorazione. Sui tre cron normali
-          # e' lo stesso valore di ORARIO_USCITA, ma i due campi non sono la
-          # stessa cosa: ORARIO_USCITA dice a YouTube quando mostrare il video,
+          # Quale partenza notturna e' questa (1-4). Orario di uscita, SLOT,
+          # lingua e voce li ricava config.risolvi_uscita dal profilo del
+          # canale: ORARIO_USCITA dice a YouTube quando mostrare il video,
           # SLOT serve a non farne due per la stessa uscita quando una
-          # lavorazione arriva in ritardo. Sulla riserva resta vuoto: quale
-          # uscita recuperare lo decide lei leggendo la cronologia.
-          SLOT: ${{ (github.event.schedule == '17 1 * * *' && '14:00') || (github.event.schedule == '17 3 * * *' && '18:00') || (github.event.schedule == '17 5 * * *' && '20:00') || (github.event.schedule == '17 6 * * *' && '21:00') || inputs.slot || '' }}
+          # lavorazione arriva in ritardo. Il fuso e' quello del profilo.
+          # La riserva e le run lanciate a mano non programmano niente:
+          # escono subito, com'e' giusto sia per una prova sia per un'uscita
+          # gia' saltata; la riserva sceglie quale uscita recuperare
+          # leggendo la cronologia.
+          USCITA_CRON: ${{ (github.event.schedule == '17 1 * * *' && '1') || (github.event.schedule == '17 3 * * *' && '2') || (github.event.schedule == '17 5 * * *' && '3') || (github.event.schedule == '17 6 * * *' && '4') || '' }}
+          # Una run lanciata a mano con 'slot' fa le veci della partenza di
+          # quell'uscita: stesso orario di pubblicazione, stessa lingua.
+          USCITA_RICHIESTA: ${{ inputs.slot }}
           # Quale dei due formati produrre. Vuoto = Short, com'e' sempre
           # stato: tutto il resto della pipeline e' identico.
           VIDEO_LUNGO: ${{ (inputs.lungo && '1') || '' }}
           MINUTI_VIDEO_LUNGO: ${{ vars.MINUTI_VIDEO_LUNGO }}
           SEZIONI_VIDEO_LUNGO: ${{ vars.SEZIONI_VIDEO_LUNGO }}
           RECUPERO: ${{ (github.event.schedule == '30 20 * * *' && '1') || (inputs.recupero && '1') || '' }}
-          # I video delle 20:00 e delle 21:00 sono in inglese: stesso canale,
-          # pubblico diverso. Le run lanciate a mano scelgono dal menu.
-          LINGUA: ${{ github.event_name == 'schedule' && ((github.event.schedule == '17 5 * * *' || github.event.schedule == '17 6 * * *') && 'en' || 'it') || ((inputs.slot == '20:00' || inputs.slot == '21:00') && 'en') || inputs.lingua || 'it' }}
-          NOME_CANALE: ${{ vars.NOME_CANALE || 'Poppone TV' }}
-          # Le parentesi contano: in GitHub Actions && lega piu' di ||,
-          # e senza di quelle l'espressione restituisce 'true' invece del
-          # nome della voce.
-          VOCE_TTS: ${{ ((github.event_name == 'schedule' && (github.event.schedule == '17 5 * * *' || github.event.schedule == '17 6 * * *')) || inputs.slot == '20:00' || inputs.slot == '21:00' || (inputs.lingua == 'en')) && (vars.VOCE_TTS_EN || 'en-US-AndrewNeural') || (vars.VOCE_TTS || 'it-IT-DiegoNeural') }}
-          # La riserva sceglie la lingua solo a lavorazione iniziata, quindi
-          # le servono tutt'e due le voci gia' pronte.
+          # La lingua la decide l'uscita coperta (per Poppone TV le 20:00 e le
+          # 21:00 sono in inglese: stesso canale, pubblico diverso). Solo le
+          # run lanciate a mano senza 'slot' la scelgono dal menu.
+          LINGUA: ${{ (!inputs.slot && inputs.lingua) || '' }}
+          # Vuoto = il nome scritto in canale.json, o Poppone TV senza file.
+          # Niente ripiego scritto qui: vincerebbe sul profilo di chi installa.
+          NOME_CANALE: ${{ vars.NOME_CANALE }}
+          # La voce di questa run la sceglie config fra le due qui sotto, in
+          # base alla lingua. La riserva sceglie la lingua solo a lavorazione
+          # iniziata, quindi le servono tutt'e due gia' pronte.
           VOCE_TTS_IT: ${{ vars.VOCE_TTS || 'it-IT-DiegoNeural' }}
           VOCE_TTS_EN: ${{ vars.VOCE_TTS_EN || 'en-US-AndrewNeural' }}
           ELEVENLABS_VOCE: ${{ vars.ELEVENLABS_VOCE }}

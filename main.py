@@ -44,6 +44,16 @@ def prepara_uscita():
     fine giornata recupera l'uscita rimasta scoperta. Senza il primo pezzo il
     secondo farebbe doppioni.
     """
+    # Il workflow lo scarta gia' prima di installare qualunque cosa (job
+    # 'uscita'), quindi qui si arriva solo lanciando main.py a mano con
+    # USCITA_CRON: in quel caso l'avviso su Telegram non disturba nessuno.
+    if config.NESSUNA_USCITA:
+        print("[Slot] Questa partenza non ha un'uscita nel profilo del canale: "
+              "non faccio niente.")
+        notifier.notifica_salto("Questa partenza notturna non ha un'uscita nel "
+                                "profilo del canale: non c'e' niente da fare.")
+        return False
+
     if config.RECUPERO:
         scelta = orari.slot_da_recuperare(carica_cronologia())
         if not scelta:

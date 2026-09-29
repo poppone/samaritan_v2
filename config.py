@@ -146,7 +146,17 @@ def risolvi_uscita():
 
     ORARIO_USCITA = _get("ORARIO_USCITA", uscita["orario"] if uscita else "")
     SLOT = _get("SLOT", uscita["orario"] if uscita else "")
-    LINGUA = _get("LINGUA", uscita["lingua"] if uscita else "it")
+    # Senza un'uscita (run a mano, riserva prima che scelga) la lingua e'
+    # comunque una di quelle in cui il canale pubblica. Il menu della run a
+    # mano parte da 'it', e anche il video di prova della pagina di
+    # installazione: un canale solo inglese non deve uscirne in italiano.
+    # Per Poppone TV, che pubblica in tutt'e due, non cambia niente.
+    lingue_del_canale = [u["lingua"] for u in PROFILO.uscite_in_ordine]
+    LINGUA = _get("LINGUA", uscita["lingua"] if uscita else lingue_del_canale[0])
+    if not uscita and (LINGUA or "").lower() not in lingue_del_canale:
+        print(f"[Config] Il canale non pubblica in '{LINGUA}': questa run "
+              f"esce in '{lingue_del_canale[0]}'.")
+        LINGUA = lingue_del_canale[0]
     # La voce segue la lingua: prima il workflow la sceglieva con la stessa
     # espressione della lingua, ripetuta.
     VOCE_TTS = _get("VOCE_TTS",
