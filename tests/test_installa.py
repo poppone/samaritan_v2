@@ -196,6 +196,7 @@ class TestPaginaConGitHubFinto:
         g = pagina["github"]
         assert "errore" in g["modello"]["classe"]
         assert "non la tua copia" in g["modello"]["testo"]
+        assert "errore" in g["poppone"]["classe"]
         assert g["verifica"]["testo"] == "Collegato a mario/samaritan (privato)."
 
     def test_ogni_chiamata_porta_il_token(self, pagina):

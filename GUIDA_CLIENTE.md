@@ -2,8 +2,7 @@
 
 Questa guida ti porta da zero al primo video, senza terminale e senza
 toccare il codice. Tutto si fa da una pagina web, la **pagina di
-installazione**, il cui indirizzo ti arriva insieme a Samaritan (finisce con
-`/installa/`).
+installazione**: https://poppone.github.io/samaritan-installa/
 
 Ci vogliono tre quarti d'ora, la prima volta. Tieni la pagina aperta dall'inizio
 alla fine: se la chiudi, i passi gia' fatti restano fatti, ma il token GitHub

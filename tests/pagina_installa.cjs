@@ -59,10 +59,16 @@ async function finGitHub(p) {
   const risultato = {};
 
   // Il modello stesso si rifiuta, prima di chiamare GitHub.
-  await p.fill("#repo", "https://github.com/poppone/samaritan_v2");
+  await p.fill("#repo", "https://github.com/poppone/samaritan-template");
   await p.fill("#token", "github_pat_finto");
   await p.click("#verifica-github");
   risultato.modello = await esito("esito-github");
+
+  // Nemmeno il repository di Poppone TV: la prima installazione ne
+  // azzererebbe la memoria.
+  await p.fill("#repo", "https://github.com/poppone/samaritan_v2");
+  await p.click("#verifica-github");
+  risultato.poppone = await esito("esito-github");
 
   await p.fill("#repo", "https://github.com/mario/samaritan");
   await p.click("#verifica-github");
