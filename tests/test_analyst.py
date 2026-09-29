@@ -306,6 +306,13 @@ class TestParoleCercate:
         self._con_termini(monkeypatch, ["chi è che ha perso un sandalo"], tmp_path)
         assert analyst.parole_cercate() == frozenset({"perso", "sandalo"})
 
+    def test_il_no_di_no_man_s_sky_non_conta_da_solo(self, monkeypatch, tmp_path):
+        """29 settembre 2026: da "no man's sky" usciva "no", e una notizia con
+        "no PS Plus required" risultava cercata dal pubblico."""
+        self._con_termini(monkeypatch, ["no man's sky"], tmp_path)
+        assert "no" not in analyst.parole_cercate()
+        assert "sky" in analyst.parole_cercate()
+
     def test_butta_i_numeri_da_soli(self, monkeypatch, tmp_path):
         self._con_termini(monkeypatch, ["gta 6"], tmp_path)
         assert analyst.parole_cercate() == frozenset({"gta"})

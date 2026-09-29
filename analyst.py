@@ -52,7 +52,7 @@ PAROLE_VUOTE_RICERCA = frozenset((
     "chi", "non", "si", "mi", "ti", "ci", "del", "della", "dei", "degli",
     "delle", "al", "alla", "ai", "nel", "nella", "sul", "sulla", "ed",
     "the", "an", "of", "to", "on", "for", "and", "is", "it", "how", "why",
-    "who", "are", "was", "can",
+    "who", "are", "was", "can", "no", "not",
 ))
 
 
