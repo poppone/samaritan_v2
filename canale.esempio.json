@@ -89,6 +89,15 @@
     "chef plating food"
   ],
 
+  "_uscite": "Quando escono i video: da 1 a 4 uscite al giorno, ora locale del fuso qui sotto, ognuna con la sua lingua ('it' o 'en'). Il video si prepara di notte e YouTube lo pubblica da solo all'ora esatta. Con Europe/Rome gli orari possibili vanno dalle 11:17 alle 23:17; se non ci stanno, all'avvio compare un messaggio che dice quali sono. Se manca: 14:00 e 18:00 nella lingua delle ricerche.",
+  "uscite": [
+    {"orario": "12:30", "lingua": "it"},
+    {"orario": "19:00", "lingua": "it"}
+  ],
+
+  "_fuso": "Il fuso orario delle uscite, come 'Europe/Rome' o 'America/New_York'. Se manca: Europe/Rome.",
+  "fuso": "Europe/Rome",
+
   "_categoria_youtube": "Il numero della categoria YouTube: 20 Gaming, 26 Stile e consigli (dove sta la cucina), 17 Sport, 24 Intrattenimento, 22 Persone e blog. Se manca: 22.",
   "categoria_youtube": "26"
 }

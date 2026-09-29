@@ -86,16 +86,26 @@ except profilo.ProfiloNonValido as e:
 NOME_CANALE = _get("NOME_CANALE", PROFILO.nome_canale)
 # Handle YouTube: finisce nella descrizione di ogni video come link al canale.
 HANDLE_CANALE = _get("HANDLE_CANALE", PROFILO.handle)
-LINGUA = _get("LINGUA", "it")
 
-# Quale delle uscite giornaliere sta coprendo questa run ('14:00', '18:00',
-# '21:00'), oppure vuoto per le run lanciate a mano. Non e' l'ora di
-# pubblicazione, che e' ORARIO_USCITA piu' sotto: SLOT serve solo a non
-# pubblicare due volte lo stesso video quando una run arriva in ritardo e
-# un'altra l'ha gia' fatto. Di norma i due valori coincidono; la run di
-# recupero invece ha SLOT pieno e ORARIO_USCITA vuoto, perche' recupera
-# un'uscita saltata e la pubblica subito.
-SLOT = _get("SLOT", "")
+# Lingua, uscita coperta, orario di pubblicazione e voce di questa run: li
+# decide risolvi_uscita() qui sotto, a partire dal profilo del canale.
+#
+# SLOT e' quale delle uscite giornaliere sta coprendo questa run ('14:00',
+# '18:00'...), oppure vuoto per le run lanciate a mano. Non e' l'ora di
+# pubblicazione, che e' ORARIO_USCITA: SLOT serve solo a non pubblicare due
+# volte lo stesso video quando una run arriva in ritardo e un'altra l'ha gia'
+# fatto. Di norma i due valori coincidono; la run di recupero invece ha SLOT
+# pieno e ORARIO_USCITA vuoto, perche' recupera un'uscita saltata e la
+# pubblica subito.
+LINGUA = "it"
+SLOT = ""
+ORARIO_USCITA = ""
+VOCE_TTS = ""
+# L'uscita del profilo coperta da questa run ({'orario', 'lingua'}), o None.
+USCITA_SCELTA = None
+# Vero quando questa e' una partenza notturna senza un'uscita da coprire: un
+# canale con due uscite al giorno lascia libere due partenze su quattro.
+NESSUNA_USCITA = False
 # L'istante dell'uscita coperta (secondi epoch), deciso da main.prepara_uscita
 # e scritto in cronologia accanto a SLOT.
 USCITA = None
@@ -105,12 +115,75 @@ RECUPERO = _get("RECUPERO", "") not in ("", "0", "false", "False")
 VOCE_TTS_IT = _get("VOCE_TTS_IT", "it-IT-DiegoNeural")
 VOCE_TTS_EN = _get("VOCE_TTS_EN", "en-US-AndrewNeural")
 
+
+def risolvi_uscita():
+    """Decide quale uscita copre questa run, e da li' lingua, orari e voce.
+
+    Prima questi valori li scriveva il workflow, uno per cron, con gli orari
+    di Poppone TV dentro le espressioni. Ora il workflow dice solo QUALE
+    partenza e' (USCITA_CRON, da 1 a 4) oppure, per le run a mano, quale
+    uscita coprire (USCITA_RICHIESTA: il numero nella giornata o l'orario);
+    orario e lingua arrivano dal profilo.
+
+    Le variabili d'ambiente ORARIO_USCITA, SLOT, LINGUA e VOCE_TTS, quando
+    ci sono, vincono: servono alle prove in locale. Il workflow passa LINGUA
+    solo per le run a mano che non coprono un'uscita.
+    """
+    global LINGUA, SLOT, ORARIO_USCITA, VOCE_TTS, USCITA_SCELTA, NESSUNA_USCITA
+    cron = _get("USCITA_CRON", "")
+    richiesta = _get("USCITA_RICHIESTA", "")
+    uscita = None
+    NESSUNA_USCITA = False
+    if cron:
+        if not cron.isdigit():
+            raise profilo.ProfiloNonValido(
+                f"USCITA_CRON deve essere il numero della partenza, non '{cron}'.")
+        uscita = profilo.uscita_del_cron(PROFILO, int(cron))
+        NESSUNA_USCITA = uscita is None
+    elif richiesta:
+        uscita = profilo.uscita_richiesta(PROFILO, richiesta)
+    USCITA_SCELTA = uscita
+
+    ORARIO_USCITA = _get("ORARIO_USCITA", uscita["orario"] if uscita else "")
+    SLOT = _get("SLOT", uscita["orario"] if uscita else "")
+    # Senza un'uscita (run a mano, riserva prima che scelga) la lingua e'
+    # comunque una di quelle in cui il canale pubblica. Il menu della run a
+    # mano parte da 'it', e anche il video di prova della pagina di
+    # installazione: un canale solo inglese non deve uscirne in italiano.
+    # Per Poppone TV, che pubblica in tutt'e due, non cambia niente.
+    lingue_del_canale = [u["lingua"] for u in PROFILO.uscite_in_ordine]
+    LINGUA = _get("LINGUA", uscita["lingua"] if uscita else lingue_del_canale[0])
+    if not uscita and (LINGUA or "").lower() not in lingue_del_canale:
+        print(f"[Config] Il canale non pubblica in '{LINGUA}': questa run "
+              f"esce in '{lingue_del_canale[0]}'.")
+        LINGUA = lingue_del_canale[0]
+    # La voce segue la lingua: prima il workflow la sceglieva con la stessa
+    # espressione della lingua, ripetuta.
+    VOCE_TTS = _get("VOCE_TTS",
+                    VOCE_TTS_EN if (LINGUA or "").lower() == "en" else VOCE_TTS_IT)
+
+
+try:
+    risolvi_uscita()
+except profilo.ProfiloNonValido as e:
+    print(f"[Config] ERRORE: {e}")
+    sys.exit(1)
+
+# ------------------------------------------ Credenziali YouTube (senza file)
+# Il secondo modo di collegare YouTube, quello della pagina di installazione:
+# tre Secrets invece di client_secret.json e token.pickle in base64. Se c'e'
+# token.pickle vince lui (vedi uploader.ottieni_credenziali).
+YOUTUBE_CLIENT_ID = _get("YOUTUBE_CLIENT_ID")
+YOUTUBE_CLIENT_SECRET = _get("YOUTUBE_CLIENT_SECRET")
+YOUTUBE_REFRESH_TOKEN = _get("YOUTUBE_REFRESH_TOKEN")
+
 # ------------------------------------------------------------------ Voce (TTS)
 # Voce neurale Microsoft Edge. Voci italiane disponibili:
 #   it-IT-DiegoNeural     (maschile, energico  -> consigliata per il gaming)
 #   it-IT-IsabellaNeural  (femminile, brillante)
 #   it-IT-GiuseppeNeural  (maschile, caldo)
-VOCE_TTS = _get("VOCE_TTS", "it-IT-DiegoNeural")
+# VOCE_TTS, la voce di questa run, la sceglie risolvi_uscita() in base alla
+# lingua: VOCE_TTS_IT o VOCE_TTS_EN, se la variabile non c'e'.
 VOCE_VELOCITA = _get("VOCE_VELOCITA", "+12%")   # gli Shorts virali parlano veloce
 VOCE_PITCH = _get("VOCE_PITCH", "+8Hz")         # leggermente piu alto = piu "sveglio"
 
@@ -216,10 +289,9 @@ PRIVACY_STATUS = _get("PRIVACY_STATUS", "public")
 # Non e' l'ora in cui parte la pipeline: GitHub fa partire le run schedulate
 # con ritardi da un'ora a tre e mezza, quindi il video si carica in anticipo e
 # YouTube lo rende pubblico da solo all'istante esatto. Vuoto = subito, ed e'
-# il caso delle run lanciate a mano. Lo imposta il workflow, un orario per
-# ciascun cron. Vedi orari.py.
-ORARIO_USCITA = _get("ORARIO_USCITA", "")
-FUSO_USCITA = _get("FUSO_USCITA", "Europe/Rome")
+# il caso delle run lanciate a mano. ORARIO_USCITA lo sceglie risolvi_uscita()
+# dalle uscite del profilo; il fuso e' quello del profilo. Vedi orari.py.
+FUSO_USCITA = _get("FUSO_USCITA", PROFILO.fuso)
 
 # ------------------------------------------------ Notifiche Telegram (opzionali)
 TELEGRAM_BOT_TOKEN = _get("TELEGRAM_BOT_TOKEN")

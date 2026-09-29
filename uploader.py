@@ -33,13 +33,50 @@ SCOPES = [
 TOKEN_FILE = os.path.join(config.DIR_PROGETTO, "token.pickle")
 CLIENT_SECRET_FILE = os.path.join(config.DIR_PROGETTO, "client_secret.json")
 
+# Dove Google scambia il refresh token con un token di accesso.
+TOKEN_URI = "https://oauth2.googleapis.com/token"
+
+
+def _credenziali_da_secret():
+    """Le credenziali costruite da YOUTUBE_CLIENT_ID/SECRET/REFRESH_TOKEN, o None.
+
+    E' il modo della pagina di installazione: chi compra Samaritan non ha un
+    terminale per lanciare setup_secrets.py, quindi l'autorizzazione la fa
+    il suo browser e nei Secrets finiscono tre stringhe invece di un pickle.
+    Niente viene scritto su disco: il token di accesso vive in memoria per
+    la durata della lavorazione.
+    """
+    if not (config.YOUTUBE_CLIENT_ID and config.YOUTUBE_CLIENT_SECRET
+            and config.YOUTUBE_REFRESH_TOKEN):
+        return None
+    from google.oauth2.credentials import Credentials
+    credenziali = Credentials(
+        token=None,
+        refresh_token=config.YOUTUBE_REFRESH_TOKEN,
+        token_uri=TOKEN_URI,
+        client_id=config.YOUTUBE_CLIENT_ID,
+        client_secret=config.YOUTUBE_CLIENT_SECRET,
+        scopes=SCOPES,
+    )
+    credenziali.refresh(Request())
+    return credenziali
+
 
 def ottieni_credenziali():
-    """Credenziali OAuth condivise fra uploader e analyst."""
+    """Credenziali OAuth condivise fra uploader e analyst.
+
+    token.pickle, se c'e', vince: e' il modo di sempre di popponetv. Senza,
+    si provano i tre Secrets della pagina di installazione, e solo alla fine
+    l'autorizzazione dal browser in locale con client_secret.json.
+    """
     credenziali = None
     if os.path.exists(TOKEN_FILE):
         with open(TOKEN_FILE, "rb") as token:
             credenziali = pickle.load(token)
+    else:
+        dai_secret = _credenziali_da_secret()
+        if dai_secret is not None:
+            return dai_secret
 
     if credenziali and credenziali.valid:
         return credenziali

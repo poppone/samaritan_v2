@@ -554,3 +554,99 @@ class TestAvvio:
             tmp_path, _minimo_cucina(materiale="youtube")))
         assert esito.returncode == 1
         assert "'materiale' e' 'steam' o 'stock'" in esito.stdout
+
+
+class TestUscite:
+    """Orari e lingue delle uscite stanno nel profilo. Il workflow ha solo
+    quattro partenze notturne fisse, e ogni uscita deve cadere abbastanza
+    dopo la sua partenza (almeno MARGINE_MINIMO_ORE, contro i ritardi di
+    GitHub) ma non troppo (al massimo ANTICIPO_PARTENZA_ORE, se no la
+    lavorazione si crede di ieri)."""
+
+    def _uscite(self, *orari, lingua="it"):
+        return [{"orario": o, "lingua": lingua} for o in orari]
+
+    def test_le_finestre_di_roma(self):
+        assert profilo.finestre("Europe/Rome") == [
+            ("11:17", "18:17"), ("13:17", "20:17"),
+            ("15:17", "22:17"), ("16:17", "23:17")]
+
+    def test_una_sola_uscita_serale_va_sulla_partenza_giusta(self):
+        p = profilo.da_dizionario({"uscite": self._uscite("22:00")})
+        assert [profilo.uscita_del_cron(p, n) for n in (1, 2, 3, 4)] == [
+            None, None, {"orario": "22:00", "lingua": "it"}, None]
+
+    def test_l_ordine_nel_file_non_conta(self):
+        p = profilo.da_dizionario({"uscite": self._uscite("18:00", "12:00")})
+        assert profilo.uscita_del_cron(p, 1)["orario"] == "12:00"
+        assert profilo.uscita_del_cron(p, 2)["orario"] == "18:00"
+        assert profilo.uscita_richiesta(p, "1")["orario"] == "12:00"
+
+    @pytest.mark.parametrize("orari", [
+        ("23:30",), ("10:00",), ("11:00", "12:00"),
+        ("13:00", "14:00", "15:00", "16:00"),
+    ])
+    def test_orari_fuori_dalle_partenze(self, orari):
+        with pytest.raises(profilo.ProfiloNonValido) as errore:
+            profilo.da_dizionario({"uscite": self._uscite(*orari)})
+        # Il messaggio dice anche cosa si puo' fare.
+        assert "partenza 1 dalle 11:17 alle 18:17" in str(errore.value)
+
+    def test_vale_anche_con_l_ora_legale(self):
+        """Le 18:30 a Roma sono 17:30 UTC d'inverno, sedici ore e un quarto
+        dopo la prima partenza (01:17 UTC): troppo. D'estate starebbero
+        dentro, ma l'uscita deve funzionare tutto l'anno."""
+        assert profilo.cron_adatto("18:17", 0, "Europe/Rome")
+        assert not profilo.cron_adatto("18:30", 0, "Europe/Rome")
+
+    def test_un_altro_fuso(self):
+        p = profilo.da_dizionario({"uscite": self._uscite("09:00"),
+                                   "fuso": "America/New_York"})
+        assert profilo.uscita_del_cron(p, 1)["orario"] == "09:00"
+
+    @pytest.mark.parametrize("modifica, parola", [
+        ({"uscite": []}, "da 1 a 4"),
+        ({"uscite": [{"orario": "14:00", "lingua": "it"}] * 5}, "da 1 a 4"),
+        ({"uscite": [{"orario": "14", "lingua": "it"}]}, "HH:MM"),
+        ({"uscite": [{"orario": "24:00", "lingua": "it"}]}, "HH:MM"),
+        ({"uscite": [{"orario": "14:00", "lingua": "fr"}]}, "lingua 'fr'"),
+        ({"uscite": [{"orario": "14:00"}]}, "'orario' e 'lingua'"),
+        ({"uscite": [{"orario": "14:00", "lingua": "it"},
+                     {"orario": "14:00", "lingua": "en"}]}, "due uscite"),
+        ({"fuso": "Europa/Roma"}, "fuso orario conosciuto"),
+    ])
+    def test_errori_chiari(self, modifica, parola):
+        with pytest.raises(profilo.ProfiloNonValido) as errore:
+            profilo.da_dizionario(_minimo_cucina(**modifica))
+        assert parola in str(errore.value)
+
+    def test_l_uscita_richiesta_che_non_c_e(self):
+        with pytest.raises(profilo.ProfiloNonValido, match="1\\) 14:00"):
+            profilo.uscita_richiesta(profilo.predefinito(), "5")
+
+    def test_un_profilo_di_cucina_ha_due_uscite_nella_sua_lingua(self):
+        p = profilo.da_dizionario(_minimo_cucina(ricerche={"en": ["recipes"]}))
+        assert p.uscite == self._uscite("14:00", "18:00", lingua="en")
+        assert p.fuso == "Europe/Rome"
+
+    def _decidi(self, tmp_path, contenuto, cron):
+        percorso = _scrivi(tmp_path, contenuto)
+        # -S: senza site-packages, come nel job 'uscita' che non installa
+        # niente. profilo.py deve cavarsela con la libreria standard.
+        return subprocess.run(
+            [sys.executable, "-S", "profilo.py", "decidi"], cwd=RADICE,
+            env=dict(os.environ, PROFILO_CANALE=percorso, USCITA_CRON=cron),
+            capture_output=True, text=True, timeout=30)
+
+    def test_il_workflow_chiede_al_profilo_da_riga_di_comando(self, tmp_path):
+        una = {"uscite": [{"orario": "18:00", "lingua": "it"}]}
+        esito = self._decidi(tmp_path, una, "3")
+        assert esito.returncode == 0, esito.stderr
+        assert esito.stdout.strip() == "attiva=false"
+        assert self._decidi(tmp_path, una, "1").stdout.strip() == "attiva=true"
+
+    def test_un_profilo_sbagliato_ferma_la_partenza(self, tmp_path):
+        esito = self._decidi(
+            tmp_path, {"uscite": [{"orario": "03:00", "lingua": "it"}]}, "1")
+        assert esito.returncode == 1
+        assert esito.stdout.startswith("::error::Profilo del canale non valido")

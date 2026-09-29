@@ -7,6 +7,13 @@ richiesta un video lungo 16:9 da otto minuti.
 Non e' solo un generatore: misura la retention reale dei video pubblicati e
 usa quei dati per decidere cosa produrre dopo.
 
+> **Hai Samaritan per il tuo canale?** Non ti serve niente di questo file: si
+> installa da una pagina web, `installa/index.html`, senza terminale e senza
+> toccare il codice. I passi, spiegati per chi non programma, sono in
+> [GUIDA_CLIENTE.md](GUIDA_CLIENTE.md). Per pubblicare la pagina chi possiede
+> il repository modello deve segnarlo come *Template repository* e accendere
+> GitHub Pages (vedi [Installazione per i clienti](#installazione-per-i-clienti)).
+
 ```
 FASE 0  analyst.py   scarica la retention reale degli ultimi 90 giorni
 FASE 1  brain.py     sceglie il formato (pesato sui dati) e scrive lo script
@@ -279,14 +286,20 @@ Stampa i valori base64 da incollare in **Settings > Secrets and variables > Acti
 **Secrets obbligatori**
 `GROQ_API_KEY`, `PEXELS_API_KEY`, `CLIENT_SECRET_B64`, `YOUTUBE_TOKEN_B64`
 
+Al posto degli ultimi due vanno bene anche `YOUTUBE_CLIENT_ID`,
+`YOUTUBE_CLIENT_SECRET` e `YOUTUBE_REFRESH_TOKEN`, che sono quelli che scrive
+la pagina di installazione: niente file, niente pickle. Se ci sono tutti e due
+i modi vince il pickle.
+
 **Secrets opzionali**
 `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
 
 **Variables opzionali**
 `NOME_CANALE`, `VOCE_TTS`, `VOCE_TTS_EN`, `WHISPER_MODEL`
 
-**I video escono alle 14:00, alle 18:00, alle 20:00 e alle 21:00 italiane**,
-sempre, anche quando cambia l'ora legale.
+**I video di Poppone TV escono alle 14:00, alle 18:00, alle 20:00 e alle 21:00
+italiane**, sempre, anche quando cambia l'ora legale. Sono le `uscite` del
+profilo predefinito: un altro canale le sceglie in `canale.json` (vedi sotto).
 
 - 14:00 e 18:00: Short in italiano.
 - **20:00 e 21:00: Short in inglese**, stesso canale, pubblico diverso.
@@ -294,8 +307,9 @@ sempre, anche quando cambia l'ora legale.
   hanno fatto 6, 0 e 0 visualizzazioni, e l'inglese rendeva almeno quanto
   l'italiano. Il lungo resta lanciabile a mano.
 
-La lingua la passa il workflow con `LINGUA` e il formato con `VIDEO_LUNGO`;
-una run lanciata a mano li sceglie dal menu.
+Orario e lingua di ogni uscita li legge `config.py` dal profilo del canale;
+il formato lo passa il workflow con `VIDEO_LUNGO`. Una run lanciata a mano li
+sceglie dal menu.
 
 Quattro caricamenti al giorno stanno sotto il tetto di YouTube, che e' di sei
 (la quota giornaliera dell'API e' 10.000 unita' e ogni caricamento ne costa
@@ -314,11 +328,18 @@ Quindi la pipeline parte di notte, dieci-tredici ore prima dell'uscita (`17 1`,
 chiede a YouTube di renderlo pubblico all'istante giusto: e' il campo
 `publishAt`, e vale al minuto.
 
-Per cambiare l'ora di uscita si cambia `ORARIO_USCITA` in
-`.github/workflows/samaritan.yml`, un valore per ciascun cron; i cron si
-toccano solo per allargare il margine. L'ora si calcola in ora italiana vera
-(`FUSO_USCITA`, default `Europe/Rome`), quindi al cambio di stagione non c'e'
-piu' niente da correggere a mano.
+I quattro cron sono quattro **partenze** fisse, numerate da 1 a 4; il
+workflow dice alla pipeline solo quale partenza e' (`USCITA_CRON`). Quale
+uscita copre ciascuna lo decide `profilo.py` (`abbina_cron`) a partire dalle
+`uscite` del profilo, controllando che ogni uscita cada fra
+`MARGINE_MINIMO_ORE` (8) e `ANTICIPO_PARTENZA_ORE` (16) ore dopo la sua
+partenza, con l'ora legale e senza. Una partenza che non ha un'uscita si ferma
+in pochi secondi nel job `uscita`, prima di installare qualunque cosa. Per
+cambiare un orario si cambia `canale.json`, non il workflow; i cron si toccano
+solo per allargare il margine, e in quel caso va aggiornato anche
+`profilo.CRON_USCITE` (un test li confronta). L'ora si calcola nel `fuso` del
+profilo (default `Europe/Rome`), quindi al cambio di stagione non c'e' niente
+da correggere a mano.
 
 Se la run arriva talmente in ritardo da superare l'ora di uscita, il video
 esce subito invece di aspettare il giorno dopo.
@@ -347,12 +368,15 @@ uscita ha gia' il suo video. Un video conta come pubblicato solo quando ha un
 `video_id`: una lavorazione morta prima del caricamento lascia l'uscita
 scoperta, che e' esattamente il caso in cui la riserva deve intervenire.
 
-L'elenco delle uscite sta in `orari.py` (`SLOT_GIORNALIERI`) e nei cron del
-workflow: sono due copie della stessa cosa, e un test controlla che dicano lo
-stesso.
+L'elenco delle uscite che la riserva controlla (`orari.slot_giornalieri()`)
+viene dallo stesso profilo delle partenze, quindi non possono divergere. Le
+uscite dopo le 22:30 italiane la riserva non le recupera: arriverebbe dopo.
 
 Le run lanciate a mano dalla tab Actions (dove puoi anche scegliere tema e
-visibilita') non programmano niente: escono subito.
+visibilita') escono subito, nella lingua scelta se il canale pubblica in
+quella lingua. Per rimpiazzare una partenza che non e' arrivata si scrive nel
+campo `slot` il numero dell'uscita nella giornata (1-4) o il suo orario
+(`18:00`): il video esce all'ora giusta e nella lingua di quell'uscita.
 
 ---
 
@@ -460,6 +484,8 @@ Cosa decide il profilo:
 | `materiale` | `steam` (trailer e screenshot ufficiali, solo per i videogiochi) o `stock` (solo clip Pexels senza diritti) |
 | `query_stock_riserva` | ricerche Pexels di riserva, in inglese |
 | `categoria_youtube` | la categoria dell'upload (20 Gaming, 26 Stile e consigli, 17 Sport...) |
+| `uscite` | da 1 a 4 uscite al giorno, ognuna `{"orario": "HH:MM", "lingua": "it"}`. Senza, due uscite (14:00 e 18:00) nella lingua delle ricerche; per il gaming quelle di Poppone TV |
+| `fuso` | il fuso degli orari delle uscite (default `Europe/Rome`) |
 
 Con `argomento` uguale a `gaming` il file eredita tutti i valori di Poppone TV
 e basta scrivere quelli da cambiare. Con qualsiasi altro argomento **non
@@ -481,6 +507,32 @@ resta nella chiave `gioco`, anche quando e' una ricetta: cambiarla vorrebbe
 dire buttare la cronologia gia' scritta.
 
 ---
+
+## Installazione per i clienti
+
+Chi compra Samaritan non apre un terminale: copia il repository dal modello e
+configura tutto da `installa/index.html`, una pagina statica che gira nel suo
+browser e parla solo con `api.github.com` e con i server OAuth di Google. Scrive
+`canale.json` con un commit (la prima volta azzera anche cronologia,
+`performance.json` e le clip di `clip_mie/`, che sono del modello, e spegne
+`promo.yml`), salva le chiavi nei Secrets cifrandole come chiede GitHub, fa il
+giro OAuth di Google per il refresh token e lancia un video di prova privato.
+La guida per il cliente e' [GUIDA_CLIENTE.md](GUIDA_CLIENTE.md).
+
+Da fare una volta sola, da chi possiede il repository modello:
+
+1. **Settings > General > Template repository**: acceso. Il passo 1 della
+   pagina apre `github.com/<modello>/generate`; il nome del modello e' la
+   costante `TEMPLATE_REPO` in cima alla pagina. Un modello privato si puo'
+   copiare solo da chi ci ha accesso.
+2. **Settings > Pages**: pubblica il ramo `main`. La pagina sara' su
+   `https://<utente>.github.io/<repository>/installa/`, ed e' quell'indirizzo
+   che il cliente registra su Google come URI di reindirizzamento: Google
+   accetta solo `https`. Su un repository privato GitHub Pages richiede un
+   piano a pagamento.
+
+`telegram/worker.js` resta di Poppone TV (ha il repository scritto dentro):
+i clienti ricevono gli avvisi Telegram, ma non comandano la pipeline dal bot.
 
 ## I Reel che vendono Samaritan (Instagram)
 
