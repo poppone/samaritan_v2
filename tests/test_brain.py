@@ -275,6 +275,41 @@ class TestDettagliInventati:
         assert "un glitch che salta l'acquisto" in prompt_visti[1][1]
         assert risultato["script"] == pulito
 
+    def test_dopo_due_invenzioni_sulla_stessa_notizia_si_cambia_notizia(self, monkeypatch):
+        """29 settembre 2026: una rassegna su GTA VI ha fatto inventare
+        dettagli a tutti e quattro i tentativi e l'uscita e' saltata."""
+        import json as _json
+        altra = {"titolo": "Hollow Knight Silksong sells a million copies",
+                 "fonte": "IGN", "link": "https://news.google.com/y",
+                 "apparizioni": 1, "punteggio": 8, "sul_tema": False}
+        su_altra = _json.loads(self._risposta(
+            "Hollow Knight Silksong just sold a million copies. A million "
+            "players waited years for this one, refreshing every trailer and "
+            "every rumor along the way. Now the number is here and it is "
+            "huge for a small team. Was it worth the wait for you, or did the "
+            "hype burn out? Tell me below, and follow Poppone TV for the next "
+            "twist in gaming."))
+        su_altra.update({"indice_notizia": 1, "gioco": "Hollow Knight Silksong",
+                         "titolo": "Silksong: a million players already"})
+        inventato = _json.dumps({"dettagli_inventati": ["un glitch"]})
+        prompt_visti, verifiche = [], []
+        monkeypatch.setattr(brain, "client", self._finto_client(
+            [self._risposta(), self._risposta(), self._risposta(),
+             _json.dumps(su_altra)],
+            [inventato, inventato, _json.dumps({"dettagli_inventati": []})],
+            prompt_visti, verifiche))
+        monkeypatch.setattr(brain, "recupera_trend_gaming_online",
+                            lambda **k: [dict(self.NOTIZIA), altra])
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: [])
+        monkeypatch.setattr(brain, "salva_in_cronologia", lambda r: None)
+        risultato = brain.genera_script_samaritan()
+        assert "Non usare le notizie [0]" not in prompt_visti[1][1]
+        assert "Non usare le notizie [0]" in prompt_visti[2][1]
+        # Il terzo tentativo ripropone la notizia vietata: scartato senza
+        # nemmeno chiamare la verifica.
+        assert len(verifiche) == 3
+        assert risultato["fonte"].startswith("Hollow Knight Silksong")
+
     def test_la_verifica_vale_anche_all_ultimo_tentativo(self, monkeypatch):
         # Con la verifica spenta sull'ultimo tentativo, nella prova del 28
         # settembre 2026 e' passato uno Short su GTA 6 nato da una notizia su
