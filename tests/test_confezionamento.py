@@ -1013,6 +1013,36 @@ class TestNotiziaPiuGrossa:
         assert notizie[0]["titolo"] == grossa
         assert notizie[0]["punteggio"] > notizie[-1]["punteggio"]
 
+    def test_il_gioco_precedente_esce_prima_del_taglio(self, monkeypatch):
+        """29 settembre 2026: le otto notizie piu' grosse erano tutte su GTA 6
+        dopo un video su GTA VI. Filtrando dopo il taglio non restava niente
+        di diverso, e l'uscita delle 18:00 e' saltata quattro volte."""
+        gta = [f"GTA 6, novita' numero {i} sul trailer" for i in range(10)]
+        altra = "Un gestionale indie riceve una patch di stabilita'"
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: [])
+        monkeypatch.setattr(
+            brain.requests, "get",
+            self._rss_per_ricerca({"videogiochi": gta + [altra]}, []),
+        )
+
+        notizie = brain.recupera_trend_gaming_online(
+            max_notizie=8, gioco_da_evitare="Grand Theft Auto VI")
+
+        assert [n["titolo"] for n in notizie] == [altra]
+
+    def test_se_ci_sono_solo_notizie_sul_gioco_precedente_restano(self, monkeypatch):
+        gta = [f"GTA 6, novita' numero {i} sul trailer" for i in range(3)]
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: [])
+        monkeypatch.setattr(
+            brain.requests, "get",
+            self._rss_per_ricerca({"videogiochi": gta}, []),
+        )
+
+        notizie = brain.recupera_trend_gaming_online(
+            gioco_da_evitare="Grand Theft Auto VI")
+
+        assert len(notizie) == 3
+
     def test_la_stessa_notizia_da_due_ricerche_non_si_sdoppia(self, monkeypatch):
         titolo = "Minecraft annuncia un nuovo aggiornamento"
         monkeypatch.setattr(brain, "carica_cronologia", lambda: [])

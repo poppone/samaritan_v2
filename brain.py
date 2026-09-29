@@ -541,7 +541,7 @@ def _aggiungi_sommari(notizie):
               f"{len(notizie)}.")
 
 
-def recupera_trend_gaming_online(max_notizie=8, tema=None):
+def recupera_trend_gaming_online(max_notizie=8, tema=None, gioco_da_evitare=""):
     """Scarica notizie gaming fresche e scarta quelle gia' sfruttate.
 
     Ritorna una lista di dict {titolo, fonte, link}: servono strutturate
@@ -551,6 +551,11 @@ def recupera_trend_gaming_online(max_notizie=8, tema=None):
     prima proprio quello, e le notizie trovate cosi' passano davanti a tutte
     le altre: senza, il modello riceveva le notizie del giorno e il tema come
     una riga in fondo, e sceglieva la notizia piu' grossa.
+
+    Con gioco_da_evitare (il gioco del video precedente) le notizie su quel
+    gioco escono prima del taglio a max_notizie, se ne resta almeno una su un
+    altro: il 29 settembre 2026 le otto piu' grosse erano tutte su GTA 6
+    dopo un video su GTA VI, e filtrare dopo il taglio non lasciava niente.
     """
     print(f"[Samaritan Search] Ricerca trend {profilo.attivo().argomento} reali...")
 
@@ -623,7 +628,15 @@ def recupera_trend_gaming_online(max_notizie=8, tema=None):
     # In ordine di importanza, non a caso: la piu' grossa arriva al modello
     # per prima. A parita' di punteggio l'ordine e' quello di arrivo.
     notizie = sorted(trovate.values(),
-                     key=lambda v: (not v["sul_tema"], -v["punteggio"]))[:max_notizie]
+                     key=lambda v: (not v["sul_tema"], -v["punteggio"]))
+    if gioco_da_evitare.strip():
+        altre = [n for n in notizie
+                 if not _gioco_nel_titolo(n["titolo"], gioco_da_evitare)]
+        if len(altre) >= MIN_NOTIZIE_ALTRO_GIOCO:
+            print(f"[Samaritan Search] Tolte {len(notizie) - len(altre)} "
+                  f"notizie su {gioco_da_evitare}, il gioco del video precedente.")
+            notizie = altre
+    notizie = notizie[:max_notizie]
 
     _aggiungi_sommari(notizie)
 
@@ -1572,12 +1585,19 @@ def genera_script_samaritan(tema=None):
     Ritorna un dict: titolo, script, query_video, descrizione, fonte, stile.
     """
     tema = (tema or "").strip()
-    notizie = recupera_trend_gaming_online(tema=tema)
-    formato = scegli_formato(notizie)
-
     cronologia = _stesso_formato(
         _stessa_lingua([_normalizza(i) for i in carica_cronologia()])
     )
+    # Il gioco si blocca solo sull'ultimo video, non su tutta la finestra:
+    # vedi _doppione_recente per il perche'.
+    # Un tema chiesto a mano vince: se chiede Cyberpunk subito dopo un video
+    # su Cyberpunk, vuole un altro video su Cyberpunk. Il 26 settembre 2026 la
+    # prova su "Cyberpunk 2077" e' stata scartata per questo ed e' uscito GTA VI.
+    ultima_voce = cronologia[-1] if cronologia else {}
+    gioco_precedente = "" if tema else ultima_voce.get("gioco", "")
+
+    notizie = recupera_trend_gaming_online(tema=tema, gioco_da_evitare=gioco_precedente)
+    formato = scegli_formato(notizie)
     ultimi_titoli = [v.get("titolo", "") for v in cronologia[-12:]]
 
     # Due liste dalla stessa fonte: al modello servono aperture leggibili da
@@ -1597,12 +1617,6 @@ def genera_script_samaritan(tema=None):
     notizie_gia_usate = sorted({r.get("fonte", "").strip() for r in recenti} - {""})
     fonti_recenti = {f.lower() for f in notizie_gia_usate}
 
-    # Il gioco si blocca solo sull'ultimo video, non su tutta la finestra:
-    # vedi _doppione_recente per il perche'.
-    # Un tema chiesto a mano vince: se chiede Cyberpunk subito dopo un video
-    # su Cyberpunk, vuole un altro video su Cyberpunk. Il 26 settembre 2026 la
-    # prova su "Cyberpunk 2077" e' stata scartata per questo ed e' uscito GTA VI.
-    gioco_precedente = "" if tema else (recenti[-1].get("gioco", "") if recenti else "")
     giochi_recenti = [gioco_precedente] if gioco_precedente.strip() else []
 
     # Le notizie sul gioco del video precedente vanno in fondo alla lista.
