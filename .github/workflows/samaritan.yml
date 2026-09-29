@@ -3,19 +3,22 @@ name: Samaritan Auto-Poster
 on:
   schedule:
     # ATTENZIONE: queste NON sono le ore di pubblicazione. GitHub fa partire le
-    # run schedulate in ritardo, da un'ora a tre e mezza, e il ritardo non si
-    # puo' prevedere. Quindi la pipeline parte con molto anticipo e il video
-    # esce all'ora giusta perche' YouTube lo pubblica da solo (publishAt, vedi
-    # orari.py). Cambiando questi cron si sposta solo il margine; per cambiare
-    # l'ora di uscita si cambia ORARIO_USCITA piu' sotto.
-    - cron: '30 7 * * *'          # per l'uscita delle 14:00 italiane
-    - cron: '30 11 * * *'         # per l'uscita delle 18:00 italiane
+    # run schedulate in ritardo e il ritardo non si puo' prevedere: il 28
+    # settembre 2026 e' stato di sei-otto ore e tutte e quattro le uscite sono
+    # arrivate tardi. Quindi la pipeline parte di notte, dieci-tredici ore
+    # prima, e il video esce all'ora giusta perche' YouTube lo pubblica da
+    # solo (publishAt, vedi orari.py). Il minuto 17 e' voluto: allo scoccare
+    # dell'ora GitHub e' piu' carico e ritarda di piu'. Cambiando questi cron
+    # si sposta solo il margine; per cambiare l'ora di uscita si cambia
+    # ORARIO_USCITA piu' sotto.
+    - cron: '17 1 * * *'          # per l'uscita delle 14:00 italiane
+    - cron: '17 3 * * *'          # per l'uscita delle 18:00 italiane
     # Fino al 27 settembre 2026 alle 20:00 usciva il video lungo 16:9: i tre
     # pubblicati hanno fatto 6, 0 e 0 visualizzazioni. Da allora e' un secondo
     # Short in inglese. Il lungo resta lanciabile a mano (lungo, o /lungo da
     # Telegram).
-    - cron: '30 13 * * *'         # per l'uscita delle 20:00, in inglese
-    - cron: '30 14 * * *'         # per l'uscita delle 21:00, in inglese
+    - cron: '17 5 * * *'          # per l'uscita delle 20:00, in inglese
+    - cron: '17 6 * * *'          # per l'uscita delle 21:00, in inglese
     # La riserva di fine giornata. Non produce un video suo: guarda quali
     # delle quattro uscite di oggi sono rimaste scoperte e rifa' la piu'
     # vecchia, una sola, nel formato che quell'uscita voleva. Se sono tutte a
@@ -39,6 +42,12 @@ on:
         default: 'it'
         type: choice
         options: [it, en]
+      slot:
+        description: 'Copri questa uscita, pubblicando all orario giusto (vuoto = pubblica subito)'
+        required: false
+        default: ''
+        type: choice
+        options: ['', '14:00', '18:00', '20:00', '21:00']
       recupero:
         description: 'Recupera un video saltato invece di farne uno nuovo'
         required: false
@@ -65,7 +74,7 @@ permissions:
 # stanno ciascuno in una coda propria: in coda con gli altri, un comando
 # arrivato mentre un'uscita programmata aspetta il suo turno la cancellerebbe.
 concurrency:
-  group: ${{ (github.event_name == 'workflow_dispatch' && !inputs.recupero) && format('samaritan-manuale-{0}', github.run_id) || (((github.event.schedule == '30 13 * * *') || inputs.lungo) && 'samaritan-lungo' || 'samaritan-publish') }}
+  group: ${{ (github.event_name == 'workflow_dispatch' && !inputs.recupero) && format('samaritan-manuale-{0}', github.run_id) || (((github.event.schedule == '17 5 * * *') || inputs.lungo) && 'samaritan-lungo' || 'samaritan-publish') }}
   cancel-in-progress: false
 
 jobs:
@@ -129,8 +138,9 @@ jobs:
           PRIVACY_STATUS: ${{ inputs.privacy || 'public' }}
           # Un orario di uscita per ciascun cron. La riserva e le run lanciate
           # a mano non programmano niente: escono subito, com'e' giusto sia
-          # per una prova sia per un'uscita gia' saltata.
-          ORARIO_USCITA: ${{ (github.event.schedule == '30 7 * * *' && '14:00') || (github.event.schedule == '30 11 * * *' && '18:00') || (github.event.schedule == '30 13 * * *' && '20:00') || (github.event.schedule == '30 14 * * *' && '21:00') || '' }}
+          # per una prova sia per un'uscita gia' saltata. Una run lanciata a
+          # mano con 'slot' fa invece le veci del cron di quell'uscita.
+          ORARIO_USCITA: ${{ (github.event.schedule == '17 1 * * *' && '14:00') || (github.event.schedule == '17 3 * * *' && '18:00') || (github.event.schedule == '17 5 * * *' && '20:00') || (github.event.schedule == '17 6 * * *' && '21:00') || inputs.slot || '' }}
           FUSO_USCITA: 'Europe/Rome'
           # Quale uscita sta coprendo questa lavorazione. Sui tre cron normali
           # e' lo stesso valore di ORARIO_USCITA, ma i due campi non sono la
@@ -138,7 +148,7 @@ jobs:
           # SLOT serve a non farne due per la stessa uscita quando una
           # lavorazione arriva in ritardo. Sulla riserva resta vuoto: quale
           # uscita recuperare lo decide lei leggendo la cronologia.
-          SLOT: ${{ (github.event.schedule == '30 7 * * *' && '14:00') || (github.event.schedule == '30 11 * * *' && '18:00') || (github.event.schedule == '30 13 * * *' && '20:00') || (github.event.schedule == '30 14 * * *' && '21:00') || '' }}
+          SLOT: ${{ (github.event.schedule == '17 1 * * *' && '14:00') || (github.event.schedule == '17 3 * * *' && '18:00') || (github.event.schedule == '17 5 * * *' && '20:00') || (github.event.schedule == '17 6 * * *' && '21:00') || inputs.slot || '' }}
           # Quale dei due formati produrre. Vuoto = Short, com'e' sempre
           # stato: tutto il resto della pipeline e' identico.
           VIDEO_LUNGO: ${{ (inputs.lungo && '1') || '' }}
@@ -147,12 +157,12 @@ jobs:
           RECUPERO: ${{ (github.event.schedule == '30 20 * * *' && '1') || (inputs.recupero && '1') || '' }}
           # I video delle 20:00 e delle 21:00 sono in inglese: stesso canale,
           # pubblico diverso. Le run lanciate a mano scelgono dal menu.
-          LINGUA: ${{ github.event_name == 'schedule' && ((github.event.schedule == '30 13 * * *' || github.event.schedule == '30 14 * * *') && 'en' || 'it') || inputs.lingua || 'it' }}
+          LINGUA: ${{ github.event_name == 'schedule' && ((github.event.schedule == '17 5 * * *' || github.event.schedule == '17 6 * * *') && 'en' || 'it') || ((inputs.slot == '20:00' || inputs.slot == '21:00') && 'en') || inputs.lingua || 'it' }}
           NOME_CANALE: ${{ vars.NOME_CANALE || 'Poppone TV' }}
           # Le parentesi contano: in GitHub Actions && lega piu' di ||,
           # e senza di quelle l'espressione restituisce 'true' invece del
           # nome della voce.
-          VOCE_TTS: ${{ ((github.event_name == 'schedule' && (github.event.schedule == '30 13 * * *' || github.event.schedule == '30 14 * * *')) || (inputs.lingua == 'en')) && (vars.VOCE_TTS_EN || 'en-US-AndrewNeural') || (vars.VOCE_TTS || 'it-IT-DiegoNeural') }}
+          VOCE_TTS: ${{ ((github.event_name == 'schedule' && (github.event.schedule == '17 5 * * *' || github.event.schedule == '17 6 * * *')) || inputs.slot == '20:00' || inputs.slot == '21:00' || (inputs.lingua == 'en')) && (vars.VOCE_TTS_EN || 'en-US-AndrewNeural') || (vars.VOCE_TTS || 'it-IT-DiegoNeural') }}
           # La riserva sceglie la lingua solo a lavorazione iniziata, quindi
           # le servono tutt'e due le voci gia' pronte.
           VOCE_TTS_IT: ${{ vars.VOCE_TTS || 'it-IT-DiegoNeural' }}

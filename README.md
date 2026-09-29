@@ -308,9 +308,9 @@ notizia grossa di quello italiano, perche' parla ad altra gente. Ogni voce di
 l'hanno, contano come italiane.
 
 L'orario NON viene dal cron. GitHub fa partire le run schedulate in ritardo, e
-il ritardo non si puo' prevedere: fra il 17 e il 19 settembre 2026 e' andato da
-un'ora e quaranta a tre ore e mezza. Quindi la pipeline parte con circa quattro
-ore e mezza di anticipo (`30 7`, `30 11`, `30 13` e `30 14` UTC), carica il video privato e
+il ritardo non si puo' prevedere: il 28 settembre 2026 e' arrivato a otto ore.
+Quindi la pipeline parte di notte, dieci-tredici ore prima dell'uscita (`17 1`,
+`17 3`, `17 5` e `17 6` UTC), carica il video privato e
 chiede a YouTube di renderlo pubblico all'istante giusto: e' il campo
 `publishAt`, e vale al minuto.
 

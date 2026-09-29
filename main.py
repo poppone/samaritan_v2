@@ -53,6 +53,7 @@ def prepara_uscita():
             return False
         slot, lingua, formato = scelta
         config.SLOT = slot
+        config.USCITA = orari.uscita_da_coprire(slot, recupero=True)
         config.LINGUA = lingua
         config.VOCE_TTS = config.VOCE_TTS_EN if lingua == "en" else config.VOCE_TTS_IT
         # Il formato va riapplicato PRIMA di qualunque conto: la riserva non
@@ -71,6 +72,7 @@ def prepara_uscita():
         notifier.notifica_salto(f"L'uscita delle {config.SLOT} e' gia' coperta da "
                                 f"un video: questa lavorazione non ne fa un secondo.")
         return False
+    config.USCITA = orari.uscita_da_coprire(config.SLOT)
     return True
 
 

@@ -380,6 +380,9 @@ def salva_in_cronologia(dati):
         # coprono niente. Serve a orari.gia_pubblicato() per non far uscire
         # due video sulla stessa uscita quando una run arriva in ritardo.
         "slot": (config.SLOT or "").strip(),
+        # L'istante di quella uscita: con i cron che partono di notte, l'ora
+        # in cui il video e' scritto non basta a dire di che giorno e'.
+        "uscita": config.USCITA,
         # 'short' oppure 'lungo'. Serve alla lavorazione di recupero, che deve
         # sapere che formato rifare, e ai conti sulle performance, dove un
         # video da otto minuti e uno da trenta secondi non si sommano.

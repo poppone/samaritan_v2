@@ -153,7 +153,7 @@ class TestWorkflowCollegato:
     def test_ogni_cron_ha_il_suo_orario_di_uscita(self):
         testo = self._workflow()
         assert "ORARIO_USCITA:" in testo
-        for cron in ("'30 7 * * *'", "'30 11 * * *'", "'30 14 * * *'"):
+        for cron in ("'17 1 * * *'", "'17 3 * * *'", "'17 5 * * *'", "'17 6 * * *'"):
             assert cron in testo, cron
         for orario in ("'14:00'", "'18:00'", "'21:00'"):
             assert orario in testo, orario
@@ -164,12 +164,14 @@ class TestWorkflowCollegato:
         testo = self._workflow()
         assert "LINGUA:" in testo
         riga = [r for r in testo.splitlines() if r.strip().startswith("LINGUA:")][0]
-        assert "'30 14 * * *'" in riga and "'en'" in riga, riga
+        assert "'17 6 * * *'" in riga and "'en'" in riga, riga
 
-    def test_i_cron_partono_con_almeno_quattro_ore_di_margine(self):
-        """Il ritardo peggiore misurato e' tre ore e mezza: se il cron non
-        parte con margine, la run finisce dopo l'ora di uscita e il video
-        esce in ritardo invece che puntuale."""
+    def test_i_cron_partono_con_almeno_dieci_ore_di_margine(self):
+        """Il 28 settembre 2026 GitHub ha fatto partire le quattro
+        lavorazioni con sei-otto ore di ritardo: se il cron non parte con
+        margine, la run finisce dopo l'ora di uscita e il video esce in
+        ritardo invece che puntuale. Ma non oltre ANTICIPO_PARTENZA_ORE,
+        altrimenti la lavorazione si crede di ieri."""
         import re
         testo = self._workflow()
         cron = re.findall(r"cron: '(\d+) (\d+) \* \* \*'", testo)
@@ -182,7 +184,10 @@ class TestWorkflowCollegato:
         assert len(produzione) == 4, cron
         for (minuto, ora), uscita_utc in zip(produzione, (12, 16, 18, 19)):
             partenza = int(ora) + int(minuto) / 60
-            assert uscita_utc - partenza >= 4, (ora, minuto, uscita_utc)
+            assert uscita_utc - partenza >= 10, (ora, minuto, uscita_utc)
+            # D'inverno l'uscita e' un'ora piu' tardi in UTC.
+            assert uscita_utc + 1 - partenza <= orari.ANTICIPO_PARTENZA_ORE, (
+                ora, minuto, uscita_utc)
 
     def test_il_workflow_e_l_elenco_delle_uscite_dicono_la_stessa_cosa(self):
         """orari.SLOT_GIORNALIERI e i cron sono due copie della stessa
@@ -235,6 +240,17 @@ class TestWorkflowCollegato:
         assert "schedule" not in riga, riga
         assert "inputs.lungo" in riga, riga
         assert all(formato == "short" for _, _, formato in orari.SLOT_GIORNALIERI)
+
+    def test_una_run_a_mano_puo_coprire_un_uscita(self):
+        """Per rimpiazzare un cron che non e' partito, pubblicando comunque
+        all'ora giusta e nella lingua giusta."""
+        righe = self._workflow().splitlines()
+        for campo in ("ORARIO_USCITA:", "SLOT:"):
+            riga = [r for r in righe if r.strip().startswith(campo)][0]
+            assert "inputs.slot" in riga, riga
+        for campo in ("LINGUA:", "VOCE_TTS:"):
+            riga = [r for r in righe if r.strip().startswith(campo)][0]
+            assert "inputs.slot == '20:00'" in riga and "inputs.slot == '21:00'" in riga, riga
 
     def test_la_riserva_ha_tutt_e_due_le_voci(self):
         """Sceglie la lingua a lavorazione iniziata, quindi non puo' contare
@@ -328,6 +344,36 @@ class TestUscitaGiaCoperta:
                          datetime(2026, 12, 15, 12, 30, tzinfo=ROMA)):
             ieri = partenza.replace(day=partenza.day - 1, hour=18, minute=0)
             assert orari.gia_pubblicato("18:00", [_voce("18:00", ieri)], partenza) is False
+
+    def test_partendo_di_notte_guarda_l_uscita_di_oggi(self):
+        """Dal 29 settembre 2026 il cron delle 14:00 parte alle 3:17: il
+        video delle 14:00 di ieri non deve fermarlo."""
+        for partenza in (datetime(2026, 9, 29, 3, 17, tzinfo=ROMA),
+                         datetime(2026, 12, 15, 2, 17, tzinfo=ROMA)):
+            ieri = partenza.replace(day=partenza.day - 1, hour=17, minute=45)
+            voce = _voce("14:00", ieri)
+            voce["uscita"] = int(ieri.replace(hour=14, minute=0).timestamp())
+            assert orari.gia_pubblicato("14:00", [voce], partenza) is False
+
+    def test_il_video_scritto_di_notte_copre_l_uscita_del_giorno(self):
+        """Scritto alle 3:30 per le 14:00: fuori dalla vecchia finestra, ma
+        la riga dice quale uscita copre."""
+        partenza = datetime(2026, 9, 29, 3, 17, tzinfo=ROMA)
+        scritto = partenza.replace(minute=30)
+        voce = _voce("14:00", scritto)
+        voce["uscita"] = orari.uscita_da_coprire("14:00", partenza)
+        assert voce["uscita"] == int(datetime(2026, 9, 29, 14, 0, tzinfo=ROMA).timestamp())
+        dopo = datetime(2026, 9, 29, 11, 0, tzinfo=ROMA)
+        assert orari.gia_pubblicato("14:00", [voce], dopo) is True
+        assert orari.slot_da_recuperare([voce], ADESSO.replace(day=29)) == (
+            "18:00", "it", "short")
+
+    def test_la_riserva_scrive_l_uscita_passata(self):
+        ora = datetime(2026, 9, 29, 0, 10, tzinfo=ROMA)
+        assert orari.uscita_da_coprire("18:00", ora, recupero=True) == int(
+            datetime(2026, 9, 28, 18, 0, tzinfo=ROMA).timestamp())
+        assert orari.uscita_da_coprire("", ora) is None
+        assert orari.uscita_da_coprire("mezzogiorno", ora) is None
 
     def test_una_lavorazione_morta_prima_dell_upload_non_copre(self):
         """Senza video_id il video non e' mai arrivato sul canale: se
