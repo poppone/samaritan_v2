@@ -19,6 +19,7 @@ from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
 
 import config
+import profilo
 
 # yt-analytics.readonly serve ad analyst.py per leggere la retention reale.
 SCOPES = [
@@ -136,7 +137,8 @@ def carica_short(filepath, titolo, descrizione, tag=None, privacy=None,
             "title": titolo[:100],
             "description": descrizione[:5000],
             "tags": tag[:15],
-            "categoryId": "20",                    # 20 = Gaming
+            # 20 = Gaming per Poppone TV; la decide il profilo del canale.
+            "categoryId": profilo.attivo().categoria_youtube,
         },
         "status": stato,
     }

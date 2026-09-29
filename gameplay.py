@@ -19,6 +19,10 @@ Catena delle fonti:
   2. Screenshot ufficiali Steam animati in Ken Burns  (gioco esatto, statico)
   3. Pexels  (stock generico, solo se il gioco non e' identificabile)
 
+Un canale che non parla di videogiochi (profilo con materiale 'stock', vedi
+profilo.py) salta i passi 0-2: su Steam ci sono solo giochi, e cercarci una
+ricetta darebbe un gioco a caso. Resta Pexels, piu' le clip girate in casa.
+
 Sullo stesso gioco non esce due volte lo stesso materiale: quanti Short sono
 gia' usciti su quel titolo decide da che punto dell'elenco si comincia a
 pescare trailer e screenshot, e da che secondo del trailer si taglia. Senza,
@@ -37,6 +41,7 @@ from urllib.parse import quote, urljoin
 import requests
 
 import config
+import profilo
 
 STEAM_SEARCH = "https://steamcommunity.com/actions/SearchApps/{}"
 STEAM_DETAILS = "https://store.steampowered.com/api/appdetails"
@@ -643,6 +648,16 @@ def scarica_screenshot_steam(appid, dati, quanti=4, salto=0):
 # ===========================================================================
 # PUNTO DI INGRESSO
 # ===========================================================================
+def _usa_steam():
+    """Si va sugli store dei giochi? Serve il si' di config E del profilo.
+
+    USA_STEAM e' l'interruttore di sempre per spegnere Steam a mano; il
+    profilo dice se il canale parla di videogiochi. Un canale di cucina su
+    Steam non ci deve andare nemmeno con USA_STEAM acceso.
+    """
+    return bool(config.USA_STEAM) and profilo.attivo().usa_steam
+
+
 def procura_materiale(gioco=None, query_pexels="gameplay", minimo=3):
     """Ritorna una lista di sorgenti [{tipo, path, gioco}] per il montaggio.
 
@@ -653,8 +668,9 @@ def procura_materiale(gioco=None, query_pexels="gameplay", minimo=3):
     nome_ufficiale = None
     dati_gioco = None
     salto = video_gia_fatti(gioco)
+    usa_steam = _usa_steam()
 
-    pagina_ufficiale = gioco_con_pagina_ufficiale(gioco) if config.USA_STEAM else None
+    pagina_ufficiale = gioco_con_pagina_ufficiale(gioco) if usa_steam else None
     if pagina_ufficiale:
         nome_ufficiale = PAGINE_UFFICIALI[pagina_ufficiale]["nome"]
         if salto:
@@ -664,7 +680,7 @@ def procura_materiale(gioco=None, query_pexels="gameplay", minimo=3):
                 pagina_ufficiale, config.STEAM_MAX_TRAILER, salto):
             sorgenti.append({"tipo": "video", "path": percorso,
                              "gioco": nome_ufficiale})
-    elif gioco and config.USA_STEAM:
+    elif gioco and usa_steam:
         appid, nome_ufficiale = cerca_gioco_steam(gioco)
         if appid:
             dati = dettagli_gioco(appid)

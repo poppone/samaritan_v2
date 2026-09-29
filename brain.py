@@ -23,6 +23,7 @@ import requests
 from groq import Groq
 
 import config
+import profilo
 
 client = Groq(api_key=config.GROQ_API_KEY)
 
@@ -119,13 +120,8 @@ SECONDA_PERSONA = frozenset((
     "immagina", "dimmi", "fidati", "preparati", "smettila",
 ))
 
-# Dove cercare le notizie. Prima ce n'era una sola, e per giunta stretta
-# ("quando esce aggiornamento"), quindi il pescato era fatto soprattutto di
-# aggiornamenti minori. I video che su questo canale hanno fatto numeri erano
-# invece notizie enormi del giorno: GTA 6, Sora in Fortnite, Fortnite x
-# Kingdom Hearts. Piu' reti in acqua, e poi si sceglie (vedi
-# _punteggio_notizia): l'argomento e' l'unica variabile che separa i video
-# andati bene da quelli morti.
+# Dove cercare le notizie lo dice il profilo del canale (profilo.py, voce
+# 'ricerche'), perche' cambia con l'argomento del canale.
 # Quante voci leggere da ogni ricerca prima di filtrare.
 VOCI_PER_RICERCA = 15
 
@@ -138,20 +134,8 @@ VOCI_PER_RICERCA = 15
 SOGLIA_STESSA_NOTIZIA = 0.5
 MAX_CARATTERI_SOMMARIO = 400
 
-# I giochi e le piattaforme che muovono pubblico da soli. E' una lista scritta
-# a mano e va tenuta aggiornata: non esiste un modo di dedurla dai feed, e
-# sbagliarla per difetto costa poco (la notizia resta in lista, solo piu' in
-# basso) mentre un elenco automatico sbagliato per eccesso spingerebbe in cima
-# la roba sbagliata.
-GIOCHI_GROSSI = (
-    "gta", "grand theft auto", "rockstar", "fortnite", "call of duty",
-    "warzone", "minecraft", "roblox", "ea fc", "fifa", "elden ring",
-    "zelda", "mario", "pokemon", "the last of us", "god of war",
-    "cyberpunk", "assassin", "red dead", "valorant", "league of legends",
-    "counter-strike", "counter strike", "overwatch", "apex legends",
-    "battlefield", "silksong", "hollow knight", "steam", "playstation",
-    "xbox", "nintendo switch", "game pass",
-)
+# I nomi che muovono pubblico da soli (per Poppone TV: GTA, Fortnite, le
+# console) stanno nel profilo del canale, voce 'nomi_grossi'.
 
 # Parole che dicono "questa notizia la gente la sta gia' cercando". Non sono
 # parole a effetto da mettere nel titolo: servono solo a mettere in ordine le
@@ -167,12 +151,7 @@ LINGUE = {
         "seconda_persona": SECONDA_PERSONA,
         "rss": "hl=it&gl=IT&ceid=IT:it",
         "bing": "setlang=it-IT&cc=IT",
-        "ricerche": (
-            "videogiochi",
-            "videogiochi quando esce aggiornamento",
-            'GTA 6 OR Fortnite OR "Call of Duty" OR Minecraft OR Roblox',
-            "videogioco annuncio OR uscita OR gratis OR leak",
-        ),
+        # Le ricerche di notizie le aggiunge _lingua() dal profilo del canale.
         "parole_calde": (
             "esce", "uscita", "data", "annuncio", "annunciato", "svelato",
             "confermato", "gratis", "gratuito", "leak", "trapelato",
@@ -195,12 +174,6 @@ LINGUE = {
         )),
         "rss": "hl=en-US&gl=US&ceid=US:en",
         "bing": "setlang=en-US&cc=US",
-        "ricerche": (
-            "video games",
-            "video game release date OR free OR leak",
-            'GTA 6 OR Fortnite OR "Call of Duty" OR Minecraft OR Roblox',
-            "gaming news announcement OR update",
-        ),
         "parole_calde": (
             "release", "releases", "launch", "date", "announced",
             "announcement", "revealed", "confirmed", "free", "leak",
@@ -217,8 +190,19 @@ def _lingua():
     Si legge da config a ogni chiamata e non una volta all'avvio: la lingua
     cambia da una run all'altra (il video delle 21:00 e' in inglese) e i
     test la cambiano sotto i piedi.
+
+    Le ricerche di notizie arrivano dal profilo del canale, perche' dipendono
+    da cosa parla il canale oltre che dalla lingua; le parole calde pure, se
+    il profilo ne ha di sue.
     """
-    return LINGUE.get((config.LINGUA or "it").lower(), LINGUE["it"])
+    codice = (config.LINGUA or "it").lower()
+    if codice not in LINGUE:
+        codice = "it"
+    p = profilo.attivo()
+    regole = dict(LINGUE[codice])
+    regole["ricerche"] = p.ricerche_per(codice)
+    regole["parole_calde"] = p.parole_calde_per(codice) or regole["parole_calde"]
+    return regole
 
 
 def _lingua_di(voce):
@@ -321,26 +305,24 @@ _PAROLE_DEBOLI = {
     "quella", "tra", "fra", "senza", "dal", "dalla", "suo", "sua", "loro",
 }
 
-# Tema in hashtag per ogni formato: il primo hashtag della descrizione e'
-# l'unico che YouTube mostra sopra al titolo, quindi non va sprecato.
-TEMA_PER_FORMATO = {
-    "VIDEO_LUNGO": "gamingita",
-    "VIRAL_HOOK_NEWS": "newsgaming",
-    "MYTH_BUSTING_VIRAL": "rumor",
-    "EASTER_EGG_SECRET": "easteregg",
-    "SEAMLESS_LOOP_FACTS": "curiosita",
-    "DONT_DO_THIS": "consigli",
-    "TIER_LIST_LAMPO": "tierlist",
-    "DOMANDA_AL_PUBBLICO": "gamingita",
-}
+# Il tema in hashtag di ogni formato e i tag fissi di ogni video stanno nel
+# profilo del canale (voci 'hashtag_formato', 'tag_fissi', 'tag_fissi_lungo'):
+# per un canale di cucina '#newsgaming' sarebbe un hashtag sbagliato.
 
-# Tag presenti su ogni video. Da soli pesano poco sul ranking, ma cinque tag
-# IDENTICI su ogni upload sono una delle impronte che fanno riconoscere un
-# canale automatizzato: per questo costruisci_tag() ne aggiunge di variabili.
-TAG_FISSI = ["gaming ita", "videogiochi", "shorts ita", "curiosita gaming"]
-# Sul video lungo 'shorts ita' e' un tag sbagliato, e i due che lo
-# sostituiscono dicono a YouTube di che tipo di video si tratta.
-TAG_FISSI_LUNGO = ["gaming ita", "videogiochi", "recensione", "guida gaming"]
+
+def _descrizione_formato(formato):
+    """Come si descrive il formato al modello: quella del profilo se ce l'ha.
+
+    Le descrizioni di FORMATI_VIDEO sono scritte per i videogiochi ("nascosto
+    da uno sviluppatore"); un profilo di un altro argomento le sostituisce.
+    """
+    return (profilo.attivo().formati.get(formato)
+            or FORMATI_VIDEO[formato]["descrizione"])
+
+
+def _tema_formato(stile):
+    """Il tema in hashtag del formato, senza '#', o stringa vuota."""
+    return profilo.attivo().hashtag_formato.get(stile or "", "")
 
 
 # ===========================================================================
@@ -453,7 +435,7 @@ def _punteggio_notizia(titolo, apparizioni=1, cercate=frozenset()):
     """
     testo = _senza_accenti(titolo or "").lower()
     punti = 0
-    if any(g in testo for g in GIOCHI_GROSSI):
+    if any(g in testo for g in profilo.attivo().nomi_grossi):
         punti += PUNTI_GIOCO_GROSSO
     calde = sum(1 for parola in _lingua()["parole_calde"] if parola in testo)
     punti += min(calde, MAX_PAROLE_CALDE) * PUNTI_PAROLA_CALDA
@@ -564,7 +546,7 @@ def recupera_trend_gaming_online(max_notizie=8, tema=None):
     le altre: senza, il modello riceveva le notizie del giorno e il tema come
     una riga in fondo, e sceglieva la notizia piu' grossa.
     """
-    print("[Samaritan Search] Ricerca trend gaming reali...")
+    print(f"[Samaritan Search] Ricerca trend {profilo.attivo().argomento} reali...")
 
     # Cosa cerca davvero il pubblico di questo canale. Importato qui dentro e
     # non in cima al file: analyst importa brain, e in cima si avviterebbero.
@@ -810,14 +792,20 @@ def _pulisci_nome_gioco(gioco):
 
     Scarta i valori generici che il modello a volte restituisce al posto di un
     titolo vero ('videogiochi', 'gaming'): cercarli su Steam darebbe risultati
-    casuali, meglio ripiegare direttamente sullo stock.
+    casuali, meglio ripiegare direttamente sullo stock. Per un canale di un
+    altro argomento vale lo stesso con le sue parole ('ricetta', 'cucina'):
+    finirebbero come nome nel titolo e nei tag.
     """
     g = re.sub(r"[\"'`]", "", gioco).strip()
     g = re.sub(r"\s+", " ", g)
     if len(g) < 3 or len(g) > 60:
         return ""
-    if g.lower() in {"videogiochi", "gaming", "gioco", "videogioco",
-                     "games", "game", "nessuno", "n/a", "none", "vari"}:
+    p = profilo.attivo()
+    generici = {"videogiochi", "gaming", "gioco", "videogioco",
+                "games", "game", "nessuno", "n/a", "none", "vari"}
+    generici |= {v.strip().lower() for v in (
+        p.argomento, p.descrizione_argomento, p.soggetto, p.soggetto_plurale)}
+    if g.lower() in generici:
         return ""
     return g
 
@@ -991,8 +979,8 @@ def costruisci_hashtag(dati, massimo=3):
     """
     candidati = [
         _hashtag(dati.get("gioco", "")),
-        _hashtag(TEMA_PER_FORMATO.get(dati.get("stile", ""), "")),
-        "#gamingita",
+        _hashtag(_tema_formato(dati.get("stile", ""))),
+        _hashtag(profilo.attivo().hashtag_canale),
     ]
     visti, risultato = set(), []
     for h in candidati:
@@ -1008,7 +996,8 @@ def costruisci_tag(dati, massimo=15, max_caratteri=450):
     YouTube accetta 500 caratteri di tag in totale e oltre quella soglia
     rifiuta l'upload intero, non i tag in eccesso: qui si taglia a 450.
     """
-    tag = list(TAG_FISSI_LUNGO if config.VIDEO_LUNGO else TAG_FISSI)
+    p = profilo.attivo()
+    tag = list(p.tag_fissi_lungo if config.VIDEO_LUNGO else p.tag_fissi)
     if config.NOME_CANALE:
         tag.append(config.NOME_CANALE.lower())
 
@@ -1018,7 +1007,7 @@ def costruisci_tag(dati, massimo=15, max_caratteri=450):
         parole = gioco.split()
         if len(parole) > 1:
             tag.append(" ".join(parole[:-1]).lower())   # la saga senza il numero
-        tema = TEMA_PER_FORMATO.get(dati.get("stile", ""), "")
+        tema = _tema_formato(dati.get("stile", ""))
         if tema:
             tag.append(f"{gioco.lower()} {tema}")
 
@@ -1103,7 +1092,8 @@ def costruisci_descrizione(dati, materiale=None, capitoli=""):
     )
     cosa = "Altri video" if config.VIDEO_LUNGO else "Altri Shorts"
     parti.append(
-        f"\n{cosa} gaming ogni giorno su {config.NOME_CANALE}: "
+        f"\n{cosa} {profilo.attivo().argomento} ogni giorno su "
+        f"{config.NOME_CANALE}: "
         f"youtube.com/{config.HANDLE_CANALE}"
     )
     parti.append("\n" + " ".join(costruisci_hashtag(dati)))
@@ -1163,10 +1153,35 @@ def testo_miniatura(titolo, massimo_parole=4):
 # ===========================================================================
 # GENERAZIONE
 # ===========================================================================
+def _esempi(voci):
+    """" (es: 'a', 'b')" da mettere in un prompt, vuoto se non ci sono esempi."""
+    return f" (es: {profilo.Profilo.elenco(voci)})" if voci else ""
+
+
+def completa_query_video(query):
+    """La ricerca delle clip stock, pronta per Pexels.
+
+    Per i videogiochi si aggiunge 'gameplay', come si e' sempre fatto: senza,
+    Pexels risponde con gente seduta davanti a uno schermo. Per ogni altro
+    argomento la parola sbaglierebbe la ricerca, e una query vuota ripiega
+    sulla prima ricerca di riserva del profilo.
+    """
+    p = profilo.attivo()
+    if not p.videogiochi:
+        return query.strip() or p.query_stock_riserva[0]
+    if "gameplay" not in query.lower():
+        query = f"{query} gameplay"
+    return query
+
+
 def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti,
                               aperture_recenti=(), giochi_recenti=(),
                               notizie_gia_usate=(), schemi_recenti=()):
     meta = FORMATI_VIDEO[formato]
+    # Di cosa parla il canale. Senza canale.json sono i videogiochi e il
+    # prompt esce identico, parola per parola, a quello di sempre.
+    p = profilo.attivo()
+    s = p.soggetto
 
     blocco_notizie = "NESSUNA notizia fresca disponibile."
     if notizie:
@@ -1191,7 +1206,7 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti,
         "elencate sopra. Non inventare leak, date di uscita o dichiarazioni. "
         "Indica l'indice della notizia usata nel campo 'indice_notizia'.\n"
         if meta["richiede_fatto"] else
-        "VINCOLO DI VERIDICITA': usa solo fatti gaming storici e verificabili. "
+        f"VINCOLO DI VERIDICITA': usa solo fatti {p.argomento} storici e verificabili. "
         "Se non sei certo di un dettaglio, NON inserirlo. Meglio generico che falso. "
         "Imposta 'indice_notizia' a -1.\n"
     )
@@ -1203,22 +1218,32 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti,
     # saltava l'acquisto, chiuso da Microsoft in poche ore: niente di tutto
     # questo stava nel titolo. Vale per ogni formato, perche' anche quelli
     # che non richiedono una notizia a volte se ne prendono una.
+    # L'esempio e' un caso vero di questo canale e parla di GTA 6: a un
+    # canale di cucina insegnerebbe solo che esiste GTA 6.
+    esempio_invenzione = (
+        " Esempio di errore da non "
+        "ripetere: dal titolo 'These Xbox Players Got GTA 6 For Free The Hard "
+        "Way' uno script si e' inventato un glitch che saltava l'acquisto e "
+        "Microsoft che lo chiudeva in poche ore."
+        if p.videogiochi else ""
+    )
     vincolo_titolo = (
         "SOLO TITOLO E SOMMARIO: di ogni notizia conosci SOLO il titolo e, "
         "quando c'e', il sommario scritti qui sopra. Se lo Short usa una "
         "notizia, puo' affermare come fatto solo cio' che titolo e sommario "
-        "dicono. Parla del gioco di cui parla la notizia, non di un altro "
-        "gioco nominato solo come paragone. Come e' successo, quando, quante persone, "
+        f"dicono. Parla {p.g('del')} {s} di cui parla la notizia, non di "
+        f"{p.g('un_altro')} {s} nominat{p.g('o')} solo come paragone. Come "
+        "e' successo, quando, quante persone, "
         "quanto e' durato, chi ha reagito e come e' andata a finire NON li "
         "sai: non scriverli, nemmeno per rendere la storia piu' forte. Il "
-        "resto dei secondi riempilo con il perche' la notizia conta per chi "
-        "gioca, con quello che e' noto da sempre su quel gioco e con una "
+        "resto dei secondi riempilo con il perche' la notizia conta per "
+        f"{p.pubblico}, con quello che e' noto da sempre su {p.g('quel')} {s} "
+        "e con una "
         "domanda al pubblico. Se il titolo lascia un dubbio, trasformalo in "
-        "domanda invece di risolverlo inventando. Esempio di errore da non "
-        "ripetere: dal titolo 'These Xbox Players Got GTA 6 For Free The Hard "
-        "Way' uno script si e' inventato un glitch che saltava l'acquisto e "
-        "Microsoft che lo chiudeva in poche ore.\n"
-        "MAI suggerire glitch, hack o trucchi per avere giochi o contenuti a "
+        "domanda invece di risolverlo inventando."
+        f"{esempio_invenzione}\n"
+        "MAI suggerire glitch, hack o trucchi per avere "
+        f"{p.soggetto_plurale} o contenuti a "
         "pagamento senza pagare: e' contenuto ingannevole per YouTube.\n"
         if notizie else ""
     )
@@ -1230,7 +1255,8 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti,
     if aperture_recenti:
         righe_ripetizioni.append(
             "11. NON aprire lo script come questi video recenti. Cambia proprio "
-            "le prime parole, non basta cambiare il gioco nominato:\n"
+            f"le prime parole, non basta cambiare {p.g('il')} {s} "
+            f"nominat{p.g('o')}:\n"
             + "\n".join(f"   - \"{a}...\"" for a in aperture_recenti)
         )
     if schemi_recenti:
@@ -1245,7 +1271,8 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti,
     if giochi_recenti or notizie_gia_usate:
         vietati = []
         if giochi_recenti:
-            vietati.append(f"giochi: {json.dumps(list(giochi_recenti), ensure_ascii=False)}")
+            vietati.append(f"{p.soggetto_plurale}: "
+                           f"{json.dumps(list(giochi_recenti), ensure_ascii=False)}")
         if notizie_gia_usate:
             vietati.append(f"notizie: {json.dumps(list(notizie_gia_usate), ensure_ascii=False)}")
         righe_ripetizioni.append(
@@ -1256,18 +1283,55 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti,
     if blocco_ripetizioni:
         blocco_ripetizioni += "\n"   # la riga vuota prima di "Rispondi..."
 
+    # Il campo 'gioco' ha due mestieri diversi a seconda del materiale. Con
+    # Steam e' la chiave per scaricare i trailer ufficiali, quindi deve essere
+    # il nome esatto dello store; con lo stock serve solo a titolo, tag e
+    # hashtag, e la query video diventa l'unica cosa che decide le immagini.
+    if p.usa_steam:
+        regole_materiale = (
+            "6. GIOCO: il titolo ESATTO e UFFICIALE del videogioco di cui parla lo "
+            f"Short, come appare sullo store{_esempi(p.esempi_soggetto)}. "
+            "Serve a scaricare gameplay reale di quel gioco: "
+            "niente abbreviazioni, niente nomi di saghe generiche. Se lo Short non "
+            "parla di un gioco specifico, metti stringa vuota.\n"
+            "7. QUERY VIDEO: in INGLESE, 2-4 parole, usata solo come ripiego se il "
+            f"gioco non e' reperibile{_esempi(p.esempi_query_video)}.\n"
+        )
+    else:
+        regole_materiale = (
+            f"6. GIOCO (il campo si chiama cosi' per ogni canale): il nome "
+            f"{p.g('del')} {s} di cui parla lo Short, scritto come lo cerca "
+            f"il pubblico{_esempi(p.esempi_soggetto)}. Finisce nel titolo, "
+            "nei tag e nel primo hashtag: niente sigle inventate. Se lo "
+            f"Short non parla di {p.g('un')} {s} precis{p.g('o')}, metti "
+            "stringa vuota.\n"
+            "7. QUERY VIDEO: in INGLESE, 2-4 parole concrete che descrivono "
+            "cosa si deve VEDERE mentre la voce parla"
+            f"{_esempi(p.esempi_query_video)}. Serve a cercare clip stock "
+            "senza diritti: niente nomi propri, niente marchi.\n"
+        )
+
+    # Di cosa si puo' parlare senza una fonte, e a chi non si possono
+    # attribuire annunci inventati.
+    if p.videogiochi:
+        chi_annuncia = "agli sviluppatori"
+        senza_fonte = "meccaniche, segreti di gioco o consigli"
+    else:
+        chi_annuncia = "ai diretti interessati"
+        senza_fonte = "curiosita', storia o consigli pratici"
+
     return (
         f"Sei il Lead Social Media Manager di '{config.NOME_CANALE}', canale YouTube "
-        "Gaming italiano. Scrivi uno script per uno Short ad ALTISSIMA RETENTION "
+        f"{p.descrizione_canale}. Scrivi uno script per uno Short ad ALTISSIMA RETENTION "
         "(24-30 secondi, quindi 55-85 parole).\n\n"
         f"LINGUA DELL'OUTPUT: {_lingua()['nome']}. Titolo, script e "
         f"descrizione vanno scritti INTERAMENTE in {_lingua()['nome']}. "
         "Le regole qui sotto sono scritte in italiano perche' parlano a te, "
         "ma dicono come scrivere, non in che lingua.\n\n"
-        f"FORMATO RICHIESTO: {formato} - {meta['descrizione']}\n"
+        f"FORMATO RICHIESTO: {formato} - {_descrizione_formato(formato)}\n"
         "(quella sigla e' un'etichetta interna: non deve comparire ne' nel "
         "titolo ne' nello script)\n\n"
-        f"NOTIZIE GAMING REALI DI OGGI, IN ORDINE DI IMPORTANZA "
+        f"NOTIZIE {p.argomento.upper()} REALI DI OGGI, IN ORDINE DI IMPORTANZA "
         f"(la [0] e' quella che piu' gente sta cercando in questo momento: "
         f"scegli quella, e passa a una successiva solo se con la [0] non si "
         f"riesce a scrivere niente di sensato):\n{blocco_notizie}\n\n"
@@ -1281,7 +1345,7 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti,
         "una contraddizione, un numero che stona, un'accusa diretta allo "
         "spettatore, una scena raccontata a meta', una domanda secca, un "
         "confronto fra due cose che non c'entrano. Cambia anche le parole, non "
-        "solo il gioco nominato: due Short che aprono uguali si leggono come "
+        f"solo {p.g('il')} {s} nominat{p.g('o')}: due Short che aprono uguali si leggono come "
         "contenuto prodotto in serie, ed e' cosi' che un canale perde la "
         "monetizzazione.\n"
         "2. SEAMLESS LOOP: l'ultima frase deve ricollegarsi in modo naturale alla "
@@ -1290,23 +1354,17 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti,
         f"4. CTA fluida e breve a '{config.NOME_CANALE}', mai piu' di 6 parole, "
         "mai in apertura.\n"
         f"5. TITOLO: massimo {MAX_CARATTERI_TITOLO} caratteri (oltre viene "
-        "troncato nel feed), nome del gioco come PRIMA parola, poi i due punti "
+        f"troncato nel feed), nome {p.g('del')} {s} come PRIMA parola, poi i due punti "
         "e l'amo. UNA sola emoji e in FONDO, mai in apertura. Niente '#Shorts'. "
         "Niente maiuscolo integrale: YouTube lo tratta come titolo spam.\n"
-        "6. GIOCO: il titolo ESATTO e UFFICIALE del videogioco di cui parla lo "
-        "Short, come appare sullo store (es: 'Cyberpunk 2077', 'ELDEN RING', "
-        "'Counter-Strike 2'). Serve a scaricare gameplay reale di quel gioco: "
-        "niente abbreviazioni, niente nomi di saghe generiche. Se lo Short non "
-        "parla di un gioco specifico, metti stringa vuota.\n"
-        "7. QUERY VIDEO: in INGLESE, 2-4 parole, usata solo come ripiego se il "
-        "gioco non e' reperibile (es: 'cyberpunk gameplay', 'fps shooter action').\n"
+        f"{regole_materiale}"
         "8. DESCRIZIONE: 2 righe + UNA domanda finale che spinga a commentare.\n"
         "9. NIENTE CRONACA INVENTATA. Se non stai citando una delle notizie "
         "elencate sopra (cioe' se 'indice_notizia' non punta a una di quelle), "
         "lo script NON puo' contenere leak, date di uscita, numeri di vendite, "
-        "annunci o conferme attribuite agli sviluppatori: sono fatti verificabili "
-        "e inventarli fa danno al canale. In quel caso parla di meccaniche, "
-        "segreti di gioco o consigli, che non hanno bisogno di una fonte.\n"
+        f"annunci o conferme attribuite {chi_annuncia}: sono fatti verificabili "
+        f"e inventarli fa danno al canale. In quel caso parla di {senza_fonte}, "
+        "che non hanno bisogno di una fonte.\n"
         "10. NON riusare questi titoli gia' pubblicati:\n"
         f"   {json.dumps(ultimi_titoli, ensure_ascii=False)}\n"
         f"{blocco_ripetizioni}\n"
@@ -1420,21 +1478,26 @@ def _dettagli_inventati(titolo_notizia, script, sommario="", testata=""):
     """
     if not titolo_notizia or not script:
         return []
+    p = profilo.attivo()
+    s = p.soggetto
+    caratteristiche = ("(modalita', mappa, prezzo, contenuti)" if p.videogiochi
+                       else "(prezzo, quantita', contenuti)")
     istruzioni = (
-        "Sei un fact-checker. Ricevi il TITOLO di una notizia gaming, a "
+        f"Sei un fact-checker. Ricevi il TITOLO di una notizia {p.argomento}, a "
         "volte il suo SOMMARIO, e lo SCRIPT di uno Short che la racconta. "
         "Della notizia si conosce SOLO cio' che dicono titolo e sommario. "
         "Elenca i dettagli sull'EVENTO della notizia che lo script afferma "
         "come fatti ma che titolo e sommario non dicono, compreso "
-        "attribuire la notizia a un gioco diverso da quello di cui parla: "
+        f"attribuire la notizia a {p.g('un')} {s} divers{p.g('o')} da "
+        f"{p.g('quello')} di cui parla: "
         "come e' "
         "successo, quando, quanti, quanto e' durato, chi ha reagito, come e' "
-        "finita, citazioni, numeri, caratteristiche del gioco (modalita', "
-        "mappa, prezzo, contenuti). NON elencare: il nome della TESTATA che "
+        f"finita, citazioni, numeri, caratteristiche {p.g('del')} {s} "
+        f"{caratteristiche}. NON elencare: il nome della TESTATA che "
         "ha dato la notizia (dire che l'ha scritto o contato lei e' "
         "corretto), opinioni, domande al "
         "pubblico, inviti a iscriversi, frasi generiche su fan e community, "
-        "fatti noti da sempre sul gioco, e riformulazioni o deduzioni "
+        f"fatti noti da sempre {p.g('sul')} {s}, e riformulazioni o deduzioni "
         "ovvie del titolo (per esempio 'appena annunciato' per una notizia "
         "di oggi, 'enorme' o 'spettacolare' per un titolo che dice che il "
         "mondo 'looks wild'). Nel dubbio non elencare. Rispondi in JSON con "
@@ -1707,8 +1770,7 @@ def genera_script_samaritan(tema=None):
 
                 motivo_scarto = ""
 
-                if "gameplay" not in query_video.lower():
-                    query_video = f"{query_video} gameplay"
+                query_video = completa_query_video(query_video)
 
                 risultato = {
                     "titolo": titolo,

@@ -18,6 +18,15 @@ import pytest
 
 
 @pytest.fixture(autouse=True)
+def _profilo_predefinito(monkeypatch):
+    """Ogni test parte dal profilo di Poppone TV, anche se sul disco c'e' un
+    canale.json: i test dicono come si comporta il codice, non il canale di
+    chi li lancia. I test sui profili se ne impostano uno loro."""
+    import profilo
+    monkeypatch.setattr(profilo, "_attivo", profilo.predefinito())
+
+
+@pytest.fixture(autouse=True)
 def _niente_sommari_dalla_rete(monkeypatch):
     """Il sommario delle notizie si cerca su Bing: nei test niente rete."""
     import brain

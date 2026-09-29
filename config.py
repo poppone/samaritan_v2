@@ -7,6 +7,8 @@ Tutti i segreti vivono qui e SOLO qui, letti da variabili d'ambiente
 import os
 import sys
 
+import profilo
+
 # Caricamento .env opzionale: su GitHub Actions le variabili arrivano dai Secrets
 try:
     from dotenv import load_dotenv
@@ -67,9 +69,23 @@ GROQ_MODELLI = [
 ] or _GROQ_MODELLI_DEFAULT.split(",")
 
 # ------------------------------------------------------------ Identita canale
-NOME_CANALE = _get("NOME_CANALE", "Poppone TV")
+# Di cosa parla il canale, dove cerca le notizie, da dove prende il materiale:
+# tutto in canale.json (vedi profilo.py). Senza file e' Poppone TV di sempre.
+# Il profilo si legge qui all'avvio apposta: un file sbagliato deve fermare la
+# lavorazione subito, con un messaggio chiaro, e non a meta' montaggio.
+try:
+    PROFILO = profilo.attivo()
+except profilo.ProfiloNonValido as e:
+    print(f"[Config] ERRORE: {e}")
+    print("         Controlla il file (vedi canale.esempio.json) o toglilo per "
+          "tornare al profilo predefinito.")
+    sys.exit(1)
+
+# Le variabili d'ambiente vincono sul file: il workflow di popponetv le
+# imposta gia' e deve continuare a funzionare com'e'.
+NOME_CANALE = _get("NOME_CANALE", PROFILO.nome_canale)
 # Handle YouTube: finisce nella descrizione di ogni video come link al canale.
-HANDLE_CANALE = _get("HANDLE_CANALE", "@PopponeTV")
+HANDLE_CANALE = _get("HANDLE_CANALE", PROFILO.handle)
 LINGUA = _get("LINGUA", "it")
 
 # Quale delle uscite giornaliere sta coprendo questa run ('14:00', '18:00',
@@ -133,6 +149,8 @@ WHISPER_MODEL = _get("WHISPER_MODEL", "base")   # 'tiny' sbaglia troppe parole i
 # ------------------------------------------------- Gameplay reale (Steam)
 # Usa trailer e screenshot UFFICIALI del gioco di cui parla il video, invece
 # di stock generico. Se il gioco non e' su Steam, si ripiega su Pexels.
+# Conta solo se il profilo del canale ha materiale 'steam': un canale che non
+# parla di videogiochi su Steam non ci va mai (vedi gameplay._usa_steam).
 USA_STEAM = _get("USA_STEAM", "1") not in ("0", "false", "False")
 STEAM_MAX_TRAILER = STEAM_MAX_SCREENSHOT = SECONDI_TRAILER = 0
 # I trailer Steam sono 16:9: dentro uno Short vengono inseriti in un 9:16 con

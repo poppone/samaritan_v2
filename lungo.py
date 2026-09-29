@@ -39,6 +39,7 @@ import subprocess
 
 import config
 import brain
+import profilo
 from voice import genera_voce_samaritan
 
 # Quante parole al minuto legge la voce. Misurato sugli Short: ~165 a +12%,
@@ -105,6 +106,40 @@ def _prompt_scaletta(notizie, titoli_recenti, giochi_recenti):
     lingua = brain._lingua()["nome"]
     quante = config.SEZIONI_VIDEO_LUNGO
     minuti = config.MINUTI_VIDEO_LUNGO
+    # Di cosa parla il canale: senza canale.json i videogiochi, e il prompt
+    # resta quello di sempre parola per parola.
+    p = profilo.attivo()
+    s = p.soggetto
+
+    # Stesso discorso dello Short (brain._costruisci_system_prompt): con
+    # Steam il nome serve a scaricare i trailer e deve essere quello dello
+    # store, con lo stock serve solo a titolo e tag.
+    if p.usa_steam:
+        regola_soggetto = (
+            "1. GIOCO: un solo gioco per tutto il video, col titolo ESATTO e "
+            "UFFICIALE come appare sullo store"
+            f"{brain._esempi(p.esempi_soggetto[:2])}. "
+            "Serve a scaricare i trailer ufficiali di QUEL gioco: "
+            "niente abbreviazioni, niente nomi di saghe.\n"
+        )
+        regola_query = (
+            "7. QUERY VIDEO: in INGLESE, 2-4 parole, usata solo come ripiego se "
+            "il gioco non si trova sullo store.\n"
+        )
+    else:
+        regola_soggetto = (
+            "1. GIOCO (il campo si chiama cosi' per ogni canale): "
+            f"{p.g('un_solo').lower()} {s} per tutto il video, col nome scritto "
+            f"come lo cerca il pubblico{brain._esempi(p.esempi_soggetto[:2])}. "
+            "Finisce nel titolo e nei tag: niente sigle inventate.\n"
+        )
+        regola_query = (
+            "7. QUERY VIDEO: in INGLESE, 2-4 parole concrete che descrivono "
+            "cosa si deve VEDERE: serve a cercare clip stock senza diritti, "
+            "niente nomi propri.\n"
+        )
+    senza_fonte = ("meccaniche, storia del gioco, segreti, consigli"
+                   if p.videogiochi else "curiosita', storia, consigli pratici")
 
     blocco_notizie = "NESSUNA notizia fresca disponibile."
     if notizie:
@@ -115,24 +150,21 @@ def _prompt_scaletta(notizie, titoli_recenti, giochi_recenti):
 
     return (
         f"Sei l'autore di '{config.NOME_CANALE}', canale YouTube di "
-        f"videogiochi. Prepara la SCALETTA di un video da {minuti:.0f} minuti "
-        f"su UN SOLO gioco, diviso in {quante} sezioni.\n\n"
+        f"{p.descrizione_argomento}. Prepara la SCALETTA di un video da {minuti:.0f} minuti "
+        f"su {p.g('un_solo')} {s}, diviso in {quante} sezioni.\n\n"
         f"LINGUA DELL'OUTPUT: {lingua}. Titolo, titoli delle sezioni e "
         f"descrizione vanno scritti interamente in {lingua}.\n\n"
         "Questo NON e' uno Short. Nessuna fretta, nessun loop, nessun amo da "
         "tre secondi: chi guarda un video lungo vuole capire una cosa a "
         "fondo, e resta solo se ogni sezione gli dice qualcosa che non "
         "sapeva.\n\n"
-        f"NOTIZIE GAMING DI OGGI, IN ORDINE DI IMPORTANZA:\n{blocco_notizie}\n\n"
+        f"NOTIZIE {p.argomento.upper()} DI OGGI, IN ORDINE DI IMPORTANZA:\n{blocco_notizie}\n\n"
         "REGOLE:\n"
-        "1. GIOCO: un solo gioco per tutto il video, col titolo ESATTO e "
-        "UFFICIALE come appare sullo store (es: 'Cyberpunk 2077', "
-        "'ELDEN RING'). Serve a scaricare i trailer ufficiali di QUEL gioco: "
-        "niente abbreviazioni, niente nomi di saghe.\n"
+        f"{regola_soggetto}"
         "2. Il video puo' partire da una delle notizie elencate sopra: in tal "
         "caso metti il suo indice in 'indice_notizia', altrimenti -1. Se non "
         "citi una notizia, NON inventare date di uscita, leak o numeri di "
-        "vendita: parla di meccaniche, storia del gioco, segreti, consigli.\n"
+        f"vendita: parla di {senza_fonte}.\n"
         f"3. SEZIONI: esattamente {quante}. Ognuna ha un titolo breve (2-5 "
         "parole, diventa un capitolo YouTube) e un campo 'contenuto' che dice "
         "in due righe COSA va raccontato li' dentro. Le sezioni devono "
@@ -142,14 +174,14 @@ def _prompt_scaletta(notizie, titoli_recenti, giochi_recenti):
         "saluti, con 'in questo video' o con la presentazione del canale.\n"
         "5. L'ultima sezione chiude con un giudizio o una domanda, non con un "
         "riassunto di quello gia' detto.\n"
-        "6. TITOLO del video: massimo 70 caratteri, il nome del gioco dentro, "
+        f"6. TITOLO del video: massimo 70 caratteri, il nome {p.g('del')} {s} dentro, "
         "niente maiuscolo integrale, niente '#Shorts'.\n"
-        "7. QUERY VIDEO: in INGLESE, 2-4 parole, usata solo come ripiego se "
-        "il gioco non si trova sullo store.\n"
+        f"{regola_query}"
         "8. DESCRIZIONE: tre righe che dicono cosa si vede nel video.\n"
         "9. NON riusare questi titoli gia' pubblicati:\n"
         f"   {json.dumps(titoli_recenti, ensure_ascii=False)}\n"
-        "10. NON riparlare di questi giochi, gia' usati di recente:\n"
+        f"10. NON riparlare di {p.g('questi')} {p.soggetto_plurale}, gia' "
+        f"usat{p.g('i')} di recente:\n"
         f"   {json.dumps(giochi_recenti, ensure_ascii=False)}\n\n"
         "Rispondi ESCLUSIVAMENTE con un JSON valido con le chiavi: "
         "'titolo', 'gioco', 'query_video', 'descrizione', 'indice_notizia', "
@@ -161,10 +193,11 @@ def _prompt_sezione(scaletta, indice, sezione, coda_precedente, notizia):
     lingua = brain._lingua()["nome"]
     quante = len(scaletta["sezioni"])
     bersaglio = parole_per_sezione()
+    p = profilo.attivo()
 
     pezzi = [
         f"Stai scrivendo il video di '{config.NOME_CANALE}' su "
-        f"{scaletta['gioco'] or 'questo gioco'}, intitolato "
+        f"{scaletta['gioco'] or p.g('questo') + ' ' + p.soggetto}, intitolato "
         f"\"{scaletta['titolo']}\".",
         f"LINGUA: {lingua}, e soltanto quella.",
         f"Scrivi SOLO la sezione {indice + 1} di {quante}: "
@@ -180,10 +213,13 @@ def _prompt_sezione(scaletta, indice, sezione, coda_precedente, notizia):
             f"di cronaca che puoi affermare sono i suoi: {notizia}"
         )
     else:
+        senza_fonte = ("Meccaniche, storia del gioco, segreti e consigli"
+                       if p.videogiochi else
+                       "Curiosita', storia e consigli pratici")
         pezzi.append(
             "Non hai una fonte di cronaca: NON affermare date di uscita, "
-            "leak, annunci o numeri di vendita. Meccaniche, storia del gioco, "
-            "segreti e consigli non hanno bisogno di fonte e vanno benissimo."
+            f"leak, annunci o numeri di vendita. {senza_fonte} "
+            "non hanno bisogno di fonte e vanno benissimo."
         )
 
     if coda_precedente:
@@ -341,9 +377,8 @@ def genera_video_lungo(tema=None):
     print(f"[Samaritan Lungo] Testo pronto: {parole} parole, "
           f"circa {parole / PAROLE_AL_MINUTO:.1f} minuti.")
 
-    query_video = str(scaletta.get("query_video", "gameplay")).strip()
-    if "gameplay" not in query_video.lower():
-        query_video = f"{query_video} gameplay"
+    query_video = brain.completa_query_video(
+        str(scaletta.get("query_video", "gameplay")).strip())
 
     risultato = {
         "titolo": titolo,
@@ -367,7 +402,8 @@ def _scrivi_sezione(scaletta, indice, sezione, coda_precedente, fonte):
     troppo corto; alla seconda si tiene quello che c'e'. Una sezione magra
     accorcia il video, una sezione mancante lo spezza a meta'.
     """
-    system = "Scrivi il testo parlato di una sezione di un video di videogiochi."
+    system = ("Scrivi il testo parlato di una sezione di un video di "
+              f"{profilo.attivo().descrizione_argomento}.")
     utente = _prompt_sezione(scaletta, indice, sezione, coda_precedente, fonte)
 
     migliore = ""

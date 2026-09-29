@@ -431,6 +431,57 @@ I formati video si modificano nel dizionario `FORMATI_VIDEO` in `brain.py`.
 
 ---
 
+## Un canale che non parla di videogiochi (`canale.json`)
+
+Samaritan e' nato per Poppone TV, ma di cosa parla il canale non e' piu'
+scritto nel codice: sta in un file, `canale.json`, nella radice del progetto
+(oppure dove dice la variabile `PROFILO_CANALE`). **Senza il file non cambia
+niente**: vale il profilo di Poppone TV, con gli stessi prompt, le stesse
+ricerche, gli stessi tag e Steam di sempre.
+
+Per un altro argomento si parte da `canale.esempio.json`, che e' il profilo
+completo di un canale di cucina con ogni campo spiegato:
+
+```bash
+cp canale.esempio.json canale.json
+```
+
+Cosa decide il profilo:
+
+| Campo | Cosa cambia |
+|---|---|
+| `nome_canale`, `handle` | nome e link nella descrizione, nella chiamata all'azione e nei tag. `NOME_CANALE` e `HANDLE_CANALE` in `.env` o nei Secrets **vincono** sul file |
+| `argomento`, `descrizione_argomento`, `descrizione_canale` | come i prompt chiamano l'argomento ("notizie di cucina", "canale YouTube di cucina italiana") |
+| `soggetto`, `soggetto_plurale`, `genere`, `pubblico` | di cosa parla ogni video ("la ricetta", "un'altra ricetta", "per chi cucina a casa") |
+| `ricerche` | le ricerche su Google News, una lista per lingua (`it`, `en`) |
+| `parole_calde`, `nomi_grossi` | cosa fa salire una notizia in classifica |
+| `tag_fissi`, `tag_fissi_lungo`, `hashtag_canale`, `hashtag_formato` | tag e hashtag di ogni video |
+| `formati` | la descrizione di un formato come la legge il modello |
+| `materiale` | `steam` (trailer e screenshot ufficiali, solo per i videogiochi) o `stock` (solo clip Pexels senza diritti) |
+| `query_stock_riserva` | ricerche Pexels di riserva, in inglese |
+| `categoria_youtube` | la categoria dell'upload (20 Gaming, 26 Stile e consigli, 17 Sport...) |
+
+Con `argomento` uguale a `gaming` il file eredita tutti i valori di Poppone TV
+e basta scrivere quelli da cambiare. Con qualsiasi altro argomento **non
+eredita niente di gaming**: `soggetto` e `ricerche` diventano obbligatori, il
+materiale diventa `stock` e Steam non viene mai interrogato, nemmeno se il
+modello nomina un gioco. Gli altri campi si ricavano da soli (vedi
+`profilo.py`) e si possono comunque scrivere.
+
+Il file si controlla all'avvio: un campo sconosciuto, un `materiale` che non
+esiste, una lista di ricerche vuota fermano la lavorazione subito con un
+messaggio in italiano, invece di far fallire il montaggio a meta'.
+
+La regola sul materiale non cambia con l'argomento: **mai video di altri**.
+Solo materiale ufficiale dell'editore (Steam), stock senza diritti (Pexels) o
+clip girate dal proprietario del canale (`clip_mie/`).
+
+Nella risposta del modello e in `cronologia_trend.json` il soggetto del video
+resta nella chiave `gioco`, anche quando e' una ricetta: cambiarla vorrebbe
+dire buttare la cronologia gia' scritta.
+
+---
+
 ## I Reel che vendono Samaritan (Instagram)
 
 Il canale YouTube parla di videogiochi. Il profilo Instagram parla di

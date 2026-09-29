@@ -1,0 +1,94 @@
+{
+  "_leggimi": "Esempio di profilo per un canale che NON parla di videogiochi: una cucina italiana. Copialo in canale.json (nella radice del progetto) e cambialo per il tuo canale. Senza canale.json Samaritan resta Poppone TV, canale di videogiochi. Le chiavi che cominciano con '_' sono commenti e vengono ignorate. Tutti i campi sono facoltativi tranne 'soggetto' e 'ricerche' quando 'argomento' non e' 'gaming'.",
+
+  "_nome_canale": "Il nome del canale: finisce nella chiamata all'azione, nei tag e nella descrizione. La variabile d'ambiente NOME_CANALE, se c'e', vince su questo campo.",
+  "nome_canale": "La Cucina di Esempio",
+
+  "_handle": "L'handle YouTube, con la chiocciola: diventa il link youtube.com/@... in fondo alla descrizione. La variabile HANDLE_CANALE, se c'e', vince.",
+  "handle": "@CucinaDiEsempio",
+
+  "_argomento": "Come si dice l'argomento DOPO un nome: 'notizie di cucina', 'Altri Shorts di cucina ogni giorno'. Con 'gaming' il profilo eredita tutti i valori di Poppone TV (ricerche, tag, hashtag, Steam); con qualsiasi altro valore non eredita niente di gaming.",
+  "argomento": "di cucina",
+
+  "_descrizione_argomento": "L'argomento come nome, dopo 'di': 'canale YouTube di cucina'. Se manca si ricava da 'argomento' togliendo il 'di' iniziale.",
+  "descrizione_argomento": "cucina",
+
+  "_descrizione_canale": "Come si presenta il canale nella prima riga del prompt: 'canale YouTube ...'. Se manca: argomento + ' italiano'.",
+  "descrizione_canale": "di cucina italiana",
+
+  "_soggetto": "Di cosa parla ogni singolo video, al singolare: per un canale di calcio 'squadra', per uno di cinema 'film'. Scegli un nome che vuole l'articolo 'il' o 'la' (per 'lo' o l' usa un sinonimo). Nella risposta del modello e in cronologia finisce comunque nella chiave 'gioco'.",
+  "soggetto": "ricetta",
+
+  "_soggetto_plurale": "Il plurale. Se manca si ricava per i nomi regolari di una parola (ricetta -> ricette, film -> film).",
+  "soggetto_plurale": "ricette",
+
+  "_genere": "'m' o 'f', il genere del soggetto: serve a scrivere 'della ricetta' e non 'del ricetta'. Se manca: 'f' se il soggetto finisce in 'a', altrimenti 'm'.",
+  "genere": "f",
+
+  "_pubblico": "Chi guarda, come si dice dopo 'per': 'il perche' la notizia conta per chi cucina'. Se manca: 'gli appassionati di' + descrizione_argomento.",
+  "pubblico": "chi cucina a casa",
+
+  "_esempi_soggetto": "Due o tre nomi scritti come li cerca il pubblico: il modello li usa come esempio per il campo del soggetto. Facoltativo.",
+  "esempi_soggetto": ["Carbonara", "Tiramisu", "Pizza napoletana"],
+
+  "_esempi_query_video": "Due esempi di ricerca delle clip stock, in inglese, che descrivono cosa si vede. Facoltativo.",
+  "esempi_query_video": ["pasta cooking kitchen", "chef chopping vegetables"],
+
+  "_ricerche": "Le ricerche su Google News, una lista per lingua ('it', 'en'). Obbligatorie se l'argomento non e' 'gaming'. Si possono usare OR e le virgolette come su Google. Se il video esce in una lingua che qui manca si usano quelle italiane.",
+  "ricerche": {
+    "it": [
+      "ricette",
+      "cucina italiana novita",
+      "chef OR ristorante OR stellato",
+      "cibo richiamo OR allerta OR record OR tendenza"
+    ],
+    "en": [
+      "recipes",
+      "food trend OR viral recipe",
+      "chef OR restaurant OR Michelin"
+    ]
+  },
+
+  "_parole_calde": "Parole che fanno salire una notizia in classifica, per lingua. Facoltativo: se manca valgono parole da notizia generiche ('annunciato', 'record', 'chiude').",
+  "parole_calde": {
+    "it": ["record", "vietato", "richiamo", "stellato", "classifica", "nuovo", "chiude", "apre"]
+  },
+
+  "_nomi_grossi": "Nomi che muovono pubblico da soli (in minuscolo): una notizia che li nomina sale in cima. Facoltativo.",
+  "nomi_grossi": ["cannavacciuolo", "barbieri", "masterchef", "michelin", "bottura"],
+
+  "_tag_fissi": "Tag presenti su ogni Short. Se manca: descrizione_argomento e 'shorts ita'. Il nome del canale e quello della ricetta si aggiungono da soli.",
+  "tag_fissi": ["cucina italiana", "ricette", "shorts ita", "ricette facili"],
+
+  "_tag_fissi_lungo": "Tag presenti su ogni video lungo. Se manca: descrizione_argomento.",
+  "tag_fissi_lungo": ["cucina italiana", "ricette", "ricetta passo passo"],
+
+  "_hashtag_canale": "L'ultimo hashtag di ogni descrizione, senza '#'. Se manca: descrizione_argomento.",
+  "hashtag_canale": "cucinaitaliana",
+
+  "_hashtag_formato": "Il tema in hashtag per ogni formato, senza '#'. Basta scrivere quelli da cambiare: gli altri restano quelli neutri (notizie, rumor, segreti, curiosita, consigli, classifica).",
+  "hashtag_formato": {
+    "VIRAL_HOOK_NEWS": "notiziecucina",
+    "DONT_DO_THIS": "erroriincucina"
+  },
+
+  "_formati": "La descrizione di un formato come la legge il modello. Facoltativo: basta scrivere quelli da cambiare. Formati: VIRAL_HOOK_NEWS, MYTH_BUSTING_VIRAL, EASTER_EGG_SECRET, SEAMLESS_LOOP_FACTS, DONT_DO_THIS, TIER_LIST_LAMPO, DOMANDA_AL_PUBBLICO.",
+  "formati": {
+    "EASTER_EGG_SECRET": "Un segreto storico e verificabile dietro un piatto famoso",
+    "DONT_DO_THIS": "Errore concreto da evitare in una ricetta popolare"
+  },
+
+  "_materiale": "Da dove arrivano le immagini. 'stock' = solo clip Pexels senza diritti, cercate con la query scritta dal modello. 'steam' = trailer e screenshot ufficiali dei giochi, e vale solo con argomento 'gaming'. In ogni caso Samaritan non usa MAI video di altri.",
+  "materiale": "stock",
+
+  "_query_stock_riserva": "Ricerche Pexels di riserva, in inglese, quando quella del video trova troppe poche clip.",
+  "query_stock_riserva": [
+    "cooking in kitchen",
+    "fresh ingredients close up",
+    "pasta boiling pot",
+    "chef plating food"
+  ],
+
+  "_categoria_youtube": "Il numero della categoria YouTube: 20 Gaming, 26 Stile e consigli (dove sta la cucina), 17 Sport, 24 Intrattenimento, 22 Persone e blog. Se manca: 22.",
+  "categoria_youtube": "26"
+}
