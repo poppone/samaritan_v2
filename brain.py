@@ -1567,6 +1567,13 @@ def genera_script_samaritan(tema=None):
     # stesso identico input e rifa' un tiro di dado. Dicendo al modello cosa
     # non e' andato, i tentativi diventano correzioni.
     motivo_scarto = ""
+    # Le notizie su cui lo script ha inventato dettagli due volte. Il 29
+    # settembre 2026 una rassegna ("GTA VI, tutte le novita' che ridefiniscono
+    # la serie") ha fatto inventare funzioni del gioco a tutti e quattro i
+    # tentativi e l'uscita e' saltata: su una notizia cosi' il modello non
+    # smette di riempire, conviene cambiarla.
+    invenzioni_per_notizia = {}
+    notizie_vietate = set()
 
     modelli = config.GROQ_MODELLI
 
@@ -1590,6 +1597,12 @@ def genera_script_samaritan(tema=None):
                     prompt_utente += (
                         f" Il tentativo precedente e' stato scartato perche' "
                         f"{motivo_scarto}. Correggi quel punto."
+                    )
+                if notizie_vietate:
+                    elenco = ", ".join(f"[{i}]" for i in sorted(notizie_vietate))
+                    prompt_utente += (
+                        f" Non usare le notizie {elenco}: scegline un'altra "
+                        f"dall'elenco."
                     )
                 print(f"[Samaritan Brain] {modello} - tentativo {tentativo} "
                       f"(formato {formato}, "
@@ -1655,6 +1668,10 @@ def genera_script_samaritan(tema=None):
                 )
                 if ok:
                     ok, motivo = valida_titolo(titolo, gioco)
+                if ok and fonte and idx in notizie_vietate:
+                    ok = False
+                    motivo = (f"usa la notizia [{idx}], che non si puo' piu' "
+                              f"usare. Scegline un'altra")
                 if ok and _cronaca_senza_fonte(script, fonte):
                     ok = False
                     motivo = "afferma fatti di cronaca senza citare una notizia"
@@ -1670,6 +1687,9 @@ def genera_script_samaritan(tema=None):
                         notizie[idx].get("fonte", ""))
                     if inventati:
                         ok = False
+                        invenzioni_per_notizia[idx] = invenzioni_per_notizia.get(idx, 0) + 1
+                        if invenzioni_per_notizia[idx] >= 2:
+                            notizie_vietate.add(idx)
                         motivo = ("aggiunge alla notizia dettagli che il titolo "
                                   "non dice (" + "; ".join(inventati) + "). "
                                   "Racconta solo quello che dice il titolo")
