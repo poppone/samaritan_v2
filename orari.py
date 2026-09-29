@@ -39,13 +39,24 @@ SLOT_GIORNALIERI = (
 # La finestra dentro cui un video "appartiene" a una certa uscita. Non e'
 # centrata, e il motivo e' che la cronologia registra il momento in cui il
 # video viene SCRITTO, non quello in cui YouTube lo pubblica: la pipeline
-# parte in anticipo (al massimo quattro ore e mezza) e puo' invece finire con
+# parte in anticipo (fino a quattro ore e mezza per le righe di prima del 29
+# settembre 2026, che non hanno il campo "uscita") e puo' invece finire con
 # molte ore di ritardo quando GitHub fa partire il cron tardi. Il record e'
 # sette ore, il 21 settembre 2026. Le uscite distano 24 ore, quindi la
 # finestra piu' larga qui sotto non arriva mai a toccare quella del giorno
 # prima.
 ANTICIPO_MASSIMO_ORE = 6
 RITARDO_MASSIMO_ORE = 12
+
+# Quanto prima della sua uscita puo' partire una lavorazione. Dal 29
+# settembre 2026 i cron partono di notte, dieci-tredici ore prima
+# dell'uscita: il 28 settembre GitHub li aveva fatti partire con sei-otto ore
+# di ritardo e tutte e quattro le uscite erano arrivate tardi. Con partenze
+# cosi' in anticipo la finestra qui sopra non basta piu' a riconoscere a
+# quale uscita appartiene un video, quindi ogni video scrive in cronologia
+# anche l'uscita che copre (campo 'uscita'), e la finestra resta solo per le
+# righe scritte prima.
+ANTICIPO_PARTENZA_ORE = 16
 
 
 def _leggi_orario(testo):
@@ -111,20 +122,42 @@ def _occorrenza_da_coprire(slot, adesso):
     """L'uscita che una lavorazione partita adesso sta coprendo.
 
     Non e' sempre l'ultima passata. Le lavorazioni partono PRIMA della loro
-    uscita (il cron e' quattro ore e mezza prima, di piu' d'inverno), e se
+    uscita (dal 29 settembre 2026 il cron e' dieci-tredici ore prima), e se
     GitHub e' puntuale l'uscita di oggi non e' ancora arrivata: guardando solo
     all'indietro la lavorazione si confrontava con il video di IERI alla
     stessa ora, lo trovava e si fermava. Cosi' si sono perse le 21:00 del 22 e
     del 24 settembre 2026 e le 18:00 del 25.
 
-    Quindi: se l'uscita di oggi arriva entro ANTICIPO_MASSIMO_ORE e' quella
+    Quindi: se l'uscita di oggi arriva entro ANTICIPO_PARTENZA_ORE e' quella
     che si sta coprendo, altrimenti e' l'ultima passata.
     """
     ultima = _ultima_occorrenza(slot, adesso)
     prossima = ultima + timedelta(days=1)
-    if (prossima - adesso).total_seconds() <= ANTICIPO_MASSIMO_ORE * 3600:
+    if (prossima - adesso).total_seconds() <= ANTICIPO_PARTENZA_ORE * 3600:
         return prossima
     return ultima
+
+
+def uscita_da_coprire(slot, adesso=None, recupero=False):
+    """L'istante dell'uscita che questa lavorazione copre, in secondi epoch.
+
+    Si scrive in cronologia accanto allo slot, cosi' chi viene dopo sa di
+    quale giorno era il video senza dover indovinare dall'ora in cui e' stato
+    scritto. La riserva recupera sempre un'uscita gia' passata. None se lo
+    slot manca o e' scritto male.
+    """
+    slot = (slot or "").strip()
+    if not slot:
+        return None
+    adesso = adesso or datetime.now(_fuso())
+    try:
+        if recupero:
+            occorrenza = _ultima_occorrenza(slot, adesso)
+        else:
+            occorrenza = _occorrenza_da_coprire(slot, adesso)
+    except ValueError:
+        return None
+    return int(occorrenza.timestamp())
 
 
 def gia_pubblicato(slot, cronologia, adesso=None):
@@ -163,6 +196,12 @@ def _coperta(slot, occorrenza, cronologia):
         # far passare l'uscita per coperta, altrimenti la rete di sicurezza
         # non servirebbe proprio nel caso in cui serve.
         if not voce.get("video_id"):
+            continue
+        # Le righe nuove dicono quale uscita coprono: basta confrontarla.
+        uscita = voce.get("uscita")
+        if isinstance(uscita, (int, float)):
+            if abs(uscita - occorrenza.timestamp()) < 3600:
+                return True
             continue
         quando = voce.get("timestamp") or 0
         if inizio <= quando <= fine:

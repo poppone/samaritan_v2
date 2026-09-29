@@ -80,6 +80,9 @@ LINGUA = _get("LINGUA", "it")
 # recupero invece ha SLOT pieno e ORARIO_USCITA vuoto, perche' recupera
 # un'uscita saltata e la pubblica subito.
 SLOT = _get("SLOT", "")
+# L'istante dell'uscita coperta (secondi epoch), deciso da main.prepara_uscita
+# e scritto in cronologia accanto a SLOT.
+USCITA = None
 # La run di recupero non sa in partenza quale uscita le tocchera': lo decide
 # leggendo la cronologia, e con esso sceglie lingua e voce fra queste due.
 RECUPERO = _get("RECUPERO", "") not in ("", "0", "false", "False")
