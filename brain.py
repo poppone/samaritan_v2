@@ -134,7 +134,10 @@ VOCI_PER_RICERCA = 15
 SOGLIA_STESSA_NOTIZIA = 0.5
 # Quante notizie su altri giochi devono restare per togliere dalla lista
 # quelle sul gioco del video precedente invece di metterle solo in fondo.
-MIN_NOTIZIE_ALTRO_GIOCO = 3
+# Una basta: il 29 settembre 2026, con la soglia a 3, su 8 notizie quasi tutte
+# su GTA 6 la lista e' rimasta intera e l'uscita delle 18:00 e' saltata la
+# terza volta. Una notizia minore su un altro gioco vale piu' di un buco.
+MIN_NOTIZIE_ALTRO_GIOCO = 1
 MAX_CARATTERI_SOMMARIO = 400
 
 # I nomi che muovono pubblico da soli (per Poppone TV: GTA, Fortnite, le
@@ -1609,7 +1612,8 @@ def genera_script_samaritan(tema=None):
     # quattro bruciati cosi'. L'ordine resta stabile per tutto il resto.
     # Il 29 settembre 2026 non e' bastato: il modello andava a prendersi la
     # notizia su GTA 6 anche in fondo alla lista, e l'uscita delle 18:00 e'
-    # saltata due volte. Se ne restano abbastanza, quelle notizie si tolgono.
+    # saltata due volte. Se resta almeno una notizia su un altro gioco,
+    # quelle sul gioco precedente si tolgono.
     if gioco_precedente.strip():
         altre = [n for n in notizie
                  if not _gioco_nel_titolo(n["titolo"], gioco_precedente)]
