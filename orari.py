@@ -19,22 +19,25 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import config
+import profilo
 
 
-# Le uscite della giornata: orario, lingua e formato di ciascuna. E' l'elenco
-# che la run di recupero usa per capire quale manca; il workflow ha la sua
-# copia sotto forma di cron, e un test controlla che le due dicano la stessa
-# cosa.
-#
-# Il formato non e' un dettaglio di etichetta: il video lungo esce 16:9 da
-# otto minuti e lo Short 9:16 da mezzo minuto, e la lavorazione di recupero
-# deve sapere quale dei due sta rifacendo prima di calcolare qualunque misura.
-SLOT_GIORNALIERI = (
-    ("14:00", "it", "short"),
-    ("18:00", "it", "short"),
-    ("20:00", "en", "short"),   # fino al 27 settembre 2026 il video lungo
-    ("21:00", "en", "short"),
-)
+def slot_giornalieri():
+    """Le uscite della giornata: orario, lingua e formato di ciascuna.
+
+    E' l'elenco che la run di recupero usa per capire quale manca. Viene dal
+    profilo del canale (voce 'uscite'); il workflow non ha piu' una copia
+    sua degli orari, ha solo le quattro partenze notturne, e quale uscita
+    tocchi a ciascuna lo decide profilo.abbina_cron.
+
+    Il formato non e' un dettaglio di etichetta: il video lungo esce 16:9 da
+    otto minuti e lo Short 9:16 da mezzo minuto, e la lavorazione di recupero
+    deve sapere quale dei due sta rifacendo prima di calcolare qualunque
+    misura. Le uscite programmate sono tutte Short: fino al 27 settembre 2026
+    alle 20:00 usciva il video lungo, che ora si lancia solo a mano.
+    """
+    return tuple((u["orario"], u["lingua"], "short")
+                 for u in profilo.attivo().uscite_in_ordine)
 
 # La finestra dentro cui un video "appartiene" a una certa uscita. Non e'
 # centrata, e il motivo e' che la cronologia registra il momento in cui il
@@ -56,7 +59,10 @@ RITARDO_MASSIMO_ORE = 12
 # quale uscita appartiene un video, quindi ogni video scrive in cronologia
 # anche l'uscita che copre (campo 'uscita'), e la finestra resta solo per le
 # righe scritte prima.
-ANTICIPO_PARTENZA_ORE = 16
+#
+# Il valore sta in profilo.py perche' serve anche a validare gli orari delle
+# uscite scritti in canale.json, e profilo.py non puo' importare questo file.
+ANTICIPO_PARTENZA_ORE = profilo.ANTICIPO_PARTENZA_ORE
 
 
 def _leggi_orario(testo):
@@ -223,7 +229,7 @@ def slot_da_recuperare(cronologia, adesso=None):
     """
     adesso = adesso or datetime.now(_fuso())
     mancanti = []
-    for slot, lingua, formato in SLOT_GIORNALIERI:
+    for slot, lingua, formato in slot_giornalieri():
         try:
             occorrenza = _ultima_occorrenza(slot, adesso)
         except ValueError:

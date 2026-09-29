@@ -23,9 +23,17 @@ Due regole che il profilo non puo' cambiare:
 
 Questo modulo non importa config ne' nient'altro del progetto: config lo
 importa per il nome del canale, e un giro di import li bloccherebbe entrambi.
+Per lo stesso motivo usa solo la libreria standard: il workflow lo lancia da
+solo (`python3 profilo.py decidi`) per sapere in pochi secondi se una
+partenza notturna ha un'uscita da coprire, prima di installare qualunque cosa.
 """
 import json
 import os
+import re
+import sys
+from datetime import datetime
+from itertools import permutations
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 # Dove si cerca il profilo se PROFILO_CANALE non dice altro.
 FILE_PREDEFINITO = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -46,6 +54,25 @@ FORMATI = (
 FORMATI_CON_LUNGO = FORMATI + ("VIDEO_LUNGO",)
 
 MATERIALI = ("steam", "stock")
+
+# Le quattro partenze notturne del workflow (samaritan.yml), in UTC, come
+# (ora, minuto). Sono fisse perche' un cron di GitHub si cambia solo toccando
+# il workflow, e chi installa Samaritan il workflow non lo tocca: le uscite
+# del profilo si abbinano a queste (vedi abbina_cron). Un test controlla che
+# il workflow dica la stessa cosa.
+CRON_USCITE = ((1, 17), (3, 17), (5, 17), (6, 17))
+
+# Quanto prima della sua uscita deve partire la lavorazione, al minimo e al
+# massimo. Il minimo e' il ritardo peggiore visto su GitHub (sei-otto ore il
+# 28 settembre 2026): con meno margine una partenza in ritardo pubblica tardi.
+# Il massimo non e' una scelta: oltre, orari._occorrenza_da_coprire crede che
+# la lavorazione stia coprendo l'uscita di IERI, la trova gia' fatta e si
+# ferma senza pubblicare niente (vedi orari.ANTICIPO_PARTENZA_ORE).
+MARGINE_MINIMO_ORE = 8
+ANTICIPO_PARTENZA_ORE = 16
+
+MAX_USCITE = len(CRON_USCITE)
+_RE_ORARIO = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 
 # L'argomento che eredita i valori di Poppone TV. Un profilo con un altro
 # argomento NON eredita ricerche, tag e hashtag di gaming: un canale di
@@ -160,6 +187,18 @@ PREDEFINITO = {
     ],
     # Categoria YouTube dell'upload: 20 = Gaming.
     "categoria_youtube": "20",
+
+    # Le uscite della giornata: a che ora, ora locale del fuso qui sotto, e
+    # in che lingua. Per Poppone TV due Short italiani e, dal 27 settembre
+    # 2026, due inglesi (alle 20:00 prima usciva il video lungo, che resta
+    # lanciabile solo a mano). Da una a quattro, una per partenza notturna.
+    "uscite": [
+        {"orario": "14:00", "lingua": "it"},
+        {"orario": "18:00", "lingua": "it"},
+        {"orario": "20:00", "lingua": "en"},
+        {"orario": "21:00", "lingua": "en"},
+    ],
+    "fuso": "Europe/Rome",
 }
 
 # Campi che un profilo non-gaming ricava dagli altri se il file non li dice.
@@ -167,7 +206,7 @@ PREDEFINITO = {
 _RICAVATI = (
     "descrizione_argomento", "descrizione_canale", "soggetto_plurale",
     "genere", "pubblico", "tag_fissi", "tag_fissi_lungo", "hashtag_canale",
-    "hashtag_formato", "formati",
+    "hashtag_formato", "formati", "uscite",
 )
 
 # Campi che un profilo non-gaming DEVE scrivere: non c'e' un valore neutro
@@ -191,6 +230,7 @@ _NEUTRO = {
     ],
     # 22 = Persone e blog, la categoria generica di YouTube.
     "categoria_youtube": "22",
+    "fuso": "Europe/Rome",
 }
 
 # Articoli e desinenze per i due generi. Servono perche' i prompt parlano
@@ -228,6 +268,11 @@ class Profilo:
     @property
     def usa_steam(self):
         return self.materiale == "steam"
+
+    @property
+    def uscite_in_ordine(self):
+        """Le uscite dalla prima della giornata all'ultima."""
+        return sorted(self.uscite, key=lambda u: u["orario"])
 
     def g(self, parola):
         """La parola accordata al genere del soggetto: g('del') -> 'della'."""
@@ -299,6 +344,13 @@ def _ricava(dati, dal_file):
     if "hashtag_canale" not in dal_file:
         dati["hashtag_canale"] = descrizione
     canale = dati["hashtag_canale"]
+    if "uscite" not in dal_file:
+        # Due Short al giorno nella lingua delle ricerche: le due uscite
+        # inglesi di Poppone TV sono un esperimento suo, non un default.
+        ricerche = dati.get("ricerche") if isinstance(dati.get("ricerche"), dict) else {}
+        lingua = "it" if "it" in ricerche or not ricerche else next(iter(ricerche))
+        dati["uscite"] = [{"orario": "14:00", "lingua": lingua},
+                          {"orario": "18:00", "lingua": lingua}]
 
     # I temi per formato e le descrizioni dei formati: si parte da quelli
     # neutri e il file puo' cambiarne anche uno solo.
@@ -402,11 +454,169 @@ def _valida(dati, origine):
         _controlla_lista(origine, dati, chiave, vuota_ammessa=True)
     _controlla_per_formato(origine, dati, "hashtag_formato")
     _controlla_per_formato(origine, dati, "formati")
+    _controlla_uscite(origine, dati)
     if not dati["categoria_youtube"].isdigit():
         raise _errore(origine, f"'categoria_youtube' e' il numero della "
                                f"categoria YouTube (20 = Gaming, 26 = Stile e "
                                f"consigli, 17 = Sport...), non "
                                f"'{dati['categoria_youtube']}'.")
+
+
+# ===========================================================================
+# LE USCITE E LE PARTENZE NOTTURNE
+# ===========================================================================
+def _minuti(orario):
+    ora, minuto = orario.split(":")
+    return int(ora) * 60 + int(minuto)
+
+
+def _in_orario(minuti):
+    minuti %= 24 * 60
+    return f"{minuti // 60:02d}:{minuti % 60:02d}"
+
+
+def scostamenti(fuso):
+    """Gli scostamenti da UTC del fuso nell'anno, in minuti: uno o due.
+
+    Due quando c'e' l'ora legale. Si guardano meta' gennaio e meta' luglio,
+    cosi' vale per tutti e due gli emisferi. Solleva ZoneInfoNotFoundError o
+    ValueError se il fuso non esiste.
+    """
+    zona = ZoneInfo(fuso)
+    anno = datetime.now().year
+    return sorted({int(datetime(anno, mese, 15, 12, tzinfo=zona)
+                       .utcoffset().total_seconds() // 60) for mese in (1, 7)})
+
+
+def cron_adatto(orario, indice, fuso):
+    """La partenza numero `indice` (da 0) ha il margine giusto per `orario`?
+
+    Deve valere tutto l'anno: con l'ora legale la stessa uscita locale cade
+    un'ora prima in UTC, e il cron resta dov'e'.
+    """
+    ora, minuto = CRON_USCITE[indice]
+    partenza = ora * 60 + minuto
+    for scostamento in scostamenti(fuso):
+        margine = (_minuti(orario) - scostamento - partenza) % (24 * 60)
+        if not (MARGINE_MINIMO_ORE * 60 <= margine <= ANTICIPO_PARTENZA_ORE * 60):
+            return False
+    return True
+
+
+def finestre(fuso):
+    """Per ogni partenza, fra che ore locali puo' cadere la sua uscita.
+
+    Serve solo a spiegare un profilo sbagliato con parole utili, per esempio
+    "prima partenza: dalle 11:17 alle 18:17".
+    """
+    risultato = []
+    offs = scostamenti(fuso)
+    for ora, minuto in CRON_USCITE:
+        partenza = ora * 60 + minuto
+        inizio = partenza + MARGINE_MINIMO_ORE * 60 + max(offs)
+        fine = partenza + ANTICIPO_PARTENZA_ORE * 60 + min(offs)
+        risultato.append((_in_orario(inizio), _in_orario(fine)))
+    return risultato
+
+
+def abbina_cron(uscite, fuso):
+    """A quale partenza notturna va ciascuna uscita, o None se non si puo'.
+
+    Ritorna una lista di indici da 0, nello stesso ordine di `uscite`. Si
+    provano gli abbinamenti in ordine, dalle uscite piu' presto alle
+    partenze piu' presto, e vince il primo che rispetta i margini: per
+    Poppone TV e' 14:00 -> prima, 18:00 -> seconda, 20:00 -> terza, 21:00 ->
+    quarta, cioe' i cron di sempre. Quattro partenze danno al massimo 24
+    abbinamenti da provare.
+    """
+    ordine = sorted(range(len(uscite)), key=lambda i: uscite[i]["orario"])
+    for scelta in permutations(range(len(CRON_USCITE)), len(uscite)):
+        if all(cron_adatto(uscite[i]["orario"], cron, fuso)
+               for i, cron in zip(ordine, scelta)):
+            abbinamento = [None] * len(uscite)
+            for i, cron in zip(ordine, scelta):
+                abbinamento[i] = cron
+            return abbinamento
+    return None
+
+
+def uscita_del_cron(profilo, numero):
+    """L'uscita che copre la partenza numero `numero` (1-4), o None.
+
+    None vuol dire che questa partenza oggi non ha niente da fare: un canale
+    con due uscite ne lascia libere due.
+    """
+    abbinamento = abbina_cron(profilo.uscite, profilo.fuso) or []
+    for uscita, cron in zip(profilo.uscite, abbinamento):
+        if cron == numero - 1:
+            return uscita
+    return None
+
+
+def uscita_richiesta(profilo, testo):
+    """L'uscita chiesta a mano: il suo numero nella giornata o il suo orario.
+
+    '2' e' la seconda uscita della giornata, '18:00' e' quella delle 18:00.
+    Solleva ProfiloNonValido se nel profilo non c'e'.
+    """
+    testo = (testo or "").strip()
+    in_ordine = profilo.uscite_in_ordine
+    if testo.isdigit() and 1 <= int(testo) <= len(in_ordine):
+        return in_ordine[int(testo) - 1]
+    for uscita in in_ordine:
+        if uscita["orario"] == testo:
+            return uscita
+    elenco = ", ".join(f"{i}) {u['orario']}" for i, u in enumerate(in_ordine, 1))
+    raise ProfiloNonValido(
+        f"L'uscita richiesta '{testo}' non c'e' nel profilo del canale. "
+        f"Le uscite sono: {elenco}.")
+
+
+def _controlla_uscite(origine, dati):
+    fuso = dati.get("fuso")
+    if not isinstance(fuso, str) or not fuso.strip():
+        raise _errore(origine, "'fuso' deve essere un fuso orario, per "
+                               "esempio 'Europe/Rome'.")
+    try:
+        scostamenti(fuso)
+    except (ZoneInfoNotFoundError, ValueError):
+        raise _errore(origine, f"'fuso': '{fuso}' non e' un fuso orario "
+                               f"conosciuto. Si scrive come 'Europe/Rome' o "
+                               f"'America/New_York'.") from None
+
+    uscite = dati.get("uscite")
+    if not isinstance(uscite, list) or not 1 <= len(uscite) <= MAX_USCITE:
+        raise _errore(origine, f"'uscite' deve essere una lista da 1 a "
+                               f"{MAX_USCITE} uscite, per esempio "
+                               f'[{{"orario": "18:00", "lingua": "it"}}].')
+    visti = set()
+    for n, uscita in enumerate(uscite, 1):
+        if not isinstance(uscita, dict) or set(uscita) != {"orario", "lingua"}:
+            raise _errore(origine, f"l'uscita numero {n} deve avere solo "
+                                   f"'orario' e 'lingua'.")
+        orario, lingua = uscita["orario"], uscita["lingua"]
+        if not isinstance(orario, str) or not _RE_ORARIO.match(orario):
+            raise _errore(origine, f"l'uscita numero {n} ha orario "
+                                   f"'{orario}': si scrive HH:MM, per esempio "
+                                   f"'18:00'.")
+        if lingua not in LINGUE:
+            raise _errore(origine, f"l'uscita delle {orario} ha lingua "
+                                   f"'{lingua}': si usa {' o '.join(LINGUE)}.")
+        if orario in visti:
+            raise _errore(origine, f"due uscite alle {orario}.")
+        visti.add(orario)
+
+    if abbina_cron(uscite, fuso) is None:
+        spiegazione = "; ".join(
+            f"partenza {n} dalle {da} alle {a}"
+            for n, (da, a) in enumerate(finestre(fuso), 1))
+        raise _errore(origine, f"gli orari delle uscite non stanno nelle "
+                               f"partenze notturne. Ogni uscita deve cadere "
+                               f"fra {MARGINE_MINIMO_ORE} e "
+                               f"{ANTICIPO_PARTENZA_ORE} ore dopo la sua "
+                               f"partenza, e ogni partenza copre una sola "
+                               f"uscita. Con il fuso {fuso}: {spiegazione} "
+                               f"(ora locale).")
 
 
 def da_dizionario(dal_file, origine="canale.json"):
@@ -515,3 +725,35 @@ def imposta(profilo):
     """Sostituisce il profilo in uso (test, prove a mano). None = rileggi."""
     global _attivo
     _attivo = profilo
+
+
+def decidi(numero_cron):
+    """Per il workflow: questa partenza ha qualcosa da fare? Ritorna le righe
+    da scrivere in $GITHUB_OUTPUT.
+
+    Una partenza senza numero (la riserva, le prove a mano) ha sempre da
+    fare. Una partenza notturna senza uscita abbinata si ferma qui, prima che
+    il workflow installi FFmpeg e tre giga di dipendenze per niente.
+    """
+    numero = (numero_cron or "").strip()
+    if not numero:
+        return "attiva=true"
+    uscita = uscita_del_cron(attivo(), int(numero))
+    if uscita is None:
+        print(f"[Profilo] La partenza {numero} non ha un'uscita da coprire: "
+              f"non faccio niente.", file=sys.stderr)
+        return "attiva=false"
+    print(f"[Profilo] La partenza {numero} copre l'uscita delle "
+          f"{uscita['orario']} ({uscita['lingua']}).", file=sys.stderr)
+    return "attiva=true"
+
+
+if __name__ == "__main__":
+    # python3 profilo.py decidi  -> attiva=true|false, legge USCITA_CRON
+    if sys.argv[1:] != ["decidi"]:
+        sys.exit("Uso: python3 profilo.py decidi")
+    try:
+        print(decidi(os.getenv("USCITA_CRON")))
+    except ProfiloNonValido as e:
+        print(f"::error::{e}")
+        sys.exit(1)
