@@ -232,7 +232,10 @@
 // COSTANTI. Il repository modello e' l'unico valore da cambiare se Samaritan
 // cambia casa.
 // ===========================================================================
-const TEMPLATE_REPO = "poppone/samaritan_v2";
+const TEMPLATE_REPO = "poppone/samaritan-template";
+// Repository su cui la pagina non scrive mai: il modello e il canale di
+// Poppone TV. La prima installazione azzera la memoria del repository scelto.
+const REPO_PROTETTI = [TEMPLATE_REPO, "poppone/samaritan_v2"];
 const WORKFLOW = "samaritan.yml";
 const API = "https://api.github.com";
 
@@ -709,7 +712,8 @@ async function onVerifica() {
   stato.token = document.getElementById("token").value.trim();
   stato.ramo = "";
   if (!indirizzo) return esito("esito-github", "Indirizzo non valido: incolla quello della tua copia, per esempio https://github.com/mario/samaritan.", false);
-  if (`${indirizzo.owner}/${indirizzo.repo}`.toLowerCase() === TEMPLATE_REPO.toLowerCase()) {
+  const scelto = `${indirizzo.owner}/${indirizzo.repo}`.toLowerCase();
+  if (REPO_PROTETTI.some((r) => r.toLowerCase() === scelto)) {
     return esito("esito-github", "Questo e' il modello di Samaritan, non la tua copia: fai prima il passo 1.", false);
   }
   if (!stato.token) return esito("esito-github", "Incolla il token GitHub.", false);

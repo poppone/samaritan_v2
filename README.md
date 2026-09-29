@@ -519,17 +519,21 @@ browser e parla solo con `api.github.com` e con i server OAuth di Google. Scrive
 giro OAuth di Google per il refresh token e lancia un video di prova privato.
 La guida per il cliente e' [GUIDA_CLIENTE.md](GUIDA_CLIENTE.md).
 
-Da fare una volta sola, da chi possiede il repository modello:
+Dove sta cosa (29 settembre 2026):
 
-1. **Settings > General > Template repository**: acceso. Il passo 1 della
-   pagina apre `github.com/<modello>/generate`; il nome del modello e' la
-   costante `TEMPLATE_REPO` in cima alla pagina. Un modello privato si puo'
-   copiare solo da chi ci ha accesso.
-2. **Settings > Pages**: pubblica il ramo `main`. La pagina sara' su
-   `https://<utente>.github.io/<repository>/installa/`, ed e' quell'indirizzo
-   che il cliente registra su Google come URI di reindirizzamento: Google
-   accetta solo `https`. Su un repository privato GitHub Pages richiede un
-   piano a pagamento.
+- **`poppone/samaritan-template`**, privato: la copia pulita da vendere, senza
+  la memoria e le clip di Poppone TV. Va acceso **Settings > General >
+  Template repository**. Un modello privato si copia solo se si ha accesso:
+  il cliente si invita (in sola lettura) dopo che ha pagato. Il nome e' la
+  costante `TEMPLATE_REPO` in cima alla pagina.
+- **`poppone/samaritan-installa`**, pubblico: contiene solo la pagina, perche'
+  GitHub Pages su un repository privato richiede un piano a pagamento. Con
+  **Settings > Pages** sul ramo `main` la pagina e' su
+  `https://poppone.github.io/samaritan-installa/`, ed e' quell'indirizzo che il
+  cliente registra su Google come URI di reindirizzamento (Google accetta solo
+  `https`).
+- La pagina si sviluppa qui, in `installa/index.html`, e si copia negli altri
+  due quando cambia. Rifiuta di scrivere sul modello e su questo repository.
 
 `telegram/worker.js` resta di Poppone TV (ha il repository scritto dentro):
 i clienti ricevono gli avvisi Telegram, ma non comandano la pipeline dal bot.
