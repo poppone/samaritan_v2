@@ -272,6 +272,13 @@ MAX_PAROLE_CERCATE = 2
 MEMORIA_PAROLE_TITOLI = 10
 
 MIN_PAROLE_SCRIPT = 45
+
+# Tentativi di scrittura per ogni modello Groq: dispari lo schema vincolato,
+# pari il testo libero. Erano due: con due modelli, quattro tentativi in
+# tutto, e il 29 settembre 2026 sono saltate tre uscite su quattro con tutti
+# i tentativi bruciati. Il modello piccolo scrive spesso script troppo corti,
+# quindi il tentativo in piu' conviene darlo a entrambi.
+TENTATIVI_PER_MODELLO = 3
 MAX_PAROLE_SCRIPT = 95
 
 # Con cosa puo' finire uno script per essere considerato finito. Il tetto
@@ -1669,9 +1676,15 @@ def genera_script_samaritan(tema=None):
     notizie_vietate = set()
 
     modelli = config.GROQ_MODELLI
+    # Quante volte uno script e' stato scartato per la forma dell'apertura.
+    # Il 29 settembre 2026 l'uscita delle 20:00 e' saltata con tre tentativi
+    # su quattro scartati perche' aprivano con una domanda come i video
+    # recenti: il modello non riesce a uscirne, e un'apertura gia' vista vale
+    # piu' di un buco. Dopo due scarti cosi' la regola si spegne.
+    scarti_per_schema = 0
 
     for n_modello, modello in enumerate(modelli):
-        for tentativo in range(1, 3):       # 2 tentativi per modello
+        for tentativo in range(1, TENTATIVI_PER_MODELLO + 1):
             # Sull'ultimo tentativo le regole anti-ripetizione si spengono.
             # Dicono che un video somiglia a quello di ieri, non che e'
             # sbagliato, e un video che apre come quello di ieri vale
@@ -1679,12 +1692,13 @@ def genera_script_samaritan(tema=None):
             # 2026 l'uscita delle 18:00 e' saltata proprio cosi': tre
             # tentativi bruciati da un titolo che non passava, il quarto
             # scartato per la forma dell'apertura.
-            ultima_spiaggia = (n_modello == len(modelli) - 1 and tentativo == 2)
+            ultima_spiaggia = (n_modello == len(modelli) - 1
+                               and tentativo == TENTATIVI_PER_MODELLO)
             try:
                 # Primo tentativo con lo schema vincolato, secondo in testo
                 # libero ritagliando il JSON: cosi' anche un modello che non
                 # supporta lo schema riesce comunque a rispondere.
-                con_schema = tentativo == 1
+                con_schema = tentativo % 2 == 1
                 prompt_utente = prompt_base
                 if motivo_scarto:
                     prompt_utente += (
@@ -1757,8 +1771,12 @@ def genera_script_samaritan(tema=None):
                 ok, motivo = valida_script(
                     titolo, script,
                     () if ultima_spiaggia else impronte_aperture,
-                    () if ultima_spiaggia else schemi_recenti,
+                    () if ultima_spiaggia or scarti_per_schema >= 2
+                    else schemi_recenti,
                 )
+                if not ok and motivo.startswith("apre con ") \
+                        and motivo.endswith(", come i video recenti"):
+                    scarti_per_schema += 1
                 if ok:
                     ok, motivo = valida_titolo(titolo, gioco)
                 if ok and fonte and idx in notizie_vietate:
