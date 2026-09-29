@@ -89,6 +89,10 @@ jobs:
   # Legge anche canale.json, quindi un profilo scritto male ferma tutto qui,
   # con il messaggio in chiaro, invece che a meta' montaggio.
   uscita:
+    # Il modello da vendere (samaritan-template) non ha un canale ne' chiavi:
+    # le sue partenze notturne fallirebbero tutte, ogni notte. Le copie dei
+    # clienti hanno un altro nome e partono normalmente.
+    if: github.repository != 'poppone/samaritan-template'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
