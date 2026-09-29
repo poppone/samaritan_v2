@@ -856,10 +856,10 @@ class TestUltimaSpiaggia:
             "fonte": "", "video_id": "hBMDcRhugbA",
         }]
 
-    def test_lo_stesso_script_passa_all_ultimo_tentativo(self, monkeypatch):
+    def test_dopo_due_scarti_per_la_forma_lo_script_passa(self, monkeypatch):
         prompt_visti = []
         finto = TestRigenerazioneInformata()._finto_client(
-            [self._risposta()] * 4, prompt_visti
+            [self._risposta()] * 6, prompt_visti
         )
         monkeypatch.setattr(brain, "client", finto)
         monkeypatch.setattr(brain, "recupera_trend_gaming_online", lambda **k: [])
@@ -868,15 +868,17 @@ class TestUltimaSpiaggia:
 
         risultato = brain.genera_script_samaritan()
 
-        # Scartato tre volte, accettato al quarto invece di far saltare il video.
-        assert len(prompt_visti) == 4
+        # Scartato due volte per la forma dell'apertura, accettato al terzo
+        # invece di bruciare tutti i tentativi e far saltare il video (29
+        # settembre 2026, uscita delle 20:00).
+        assert len(prompt_visti) == 3
         assert risultato["script"] == self._SCRIPT
 
     def test_prima_dell_ultimo_tentativo_la_regola_vale(self, monkeypatch):
-        # Con un solo modello i tentativi sono due: il primo deve scartare.
+        # Con un solo modello i tentativi sono tre: i primi due scartano.
         prompt_visti = []
         finto = TestRigenerazioneInformata()._finto_client(
-            [self._risposta()] * 2, prompt_visti
+            [self._risposta()] * 3, prompt_visti
         )
         monkeypatch.setattr(brain, "client", finto)
         monkeypatch.setattr(brain.config, "GROQ_MODELLI", ["openai/gpt-oss-120b"])
@@ -886,8 +888,9 @@ class TestUltimaSpiaggia:
 
         brain.genera_script_samaritan()
 
-        assert len(prompt_visti) == 2
+        assert len(prompt_visti) == 3
         assert "apre con una domanda" in prompt_visti[1]
+        assert "apre con una domanda" in prompt_visti[2]
 
 
 class TestNotiziaPiuGrossa:
