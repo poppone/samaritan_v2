@@ -132,6 +132,9 @@ VOCI_PER_RICERCA = 15
 # quello di Google almeno per questa quota di parole, se no il sommario e' di
 # un'altra notizia.
 SOGLIA_STESSA_NOTIZIA = 0.5
+# Quante notizie su altri giochi devono restare per togliere dalla lista
+# quelle sul gioco del video precedente invece di metterle solo in fondo.
+MIN_NOTIZIE_ALTRO_GIOCO = 3
 MAX_CARATTERI_SOMMARIO = 400
 
 # I nomi che muovono pubblico da soli (per Poppone TV: GTA, Fortnite, le
@@ -1496,7 +1499,8 @@ def _dettagli_inventati(titolo_notizia, script, sommario="", testata=""):
         f"{caratteristiche}. NON elencare: il nome della TESTATA che "
         "ha dato la notizia (dire che l'ha scritto o contato lei e' "
         "corretto), opinioni, domande al "
-        "pubblico, inviti a iscriversi, frasi generiche su fan e community, "
+        "pubblico, inviti a immaginare o a pensare ('immagina di...', "
+        "'pensa se...'), inviti a iscriversi, frasi generiche su fan e community, "
         f"fatti noti da sempre {p.g('sul')} {s}, e riformulazioni o deduzioni "
         "ovvie del titolo (per esempio 'appena annunciato' per una notizia "
         "di oggi, 'enorme' o 'spettacolare' per un titolo che dice che il "
@@ -1603,9 +1607,17 @@ def genera_script_samaritan(tema=None):
     # il 28 settembre 2026 la [0] era su GTA 6 dopo un video su GTA VI, e le
     # uscite delle 14:00 e delle 18:00 sono saltate con tre tentativi su
     # quattro bruciati cosi'. L'ordine resta stabile per tutto il resto.
+    # Il 29 settembre 2026 non e' bastato: il modello andava a prendersi la
+    # notizia su GTA 6 anche in fondo alla lista, e l'uscita delle 18:00 e'
+    # saltata due volte. Se ne restano abbastanza, quelle notizie si tolgono.
     if gioco_precedente.strip():
-        notizie = sorted(
-            notizie, key=lambda n: _gioco_nel_titolo(n["titolo"], gioco_precedente))
+        altre = [n for n in notizie
+                 if not _gioco_nel_titolo(n["titolo"], gioco_precedente)]
+        if len(altre) >= MIN_NOTIZIE_ALTRO_GIOCO:
+            notizie = altre
+        else:
+            notizie = sorted(
+                notizie, key=lambda n: _gioco_nel_titolo(n["titolo"], gioco_precedente))
 
     try:
         from analyst import migliori_hook
