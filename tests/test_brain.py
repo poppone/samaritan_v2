@@ -421,7 +421,7 @@ class TestNotiziaSulGiocoPrecedente:
     sceglieva perche' il prompt dice di scegliere la [0], e la regola dei
     doppioni la scartava."""
 
-    def test_le_notizie_sul_gioco_precedente_vanno_in_fondo(self, monkeypatch):
+    def test_le_notizie_sul_gioco_precedente_escono_dalla_lista(self, monkeypatch):
         import json as _json
         notizie = [
             {"titolo": "GTA 6, la lista aggiornata delle auto confermate",
@@ -464,7 +464,37 @@ class TestNotiziaSulGiocoPrecedente:
         except RuntimeError:
             pass
         prompt = visti[0]
-        assert prompt.index("[0] Elden Ring") < prompt.index("[1] GTA 6")
+        assert "[0] Elden Ring" in prompt
+        assert "GTA 6, la lista" not in prompt
+
+    def test_senza_altre_notizie_quella_sul_gioco_precedente_resta(self, monkeypatch):
+        notizie = [
+            {"titolo": "GTA 6, la lista aggiornata delle auto confermate",
+             "fonte": "Everyeye.it", "link": "", "sommario": ""},
+        ]
+        visti = []
+
+        class FinteCompletions:
+            @staticmethod
+            def create(**kw):
+                visti.append(kw["messages"][0]["content"])
+                raise RuntimeError("basta il prompt")
+
+        class FintoClient:
+            class chat:
+                completions = FinteCompletions()
+
+        monkeypatch.setattr(brain, "client", FintoClient())
+        monkeypatch.setattr(brain, "recupera_trend_gaming_online", lambda **k: notizie)
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: [{
+            "titolo": "Grand Theft Auto VI: la box da 400 euro",
+            "gioco": "Grand Theft Auto VI", "lingua": "it"}])
+        monkeypatch.setattr(brain, "salva_in_cronologia", lambda r: None)
+        try:
+            brain.genera_script_samaritan()
+        except RuntimeError:
+            pass
+        assert "[0] GTA 6" in visti[0]
 
 
 class TestTestataNellaVerifica:
