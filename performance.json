@@ -1,5 +1,5 @@
 {
-  "aggiornato": "2026-09-28",
+  "aggiornato": "2026-09-29",
   "video": {
     "XaU2hP-SWpM": {
       "views": 1419,
@@ -314,10 +314,10 @@
       "subscribersGained": 0
     },
     "eKbZZOOxBq0": {
-      "views": 50,
-      "averageViewPercentage": 74.29,
+      "views": 47,
+      "averageViewPercentage": 73.27,
       "averageViewDuration": 24,
-      "likes": 2,
+      "likes": 1,
       "comments": 0,
       "subscribersGained": 0
     },
@@ -346,9 +346,9 @@
       "subscribersGained": 0
     },
     "7RdG4xt6cVg": {
-      "views": 29,
-      "averageViewPercentage": 87.24,
-      "averageViewDuration": 13,
+      "views": 26,
+      "averageViewPercentage": 91.6,
+      "averageViewDuration": 14,
       "likes": 0,
       "comments": 0,
       "subscribersGained": 0
@@ -513,18 +513,18 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "k_DDfMjiKlQ": {
-      "views": 8,
-      "averageViewPercentage": 49.27,
-      "averageViewDuration": 7,
-      "likes": 0,
-      "comments": 0,
-      "subscribersGained": 0
-    },
     "3V0tH8tnqFU": {
       "views": 8,
       "averageViewPercentage": 146.74,
       "averageViewDuration": 13,
+      "likes": 0,
+      "comments": 0,
+      "subscribersGained": 0
+    },
+    "k_DDfMjiKlQ": {
+      "views": 7,
+      "averageViewPercentage": 50.74999999999999,
+      "averageViewDuration": 8,
       "likes": 0,
       "comments": 0,
       "subscribersGained": 0
@@ -1183,7 +1183,7 @@
     },
     {
       "sorgente": "YT_SEARCH",
-      "views": 1288
+      "views": 1281
     },
     {
       "sorgente": "YT_CHANNEL",
