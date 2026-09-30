@@ -145,6 +145,9 @@
             <select id="genere"><option value="">Lo capisce da solo</option><option value="m">Maschile (il, del)</option><option value="f">Femminile (la, della)</option></select></div>
         </div>
       </details>
+      <label><input type="checkbox" id="telegiornale"> Stile telegiornale
+        <span class="nota">(solo notizie con la fonte, tono da conduttore, cartello "Ultim'ora" con testata e "Immagini di
+        repertorio"; scarta le notizie su morti, crimini, guerre e tragedie)</span></label>
       <p class="nota">Senza Steam: le immagini dei video saranno clip senza diritti di Pexels. Samaritan non usa mai video di altri.</p>
     </div>
 
@@ -168,7 +171,7 @@
       <option value="20">Gaming</option><option value="26">Stile e consigli (cucina, casa)</option>
       <option value="17">Sport</option><option value="24">Intrattenimento</option>
       <option value="27">Istruzione</option><option value="28">Scienza e tecnologia</option>
-      <option value="22">Persone e blog</option>
+      <option value="22">Persone e blog</option><option value="25">Notizie e politica</option>
     </select>
 
     <details>
@@ -367,6 +370,7 @@ function leggiModulo() {
     tag_fissi: v("tag_fissi"), hashtag_canale: v("hashtag_canale"),
     esempi_soggetto: v("esempi_soggetto"), query_stock_riserva: v("query_stock_riserva"),
     nomi_grossi: v("nomi_grossi"),
+    telegiornale: document.getElementById("telegiornale").checked,
   };
 }
 
@@ -383,6 +387,7 @@ function costruisciProfilo(m) {
     p.soggetto = (m.soggetto || "").trim();
     if ((m.soggetto_plurale || "").trim()) p.soggetto_plurale = m.soggetto_plurale.trim();
     if (m.genere) p.genere = m.genere;
+    if (m.telegiornale) p.telegiornale = true;
   }
   // Steam ha solo videogiochi: per ogni altro argomento solo clip stock.
   p.materiale = gaming ? "steam" : "stock";

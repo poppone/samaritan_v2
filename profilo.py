@@ -199,6 +199,51 @@ PREDEFINITO = {
         {"orario": "21:00", "lingua": "en"},
     ],
     "fuso": "Europe/Rome",
+
+    # Il canale e' un telegiornale: solo notizie vere con la fonte, tono da
+    # conduttore, fonte e "immagini di repertorio" scritte a schermo, e le
+    # notizie su morti, crimini e tragedie scartate prima di arrivare al
+    # modello (vedi TEMI_DELICATI). Poppone TV non lo e'.
+    "telegiornale": False,
+    # Parole che, nel titolo o nel sommario di una notizia, la tolgono di
+    # mezzo, per lingua. Vuoto = nessun filtro; un telegiornale che non le
+    # scrive riceve TEMI_DELICATI.
+    "temi_esclusi": {},
+}
+
+# Le notizie che un telegiornale automatico non racconta. Non per pudore: su
+# morti, crimini, guerre e tragedie YouTube toglie quasi sempre la pubblicita'
+# (l'icona gialla), un errore diventa un avvertimento sul canale, e una clip
+# stock montata sotto una strage sembra il filmato della strage, cioe'
+# contenuto ingannevole. Si confrontano parole intere, senza accenti e in
+# minuscolo: "morti" prende "5 morti", non "mortificato". Le parole sono
+# scelte a mano, lasciando fuori quelle usate spesso in senso figurato
+# ("notizia bomba", "crash di Borsa", "attacca l'avversario"): una che manca
+# lascia passare una notizia, una di troppo ne scarta una buona, e una
+# notizia buona in piu' c'e' sempre.
+TEMI_DELICATI = {
+    "it": [
+        "morto", "morta", "morti", "morte", "muore", "muoiono", "morire",
+        "ucciso", "uccisa", "uccisi", "uccide", "omicidio", "omicida",
+        "femminicidio", "strage", "vittima", "vittime", "cadavere", "corpo senza vita",
+        "suicidio", "suicida", "stupro", "violenza sessuale",
+        "pedofilia", "accoltellato", "accoltellata", "sparatoria", "spari",
+        "attentato", "terrorismo", "terrorista", "esplosione",
+        "guerra", "bombardamento", "raid", "missili", "ostaggi",
+        "incidente mortale", "schianto", "tragedia", "lutto",
+        "funerale", "annegato", "annegata", "terremoto", "alluvione",
+        "overdose", "rapina", "sequestro", "arrestato", "arrestata",
+    ],
+    "en": [
+        "dead", "dies", "died", "death", "deaths", "killed", "killing",
+        "kills", "murder", "murdered", "homicide", "massacre", "victim",
+        "victims", "body found", "suicide", "rape", "sexual assault",
+        "stabbed", "stabbing", "shooting", "gunman", "terror attack",
+        "terror", "terrorist", "bomb", "explosion", "war", "airstrike",
+        "missile", "missiles", "hostage", "hostages", "fatal",
+        "tragedy", "funeral", "drowned", "earthquake", "flood", "overdose",
+        "robbery", "kidnapped", "arrested",
+    ],
 }
 
 # Campi che un profilo non-gaming ricava dagli altri se il file non li dice.
@@ -206,7 +251,7 @@ PREDEFINITO = {
 _RICAVATI = (
     "descrizione_argomento", "descrizione_canale", "soggetto_plurale",
     "genere", "pubblico", "tag_fissi", "tag_fissi_lungo", "hashtag_canale",
-    "hashtag_formato", "formati", "uscite",
+    "hashtag_formato", "formati", "uscite", "temi_esclusi",
 )
 
 # Campi che un profilo non-gaming DEVE scrivere: non c'e' un valore neutro
@@ -231,6 +276,8 @@ _NEUTRO = {
     # 22 = Persone e blog, la categoria generica di YouTube.
     "categoria_youtube": "22",
     "fuso": "Europe/Rome",
+    "telegiornale": False,
+    "temi_esclusi": {},
 }
 
 # Articoli e desinenze per i due generi. Servono perche' i prompt parlano
@@ -292,6 +339,10 @@ class Profilo:
             return tuple(self.ricerche["it"])
         return tuple(next(iter(self.ricerche.values())))
 
+    def temi_esclusi_per(self, lingua):
+        """Le parole che scartano una notizia in quella lingua, o ()."""
+        return tuple(self.temi_esclusi.get(lingua) or ())
+
     def parole_calde_per(self, lingua):
         """Le parole calde del profilo in quella lingua, o () se non ne ha."""
         return tuple(self.parole_calde.get(lingua) or ())
@@ -351,6 +402,9 @@ def _ricava(dati, dal_file):
         lingua = "it" if "it" in ricerche or not ricerche else next(iter(ricerche))
         dati["uscite"] = [{"orario": "14:00", "lingua": lingua},
                           {"orario": "18:00", "lingua": lingua}]
+
+    if "temi_esclusi" not in dal_file and dati.get("telegiornale") is True:
+        dati["temi_esclusi"] = json.loads(json.dumps(TEMI_DELICATI))
 
     # I temi per formato e le descrizioni dei formati: si parte da quelli
     # neutri e il file puo' cambiarne anche uno solo.
@@ -448,6 +502,13 @@ def _valida(dati, origine):
                                f"'{dati['argomento']}' usa 'stock'.")
     _controlla_per_lingua(origine, dati, "ricerche", vuoto_ammesso=False)
     _controlla_per_lingua(origine, dati, "parole_calde", vuoto_ammesso=True)
+    _controlla_per_lingua(origine, dati, "temi_esclusi", vuoto_ammesso=True)
+    if not isinstance(dati["telegiornale"], bool):
+        raise _errore(origine, f"'telegiornale' e' true o false, non "
+                               f"'{dati['telegiornale']}'.")
+    if dati["telegiornale"] and dati["materiale"] != "stock":
+        raise _errore(origine, "un telegiornale usa solo clip di repertorio "
+                               "senza diritti: 'materiale' deve essere 'stock'.")
     for chiave in ("tag_fissi", "tag_fissi_lungo", "query_stock_riserva"):
         _controlla_lista(origine, dati, chiave)
     for chiave in ("nomi_grossi", "esempi_soggetto", "esempi_query_video"):

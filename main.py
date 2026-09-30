@@ -131,6 +131,7 @@ def _scrivi_e_monta(tema):
         gioco=dati.get("gioco", ""),
         tema=tema or "Gaming",
         resoconto=materiale,
+        fonte=dati.get("fonte", ""),
     )
     return dati, video, materiale, ""
 

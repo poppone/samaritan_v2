@@ -1,0 +1,66 @@
+{
+  "_leggimi": "Esempio di profilo per un telegiornale in Shorts: notizie vere di attualita', economia, tecnologia, spettacolo e sport, sempre con la fonte. Copialo in canale.json e cambia nome, handle e orari. Con 'telegiornale': true Samaritan usa solo i formati di notizia, scrive con tono da conduttore, mette a schermo il cartello con titolo, testata e 'Immagini di repertorio', e scarta le notizie su morti, crimini, guerre e tragedie (profilo.TEMI_DELICATI). Per scegliere tu quali temi scartare scrivi 'temi_esclusi' (per lingua): sostituisce l'elenco predefinito, non si aggiunge.",
+
+  "nome_canale": "TG Lampo",
+  "handle": "@TGLampo",
+
+  "telegiornale": true,
+
+  "argomento": "di attualita'",
+  "descrizione_argomento": "attualita'",
+  "descrizione_canale": "di notizie in 60 secondi",
+  "soggetto": "tema",
+  "soggetto_plurale": "temi",
+  "genere": "m",
+  "pubblico": "chi vuole sapere cosa succede in pochi secondi",
+  "esempi_soggetto": ["Banca d'Italia", "Apple", "Serie A"],
+  "esempi_query_video": ["city skyline aerial", "newspaper printing press"],
+
+  "ricerche": {
+    "it": [
+      "ultime notizie Italia",
+      "economia OR bollette OR pensioni OR tasse",
+      "tecnologia OR intelligenza artificiale OR smartphone",
+      "cinema OR serie tv OR musica OR Sanremo",
+      "Serie A OR Sinner OR Formula 1"
+    ],
+    "en": [
+      "top news",
+      "economy OR inflation OR stock market",
+      "technology OR artificial intelligence",
+      "entertainment OR movies OR music"
+    ]
+  },
+
+  "parole_calde": {
+    "it": ["ufficiale", "annunciato", "da oggi", "record", "aumento", "bonus", "novita", "cambia", "arriva"]
+  },
+
+  "tag_fissi": ["notizie", "ultime notizie", "tg", "news ita", "shorts ita"],
+  "tag_fissi_lungo": ["notizie", "ultime notizie", "tg"],
+  "hashtag_canale": "notizie",
+  "hashtag_formato": {
+    "VIRAL_HOOK_NEWS": "ultimora",
+    "MYTH_BUSTING_VIRAL": "fakenews"
+  },
+  "formati": {
+    "VIRAL_HOOK_NEWS": "Notizia del giorno raccontata come in un telegiornale: il fatto nella prima frase, poi perche' conta",
+    "MYTH_BUSTING_VIRAL": "Una notizia falsa o esagerata che sta girando, smentita o chiarita dalla fonte"
+  },
+
+  "materiale": "stock",
+  "query_stock_riserva": [
+    "city skyline aerial",
+    "newspaper printing press",
+    "stock market screen",
+    "world map globe",
+    "busy street timelapse"
+  ],
+
+  "uscite": [
+    {"orario": "13:00", "lingua": "it"},
+    {"orario": "20:00", "lingua": "it"}
+  ],
+  "fuso": "Europe/Rome",
+  "categoria_youtube": "25"
+}
