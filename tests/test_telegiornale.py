@@ -177,6 +177,36 @@ class TestPrompt:
         assert any("un telegiornale racconta solo quelle" in v for v in visti)
 
 
+class TestTitoloDaTelegiornale:
+    """La prima prova vera (30 settembre 2026): "Inter: assenza contro il
+    Parma? 🤔", con lo script che apriva con una domanda."""
+
+    def test_niente_emoji_nel_titolo(self, tg):
+        assert brain._pulisci_titolo("Inter: tre assenti contro il Parma 🤔") == \
+            "Inter: tre assenti contro il Parma"
+
+    def test_poppone_tv_tiene_la_sua_emoji(self):
+        assert brain._pulisci_titolo("GTA 6: la mappa e' falsa 🤯").endswith("🤯")
+
+    def test_il_titolo_domanda_si_rigenera(self, tg):
+        assert "punto di domanda" in brain._fuori_stile_tg(
+            "Inter: assenza contro il Parma?", "Contro il Parma mancano tre titolari.")
+
+    def test_l_apertura_domanda_si_rigenera(self, tg):
+        assert "apre con una domanda" in brain._fuori_stile_tg(
+            "Inter: tre assenti contro il Parma",
+            "Inter assente contro il Parma? E' vero. Lo riporta DAZN.")
+
+    def test_un_titolo_affermativo_passa(self, tg):
+        assert brain._fuori_stile_tg(
+            "Inter: tre assenti contro il Parma",
+            "Contro il Parma l'Inter perde tre titolari. Lo riporta DAZN.") == ""
+
+    def test_il_prompt_lo_chiede(self, tg):
+        prompt = brain._costruisci_system_prompt("VIRAL_HOOK_NEWS", TestPrompt.NOTIZIE, [], [])
+        assert "senza punto di domanda" in prompt
+
+
 class TestCartello:
     """maker si porta dietro moviepy, che la CI non installa: qui si salta."""
 
