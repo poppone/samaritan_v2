@@ -69,8 +69,15 @@ MODULI = [
     _modulo(argomento="di attualita'", soggetto="tema", telegiornale=True,
             ricerche_it="ultime notizie Italia", categoria_youtube="25"),
     _modulo(tipo="gaming", ricerche_it="", telegiornale=True),     # ignorato
+    # "Altro" con il solo argomento: il resto lo scrive Samaritan.
+    _modulo(tipo="altro", argomento="di pesca sportiva", soggetto="", ricerche_it="",
+            nomi_grossi="", tag_fissi="", esempi_soggetto="", query_stock_riserva=""),
+    _modulo(tipo="altro", argomento="di scommesse sportive", soggetto="", ricerche_it=""),
+    _modulo(tipo="altro", argomento="di video porno", soggetto="", ricerche_it=""),
 ]
-TELEGIORNALE, GAMING_CON_TELEGIORNALE = len(MODULI) - 2, len(MODULI) - 1
+TELEGIORNALE, GAMING_CON_TELEGIORNALE, SOLO_ARGOMENTO = 21, 22, 23
+TESTI_VIETATI = ["di cucina", "di porno", "hot dog", "Top Gun", "casinò online",
+                 "di One Piece", "per adulti", "Scommesse sul calcio"]
 
 # Lunghezze intorno al blocco di 128 byte di BLAKE2b.
 BLAKE = [bytes(range(256))[:n] * 1 for n in (0, 1, 64, 127, 128, 129, 255)] + [
@@ -106,7 +113,7 @@ def pagina(tmp_path_factory):
     if not node:
         pytest.skip("Node o Playwright non installati: la pagina non si puo' aprire.")
     casi = tmp_path_factory.mktemp("installa") / "casi.json"
-    casi.write_text(json.dumps({"moduli": MODULI, "profili": [],
+    casi.write_text(json.dumps({"moduli": MODULI, "profili": [], "testi": TESTI_VIETATI,
                                 "blake": [b.hex() for b in BLAKE]}), encoding="utf-8")
     ambiente = dict(os.environ, NODE_PATH=moduli_node)
     ambiente.setdefault("PLAYWRIGHT_BROWSERS_PATH", "/opt/pw-browsers")
@@ -159,6 +166,29 @@ class TestPaginaNelBrowser:
         assert p.telegiornale is True
         assert p.temi_esclusi == profilo.TEMI_DELICATI
         assert p.categoria_youtube == "25"
+
+    def test_solo_l_argomento_basta(self, pagina):
+        caso = pagina["costruiti"][SOLO_ARGOMENTO]
+        assert caso["errori"] == []
+        assert caso["profilo"]["autodefinisci"] is True
+        p = profilo.da_dizionario(caso["profilo"])
+        assert p.autodefinisci is True
+        assert p.ricerche_per("it") == ("pesca sportiva",)
+
+    def test_ogni_argomento_del_menu_e_un_profilo_valido(self, pagina):
+        assert len(pagina["argomenti"]) >= 12
+        for caso in pagina["argomenti"]:
+            assert caso["errori"] == [], caso["chiave"]
+            p = profilo.da_dizionario(caso["profilo"])
+            assert p.materiale == "stock", caso["chiave"]
+            assert p.ricerche_per("en"), caso["chiave"]
+            assert not p.autodefinisci, caso["chiave"]
+        tg = [c for c in pagina["argomenti"] if c["chiave"] == "telegiornale"][0]
+        assert profilo.da_dizionario(tg["profilo"]).telegiornale is True
+
+    def test_i_temi_vietati_sono_quelli_di_profilo_py(self, pagina):
+        assert tuple(pagina["vietati"]) == profilo.ARGOMENTI_VIETATI
+        assert pagina["vietato"] == [profilo.argomento_vietato(t) for t in TESTI_VIETATI]
 
     def test_un_canale_di_videogiochi_non_diventa_telegiornale(self, pagina):
         caso = pagina["costruiti"][GAMING_CON_TELEGIORNALE]

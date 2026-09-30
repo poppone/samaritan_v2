@@ -60,9 +60,18 @@ a Samaritan non serve piu'.
 ## Passo 3: descrivi il tuo canale
 
 - **Nome del canale** e **handle** (quello che comincia con `@`).
-- **Di cosa parla**: *Videogiochi* oppure *Altro argomento*. Con un altro
-  argomento scrivi come lo diresti dopo la parola "notizie" (per esempio "di
-  cucina") e di cosa parla ogni video, al singolare (per esempio "ricetta").
+- **Di cosa parla**: scegli dal menu. Per *Videogiochi*, *Telegiornale*,
+  *Tecnologia*, *Calcio*, *Sport*, *Cinema e serie TV*, *Musica*, *Cucina*,
+  *Auto e moto*, *Economia e risparmio*, *Scienza e spazio*, *Animali*,
+  *Viaggi* e *Anime e manga* la pagina riempie da sola i campi qui sotto, e
+  puoi cambiarli. Con **Altro** scrivi solo l'argomento come lo diresti dopo
+  la parola "notizie" (per esempio "di pesca sportiva"): di cosa parla ogni
+  video, le ricerche, i tag e il resto li scrive Samaritan al primo video, e
+  ogni due settimane li ritara guardando cosa cerca davvero il tuo pubblico
+  e quali video sono andati meglio. Quello che scrivi tu vince sempre.
+  Argomenti per adulti, scommesse, droghe, armi, pirateria, truffe e
+  disinformazione medica non si possono installare: YouTube non li ammette o
+  non li monetizza.
 - **Stile telegiornale** (solo con un altro argomento): il canale diventa un
   TG in Shorts. Racconta solo notizie con la fonte, con tono da conduttore;
   in ogni video c'e' un cartello "Ultim'ora" con il titolo, la testata e la

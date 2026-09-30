@@ -130,6 +130,12 @@ async function finGitHub(p) {
           return { profilo, errori: S.validaProfilo(profilo) };
         }),
         validazioni: casi.profili.map((pr) => S.validaProfilo(pr)),
+        argomenti: S.argomenti.map((k) => {
+          const profilo = S.costruisciProfilo(S.moduloDaArgomento(k, S.leggiModulo()));
+          return { chiave: k, profilo, errori: S.validaProfilo(profilo) };
+        }),
+        vietati: S.vietati,
+        vietato: (casi.testi || []).map((t) => S.argomentoVietato(t)),
         finestre: S.finestre(S.scostamenti("Europe/Rome")),
         blake: casi.blake.map((h) => [aEsa(S.blake2b(esa(h), 24)), aEsa(S.blake2b(esa(h), 64))]),
         repository: ["https://github.com/mario/samaritan", "mario/samaritan.git", "boh"]

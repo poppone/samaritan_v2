@@ -31,6 +31,7 @@ import json
 import os
 import re
 import sys
+import unicodedata
 from datetime import datetime
 from itertools import permutations
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -38,6 +39,10 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 # Dove si cerca il profilo se PROFILO_CANALE non dice altro.
 FILE_PREDEFINITO = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 "canale.json")
+# Quello che Samaritan ha scritto da solo per un canale con 'autodefinisci':
+# sta accanto a canale.json e lo scrive autoprofilo.py. E' memoria del
+# canale come cronologia_trend.json, e il workflow lo salva con lei.
+NOME_FILE_AUTO = "canale_auto.json"
 
 # Le lingue che brain.LINGUE sa gestire. Sono ripetute qui invece di
 # importare brain, che si porta dietro Groq: un test controlla che i due
@@ -209,7 +214,37 @@ PREDEFINITO = {
     # mezzo, per lingua. Vuoto = nessun filtro; un telegiornale che non le
     # scrive riceve TEMI_DELICATI.
     "temi_esclusi": {},
+
+    # Samaritan si scrive da solo i campi che mancano (soggetto, ricerche,
+    # clip di riserva, nomi grossi, tag...) partendo dal solo argomento, e li
+    # rivede ogni tanto sui numeri veri del canale: vedi autoprofilo.py. I
+    # campi scritti a mano in canale.json vincono sempre.
+    "autodefinisci": False,
 }
+
+# Gli argomenti che YouTube non monetizza o non ammette proprio: contenuti
+# sessuali, gioco d'azzardo, droghe, armi, pirateria, truffe, disinformazione
+# medica. Fuori apposta le parole con un senso innocuo frequente ("hot dog",
+# "Top Gun", "Guns N' Roses", "Arma dei Carabinieri", "lotto di produzione").
+# Un canale su uno di questi non si installa: la pagina lo rifiuta,
+# profilo.py pure, e per un argomento libero anche il modello deve dire che
+# e' ammesso (autoprofilo.py). Parole intere, senza accenti, in minuscolo.
+ARGOMENTI_VIETATI = (
+    "porno", "porn", "pornografia", "sesso", "sex", "sexy", "erotico",
+    "erotica", "erotic", "nudo", "nuda", "nudi", "nude", "nudes",
+    "escort", "onlyfans", "fetish", "feticismo", "hentai", "xxx",
+    "per adulti", "camgirl",
+    "scommesse", "betting", "casino", "casinos", "gambling",
+    "gioco d azzardo", "azzardo", "slot machine", "poker",
+    "droga", "droghe", "drugs", "drug", "cannabis", "marijuana", "weed",
+    "cocaina", "cocaine",
+    "armi", "weapons", "esplosivi", "explosives",
+    "hacking", "hacker", "crack", "cracked", "pirateria", "piracy",
+    "pirata", "streaming gratis", "film gratis", "iptv",
+    "truffa", "truffe", "scam", "soldi facili", "easy money",
+    "schema ponzi", "complotti", "complotto", "conspiracy", "no vax",
+    "novax", "cure miracolose", "miracle cure",
+)
 
 # Le notizie che un telegiornale automatico non racconta. Non per pudore: su
 # morti, crimini, guerre e tragedie YouTube toglie quasi sempre la pubblicita'
@@ -278,6 +313,7 @@ _NEUTRO = {
     "fuso": "Europe/Rome",
     "telegiornale": False,
     "temi_esclusi": {},
+    "autodefinisci": False,
 }
 
 # Articoli e desinenze per i due generi. Servono perche' i prompt parlano
@@ -356,6 +392,22 @@ class Profilo:
 # ===========================================================================
 # CARICAMENTO E VALIDAZIONE
 # ===========================================================================
+def _parole_di(testo):
+    """' parola parola ' senza accenti e punteggiatura, per cercare parole intere."""
+    scomposto = unicodedata.normalize("NFKD", testo or "")
+    pulito = "".join(c for c in scomposto if not unicodedata.combining(c)).lower()
+    return " " + " ".join(re.split(r"[^\w]+", pulito)).strip() + " "
+
+
+def argomento_vietato(testo):
+    """La prima parola di ARGOMENTI_VIETATI che compare nel testo, o ''."""
+    parole = _parole_di(testo)
+    for vietato in ARGOMENTI_VIETATI:
+        if _parole_di(vietato) in parole:
+            return vietato
+    return ""
+
+
 def _errore(origine, testo):
     return ProfiloNonValido(f"Profilo del canale non valido ({origine}): {testo}")
 
@@ -503,6 +555,9 @@ def _valida(dati, origine):
     _controlla_per_lingua(origine, dati, "ricerche", vuoto_ammesso=False)
     _controlla_per_lingua(origine, dati, "parole_calde", vuoto_ammesso=True)
     _controlla_per_lingua(origine, dati, "temi_esclusi", vuoto_ammesso=True)
+    if not isinstance(dati["autodefinisci"], bool):
+        raise _errore(origine, f"'autodefinisci' e' true o false, non "
+                               f"'{dati['autodefinisci']}'.")
     if not isinstance(dati["telegiornale"], bool):
         raise _errore(origine, f"'telegiornale' e' true o false, non "
                                f"'{dati['telegiornale']}'.")
@@ -712,6 +767,16 @@ def da_dizionario(dal_file, origine="canale.json"):
             else:
                 dati[chiave] = valore
     else:
+        vietato = argomento_vietato(" ".join(
+            str(dal_file.get(c) or "") for c in ("argomento", "descrizione_argomento",
+                                                 "soggetto", "descrizione_canale")))
+        if vietato:
+            raise _errore(origine, f"l'argomento tocca un tema che YouTube non "
+                                   f"monetizza o non ammette ('{vietato}'): "
+                                   f"Samaritan non fa canali cosi'.")
+        if dal_file.get("autodefinisci") is True:
+            dal_file = dict(dal_file)
+            _ripieghi_autodefinizione(dal_file, argomento)
         mancanti = [c for c in _OBBLIGATORI_FUORI_DAL_GAMING if c not in dal_file]
         if mancanti:
             raise _errore(origine, f"per un canale che non parla di "
@@ -731,6 +796,69 @@ def da_dizionario(dal_file, origine="canale.json"):
 
     _valida(dati, origine)
     return Profilo(dati, origine)
+
+
+def _ripieghi_autodefinizione(dal_file, argomento):
+    """I valori con cui un canale 'autodefinisci' parte prima che il modello
+    abbia scritto i suoi (autoprofilo.py), o se non ci riesce.
+
+    Bastano per fare video veri: si cercano notizie sull'argomento stesso e
+    ogni video parla di "un tema". Sono volutamente generici: il primo giro
+    della pipeline li sostituisce con quelli scritti dal modello.
+    """
+    nome = argomento.strip()
+    nome = nome[3:] if nome.lower().startswith("di ") else nome
+    if "soggetto" not in dal_file:
+        dal_file.setdefault("soggetto_plurale", "temi")
+        dal_file.setdefault("genere", "m")
+        dal_file["soggetto"] = "tema"
+    if "ricerche" not in dal_file or not dal_file.get("ricerche"):
+        dal_file["ricerche"] = {"it": [nome.strip(" '") or argomento]}
+
+
+def _con_autodefinizione(contenuto, file):
+    """Il contenuto di canale.json con sotto i campi scritti da autoprofilo.py.
+
+    Valgono solo se il file e' 'autodefinisci' e se sono stati scritti per lo
+    stesso argomento: chi cambia argomento dalla pagina non deve ritrovarsi
+    le ricerche del canale di prima. I campi scritti a mano vincono.
+    """
+    if not isinstance(contenuto, dict) or contenuto.get("autodefinisci") is not True:
+        return contenuto
+    auto = leggi_autodefinizione(file)
+    if not auto or auto.get("argomento") != contenuto.get("argomento"):
+        return contenuto
+    unito = dict(contenuto)
+    for chiave, valore in (auto.get("campi") or {}).items():
+        if chiave in PREDEFINITO and chiave not in unito:
+            unito[chiave] = valore
+    return unito
+
+
+def file_autodefinizione(file=None):
+    """Dove sta canale_auto.json per il profilo letto da `file`."""
+    return os.path.join(os.path.dirname(os.path.abspath(file or percorso())),
+                        NOME_FILE_AUTO)
+
+
+def leggi_autodefinizione(file=None):
+    """Il contenuto di canale_auto.json, o None se manca o non si legge."""
+    try:
+        with open(file_autodefinizione(file), "r", encoding="utf-8") as f:
+            dati = json.load(f)
+        return dati if isinstance(dati, dict) else None
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def contenuto_del_file(file=None):
+    """canale.json cosi' com'e' scritto, senza autodefinizione, o None."""
+    file = file or percorso()
+    try:
+        with open(file, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return None
 
 
 def predefinito():
@@ -768,7 +896,7 @@ def carica(file=None):
     except OSError as e:
         raise ProfiloNonValido(
             f"Profilo del canale non leggibile ({file}): {e}.") from None
-    return da_dizionario(contenuto, os.path.basename(file))
+    return da_dizionario(_con_autodefinizione(contenuto, file), os.path.basename(file))
 
 
 _attivo = None

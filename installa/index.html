@@ -128,13 +128,13 @@
     <label for="tipo">Di cosa parla</label>
     <select id="tipo">
       <option value="gaming">Videogiochi</option>
-      <option value="altro">Altro argomento</option>
     </select>
+    <p class="nota" id="nota-tipo"></p>
     <div id="campi-altro" hidden>
       <div class="due">
-        <div><label for="argomento">L'argomento, come si dice dopo "notizie" <span class="nota">(es. di cucina)</span></label>
+        <div><label for="argomento">L'argomento, come si dice dopo "notizie" <span class="nota">(es. di cucina, di pesca sportiva)</span></label>
           <input type="text" id="argomento" placeholder="di cucina"></div>
-        <div><label for="soggetto">Di cosa parla ogni video, al singolare <span class="nota">(es. ricetta)</span></label>
+        <div><label for="soggetto">Di cosa parla ogni video, al singolare <span class="nota">(es. ricetta; vuoto = lo decide Samaritan)</span></label>
           <input type="text" id="soggetto" placeholder="ricetta"></div>
       </div>
       <details>
@@ -152,7 +152,7 @@
     </div>
 
     <h3>Ricerche di notizie</h3>
-    <p class="nota">Una ricerca per riga, come le scriveresti su Google News. Per i videogiochi puoi lasciarle vuote: si usano quelle gia' pronte.</p>
+    <p class="nota">Una ricerca per riga, come le scriveresti su Google News. Per i videogiochi puoi lasciarle vuote: si usano quelle gia' pronte. Per un altro argomento, se le lasci vuote, le scrive Samaritan.</p>
     <div class="due">
       <div><label for="ricerche_it">In italiano</label><textarea id="ricerche_it" placeholder="ricette&#10;chef OR ristorante"></textarea></div>
       <div><label for="ricerche_en">In inglese</label><textarea id="ricerche_en" placeholder="recipes&#10;food trend"></textarea></div>
@@ -172,6 +172,8 @@
       <option value="17">Sport</option><option value="24">Intrattenimento</option>
       <option value="27">Istruzione</option><option value="28">Scienza e tecnologia</option>
       <option value="22">Persone e blog</option><option value="25">Notizie e politica</option>
+      <option value="2">Auto e veicoli</option><option value="10">Musica</option>
+      <option value="15">Animali</option><option value="19">Viaggi ed eventi</option>
     </select>
 
     <details>
@@ -260,6 +262,118 @@ const LINGUE = ["it", "en"];
 // browser si rifiuterebbe di eseguirlo.
 const NACL_URL = "https://cdn.jsdelivr.net/npm/tweetnacl@1.0.3/nacl-fast.min.js";
 const NACL_SRI = "sha384-05+sicyRJQ56XpL4U9HJ8YbtSzFDvAg7apPKOGV6A0JsAJKFM68jp5oLnUjG5mEp";
+
+// Gli argomenti del menu. Scegliendone uno la pagina riempie i campi qui sotto,
+// che restano modificabili; "Altro" li svuota e lascia scrivere solo
+// l'argomento: il resto lo scrive Samaritan al primo video (autodefinisci,
+// vedi autoprofilo.py) e lo ritara ogni due settimane sui numeri veri.
+const ARGOMENTI = {
+  telegiornale: { etichetta: "Telegiornale (notizie del giorno)", argomento: "di attualita'", soggetto: "tema",
+    soggetto_plurale: "temi", genere: "m", telegiornale: true, categoria: "25",
+    ricerche_it: ["ultime notizie Italia", "economia OR bollette OR pensioni OR tasse", "tecnologia OR intelligenza artificiale", "cinema OR musica OR Sanremo", "Serie A OR Sinner OR Formula 1"],
+    ricerche_en: ["top news", "economy OR inflation OR stock market", "technology OR artificial intelligence"],
+    nomi_grossi: ["apple", "google", "sinner", "serie a", "sanremo", "inps", "bce"],
+    query_stock_riserva: ["city skyline aerial", "newspaper printing press", "stock market screen", "world map globe"],
+    esempi_soggetto: ["Banca d'Italia", "Apple", "Serie A"], hashtag: "notizie" },
+  tecnologia: { etichetta: "Tecnologia", argomento: "di tecnologia", soggetto: "prodotto", genere: "m", categoria: "28",
+    ricerche_it: ["smartphone", "intelligenza artificiale", "Apple OR Samsung OR Google", "app OR aggiornamento OR WhatsApp"],
+    ricerche_en: ["smartphone launch", "artificial intelligence", "Apple OR Samsung OR Google", "tech gadget"],
+    nomi_grossi: ["iphone", "samsung galaxy", "chatgpt", "apple", "google", "whatsapp", "tesla", "nintendo switch"],
+    query_stock_riserva: ["smartphone close up", "laptop typing", "circuit board macro", "data center servers"],
+    esempi_soggetto: ["iPhone 17", "Galaxy S26", "ChatGPT"], hashtag: "tech" },
+  calcio: { etichetta: "Calcio", argomento: "di calcio", soggetto: "squadra", genere: "f", categoria: "17",
+    ricerche_it: ["Serie A", "calciomercato", "Champions League OR Europa League", "Nazionale italiana calcio"],
+    ricerche_en: ["Premier League", "transfer news football", "Champions League"],
+    nomi_grossi: ["inter", "milan", "juventus", "napoli", "roma", "champions", "nazionale"],
+    query_stock_riserva: ["football stadium crowd", "soccer ball grass", "stadium lights night", "football training"],
+    esempi_soggetto: ["Inter", "Juventus", "Napoli"], hashtag: "calcio" },
+  sport: { etichetta: "Sport (tennis, Formula 1, motori...)", argomento: "di sport", soggetto: "campione", genere: "m", categoria: "17",
+    ricerche_it: ["Sinner OR tennis", "Formula 1 OR Ferrari", "MotoGP", "sport italiano record"],
+    ricerche_en: ["tennis", "Formula 1", "sports record"],
+    nomi_grossi: ["sinner", "ferrari", "leclerc", "bagnaia", "olimpiadi", "valentino rossi"],
+    query_stock_riserva: ["tennis court", "race track cars", "athlete running", "sports crowd cheering"],
+    esempi_soggetto: ["Jannik Sinner", "Charles Leclerc", "Pecco Bagnaia"], hashtag: "sport" },
+  cinema: { etichetta: "Cinema e serie TV", argomento: "di cinema e serie tv", soggetto: "film", soggetto_plurale: "film", genere: "m", categoria: "24",
+    ricerche_it: ["film uscita cinema", "serie tv Netflix OR Disney+ OR Prime Video", "box office", "trailer film"],
+    ricerche_en: ["movie release", "Netflix series", "box office"],
+    nomi_grossi: ["netflix", "marvel", "disney", "stranger things", "oscar", "prime video"],
+    query_stock_riserva: ["cinema audience", "popcorn movie theater", "film camera", "tv remote couch"],
+    esempi_soggetto: ["Dune", "Stranger Things", "Oppenheimer"], hashtag: "cinema" },
+  musica: { etichetta: "Musica", argomento: "di musica", soggetto: "artista", soggetto_plurale: "artisti", genere: "m", categoria: "10",
+    ricerche_it: ["nuovo singolo OR album", "concerti tour Italia", "classifica Spotify OR FIMI", "Sanremo"],
+    ricerche_en: ["new album release", "world tour", "billboard chart"],
+    nomi_grossi: ["sanremo", "spotify", "taylor swift", "vasco", "maneskin", "geolier", "annalisa"],
+    query_stock_riserva: ["concert crowd lights", "microphone stage", "headphones music", "guitar close up"],
+    esempi_soggetto: ["Annalisa", "Geolier", "Taylor Swift"], hashtag: "musica" },
+  cucina: { etichetta: "Cucina", argomento: "di cucina", soggetto: "ricetta", genere: "f", categoria: "26",
+    ricerche_it: ["ricette", "cucina italiana novita", "chef OR ristorante OR stellato", "cibo richiamo OR tendenza"],
+    ricerche_en: ["recipes", "food trend OR viral recipe", "chef OR restaurant OR Michelin"],
+    nomi_grossi: ["cannavacciuolo", "barbieri", "masterchef", "michelin", "bottura"],
+    query_stock_riserva: ["cooking in kitchen", "fresh ingredients close up", "pasta boiling pot", "chef plating food"],
+    esempi_soggetto: ["Carbonara", "Tiramisu", "Pizza napoletana"], hashtag: "cucina" },
+  motori: { etichetta: "Auto e moto", argomento: "di motori", soggetto: "modello", genere: "m", categoria: "2",
+    ricerche_it: ["auto nuova presentata", "auto elettriche", "Ferrari OR Lamborghini OR Fiat", "moto novita"],
+    ricerche_en: ["new car reveal", "electric cars", "supercar"],
+    nomi_grossi: ["ferrari", "tesla", "lamborghini", "fiat", "bmw", "ducati"],
+    query_stock_riserva: ["sports car driving", "car interior dashboard", "motorcycle road", "car headlights night"],
+    esempi_soggetto: ["Ferrari 12Cilindri", "Tesla Model Y", "Fiat Panda"], hashtag: "motori" },
+  soldi: { etichetta: "Economia e risparmio", argomento: "di economia e risparmio", soggetto: "tema", soggetto_plurale: "temi", genere: "m", categoria: "27",
+    ricerche_it: ["bonus OR detrazioni 2026", "bollette luce gas", "pensioni OR stipendi", "mutui tassi BCE"],
+    ricerche_en: ["inflation", "interest rates", "cost of living"],
+    nomi_grossi: ["bce", "inps", "agenzia delle entrate", "bonus", "isee"],
+    query_stock_riserva: ["calculator bills", "euro coins", "stock market screen", "shopping cart supermarket"],
+    esempi_soggetto: ["Bonus casa", "Assegno unico", "Mutui"], hashtag: "risparmio" },
+  scienza: { etichetta: "Scienza e spazio", argomento: "di scienza e spazio", soggetto: "scoperta", genere: "f", categoria: "28",
+    ricerche_it: ["scoperta scientifica", "NASA OR ESA OR SpaceX", "astronomia", "ricerca italiana scoperta"],
+    ricerche_en: ["scientific discovery", "NASA OR SpaceX", "astronomy"],
+    nomi_grossi: ["nasa", "spacex", "esa", "marte", "luna", "james webb"],
+    query_stock_riserva: ["galaxy stars space", "laboratory scientist", "rocket launch", "planet earth orbit"],
+    esempi_soggetto: ["Artemis", "James Webb", "Marte"], hashtag: "scienza" },
+  animali: { etichetta: "Animali", argomento: "di animali", soggetto: "animale", soggetto_plurale: "animali", genere: "m", categoria: "15",
+    ricerche_it: ["animali curiosita scoperta", "cani OR gatti", "specie scoperta OR avvistato", "zoo OR parco nazionale"],
+    ricerche_en: ["animal discovery", "dogs OR cats news", "wildlife"],
+    nomi_grossi: ["cane", "gatto", "orso", "lupo", "delfino", "panda"],
+    query_stock_riserva: ["dog playing grass", "cat close up", "wildlife forest", "ocean dolphins"],
+    esempi_soggetto: ["Lupo", "Panda", "Gatto"], hashtag: "animali" },
+  viaggi: { etichetta: "Viaggi", argomento: "di viaggi", soggetto: "meta", genere: "f", categoria: "19",
+    ricerche_it: ["viaggi offerte voli", "mete turismo Italia", "Ryanair OR ITA Airways OR treni", "borghi piu belli"],
+    ricerche_en: ["travel destination", "cheap flights", "tourism record"],
+    nomi_grossi: ["ryanair", "venezia", "roma", "giappone", "ita airways"],
+    query_stock_riserva: ["airplane window view", "travel suitcase airport", "beach aerial", "mountain village"],
+    esempi_soggetto: ["Giappone", "Venezia", "Islanda"], hashtag: "viaggi" },
+  anime: { etichetta: "Anime e manga", argomento: "di anime e manga", soggetto: "serie", soggetto_plurale: "serie", genere: "f", categoria: "24",
+    ricerche_it: ["anime uscita", "manga Italia", "One Piece OR Dragon Ball OR Naruto", "Crunchyroll"],
+    ricerche_en: ["anime release", "manga news", "Crunchyroll"],
+    nomi_grossi: ["one piece", "dragon ball", "naruto", "demon slayer", "jujutsu kaisen", "crunchyroll"],
+    query_stock_riserva: ["tokyo street night", "comic books stack", "drawing sketch hand", "neon city japan"],
+    esempi_soggetto: ["One Piece", "Demon Slayer", "Dragon Ball"], hashtag: "anime" },
+};
+
+// Come profilo.ARGOMENTI_VIETATI: un test controlla che siano uguali.
+const ARGOMENTI_VIETATI = ["porno", "porn", "pornografia", "sesso", "sex", "sexy", "erotico", "erotica", "erotic", "nudo", "nuda", "nudi", "nude", "nudes", "escort", "onlyfans", "fetish", "feticismo", "hentai", "xxx", "per adulti", "camgirl", "scommesse", "betting", "casino", "casinos", "gambling", "gioco d azzardo", "azzardo", "slot machine", "poker", "droga", "droghe", "drugs", "drug", "cannabis", "marijuana", "weed", "cocaina", "cocaine", "armi", "weapons", "esplosivi", "explosives", "hacking", "hacker", "crack", "cracked", "pirateria", "piracy", "pirata", "streaming gratis", "film gratis", "iptv", "truffa", "truffe", "scam", "soldi facili", "easy money", "schema ponzi", "complotti", "complotto", "conspiracy", "no vax", "novax", "cure miracolose", "miracle cure"];
+
+function paroleDi(testo) {
+  const pulito = (testo || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  return " " + pulito.split(/[^\p{L}\p{N}_]+/u).filter(Boolean).join(" ") + " ";
+}
+
+function argomentoVietato(testo) {
+  const parole = paroleDi(testo);
+  return ARGOMENTI_VIETATI.find((v) => parole.includes(paroleDi(v))) || "";
+}
+
+// Il modulo che la pagina compila scegliendo un argomento del menu.
+function moduloDaArgomento(chiave, base) {
+  const a = ARGOMENTI[chiave];
+  return Object.assign({}, base, {
+    tipo: chiave, argomento: a.argomento, soggetto: a.soggetto,
+    soggetto_plurale: a.soggetto_plurale || "", genere: a.genere || "",
+    telegiornale: Boolean(a.telegiornale), categoria_youtube: a.categoria,
+    ricerche_it: a.ricerche_it.join("\n"), ricerche_en: a.ricerche_en.join("\n"),
+    nomi_grossi: a.nomi_grossi.join(", "), query_stock_riserva: a.query_stock_riserva.join(", "),
+    esempi_soggetto: a.esempi_soggetto.join(", "), hashtag_canale: a.hashtag, tag_fissi: "",
+  });
+}
 
 const CHIAVI = [
   { nome: "GROQ_API_KEY", obbligatoria: true, dove: "https://console.groq.com/keys", testo: "Scrive i testi. Gratuita, da console.groq.com." },
@@ -377,16 +491,18 @@ function leggiModulo() {
 // Il contenuto di canale.json. Scrive solo quello che serve: i campi vuoti li
 // ricava profilo.py (e per i videogiochi li eredita da Poppone TV).
 function costruisciProfilo(m) {
-  const gaming = m.tipo !== "altro";
+  const gaming = m.tipo === "gaming";
   const p = {
     nome_canale: (m.nome_canale || "").trim(),
     handle: (m.handle || "").trim(),
     argomento: gaming ? "gaming" : (m.argomento || "").trim(),
   };
   if (!gaming) {
-    p.soggetto = (m.soggetto || "").trim();
-    if ((m.soggetto_plurale || "").trim()) p.soggetto_plurale = m.soggetto_plurale.trim();
-    if (m.genere) p.genere = m.genere;
+    if ((m.soggetto || "").trim()) {
+      p.soggetto = m.soggetto.trim();
+      if ((m.soggetto_plurale || "").trim()) p.soggetto_plurale = m.soggetto_plurale.trim();
+      if (m.genere) p.genere = m.genere;
+    }
     if (m.telegiornale) p.telegiornale = true;
   }
   // Steam ha solo videogiochi: per ogni altro argomento solo clip stock.
@@ -396,7 +512,9 @@ function costruisciProfilo(m) {
     const voci = lista(m["ricerche_" + lingua], /\n/);
     if (voci.length) ricerche[lingua] = voci;
   }
-  if (Object.keys(ricerche).length || !gaming) p.ricerche = ricerche;
+  if (Object.keys(ricerche).length) p.ricerche = ricerche;
+  // Senza soggetto o senza ricerche le scrive Samaritan (autoprofilo.py).
+  if (!gaming && (!p.soggetto || !p.ricerche)) p.autodefinisci = true;
   p.uscite = (m.uscite || []).map((u) => ({ orario: u.orario, lingua: u.lingua }));
   p.fuso = (m.fuso || "").trim();
   if (m.categoria_youtube) p.categoria_youtube = m.categoria_youtube;
@@ -417,9 +535,11 @@ function validaProfilo(p) {
   if (!p.argomento) errori.push("Scrivi di cosa parla il canale.");
   const gaming = (p.argomento || "").toLowerCase() === "gaming";
   if (!gaming) {
-    if (!p.soggetto) errori.push("Scrivi di cosa parla ogni video, per esempio ricetta.");
-    else if (/\s/.test(p.soggetto) && !p.soggetto_plurale) errori.push("Il soggetto e' di piu' parole: scrivi anche il plurale.");
-    if (!p.ricerche || !Object.keys(p.ricerche).length) errori.push("Serve almeno una ricerca di notizie.");
+    const vietato = argomentoVietato([p.argomento, p.soggetto].join(" "));
+    if (vietato) errori.push(`L'argomento tocca un tema che YouTube non monetizza o non ammette ("${vietato}"): Samaritan non fa canali cosi'.`);
+    if (p.soggetto && /\s/.test(p.soggetto) && !p.soggetto_plurale) errori.push("Il soggetto e' di piu' parole: scrivi anche il plurale.");
+    if (!p.autodefinisci && !p.soggetto) errori.push("Scrivi di cosa parla ogni video, per esempio ricetta.");
+    if (!p.autodefinisci && (!p.ricerche || !Object.keys(p.ricerche).length)) errori.push("Serve almeno una ricerca di notizie.");
     if (p.materiale === "steam") errori.push("Steam vale solo per i videogiochi.");
   }
   if (p.genere && !["m", "f"].includes(p.genere)) errori.push("Il genere e' m o f.");
@@ -667,8 +787,11 @@ function aggiornaPulsanti() {
 }
 
 function aggiornaAnteprima() {
-  const altro = document.getElementById("tipo").value === "altro";
-  document.getElementById("campi-altro").hidden = !altro;
+  const tipo = document.getElementById("tipo").value;
+  document.getElementById("campi-altro").hidden = tipo === "gaming";
+  document.getElementById("nota-tipo").textContent = tipo === "altro"
+    ? "Scrivi solo l'argomento: di cosa parla ogni video, le ricerche, i tag e il resto li scrive Samaritan al primo video, e li ritara ogni due settimane sui numeri veri del canale. Se vuoi, puoi scriverli tu."
+    : tipo === "gaming" ? "" : "Campi gia' compilati per questo argomento: puoi cambiarli.";
   const p = costruisciProfilo(leggiModulo());
   document.getElementById("anteprima").textContent = JSON.stringify(p, null, 2);
   const offs = scostamenti(p.fuso);
@@ -678,7 +801,27 @@ function aggiornaAnteprima() {
     : "";
 }
 
+// Scegliendo un argomento dal menu si riempiono i campi; "Altro" li svuota.
+function scegliArgomento() {
+  const tipo = document.getElementById("tipo").value;
+  if (tipo === "gaming") return;
+  const valori = tipo === "altro"
+    ? { argomento: "", soggetto: "", soggetto_plurale: "", genere: "", telegiornale: false, categoria_youtube: "",
+        ricerche_it: "", ricerche_en: "", nomi_grossi: "", query_stock_riserva: "", esempi_soggetto: "",
+        hashtag_canale: "", tag_fissi: "" }
+    : moduloDaArgomento(tipo, {});
+  for (const [id, valore] of Object.entries(valori)) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    if (el.type === "checkbox") el.checked = Boolean(valore); else el.value = valore;
+  }
+}
+
 function preparaModulo() {
+  const menu = document.getElementById("tipo");
+  for (const [chiave, a] of Object.entries(ARGOMENTI)) menu.add(new Option(a.etichetta, chiave));
+  menu.add(new Option("Altro (scrivi tu l'argomento)", "altro"));
+  menu.addEventListener("change", scegliArgomento);
   const righe = [["14:00", "it", true], ["18:00", "it", true], ["20:00", "en", false], ["21:00", "en", false]];
   const contenitore = document.getElementById("uscite");
   righe.forEach(([orario, lingua, attiva], i) => {
@@ -830,6 +973,7 @@ function avvia() {
 
 // Per i test: le funzioni pure, chiamabili da fuori.
 window.Samaritan = { costruisciProfilo, validaProfilo, leggiModulo, abbinaCron, finestre, scostamenti,
+  moduloDaArgomento, argomentoVietato, argomenti: Object.keys(ARGOMENTI), vietati: ARGOMENTI_VIETATI,
   blake2b, sigilla, leggiRepository, costanti: { CRON_USCITE, MARGINE_MINIMO_ORE, ANTICIPO_PARTENZA_ORE, LINGUE, SCOPES } };
 
 avvia();
