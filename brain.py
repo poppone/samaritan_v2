@@ -1590,6 +1590,45 @@ def _cronaca_senza_fonte(script, fonte):
     return any(spia in testo for spia in _SPIE_DI_CRONACA)
 
 
+# Quanto si aspetta, al massimo, quando Groq dice di riprovare fra poco.
+ATTESA_MAX_LIMITE_GROQ = 20
+
+
+def _attesa_limite_groq(errore):
+    """Secondi da aspettare per un 429 sui token al minuto, o None.
+
+    Il 30 settembre 2026 l'ultimo tentativo delle 21:00 e' andato perso per
+    un 429 che chiedeva di riprovare fra 1,2 secondi. Un limite giornaliero
+    o un'attesa lunga invece non si aspettano: None.
+    """
+    testo = str(errore)
+    if "429" not in testo and "rate_limit" not in testo:
+        return None
+    trovato = re.search(r"try again in (?:(\d+)m)?([\d.]+)(ms|s)", testo)
+    if not trovato:
+        return None
+    minuti, valore, unita = trovato.groups()
+    secondi = float(valore) / (1000 if unita == "ms" else 1) + 60 * int(minuti or 0)
+    if secondi > ATTESA_MAX_LIMITE_GROQ:
+        return None
+    return secondi + 0.5
+
+
+def _chiedi_a_groq(**parametri):
+    """client.chat.completions.create, che aspetta e riprova una volta se
+    Groq chiede solo qualche secondo di pazienza."""
+    try:
+        return client.chat.completions.create(**parametri)
+    except Exception as e:
+        attesa = _attesa_limite_groq(e)
+        if attesa is None:
+            raise
+        print(f"[Samaritan Brain] Limite di Groq al minuto: aspetto "
+              f"{attesa:.1f} secondi e riprovo.")
+        time.sleep(attesa)
+        return client.chat.completions.create(**parametri)
+
+
 _SCHEMA_VERIFICA = {
     "name": "verifica_fatti",
     "strict": True,
@@ -1663,7 +1702,7 @@ def _dettagli_inventati(titolo_notizia, script, sommario="", testata=""):
     # La seconda ragiona meno e lascia piu' spazio alla risposta.
     for ragionamento in ("medium", "low"):
         try:
-            risposta = client.chat.completions.create(
+            risposta = _chiedi_a_groq(
                 model=modello,
                 messages=[
                     {"role": "system", "content": istruzioni},
@@ -1913,7 +1952,7 @@ def genera_script_samaritan(tema=None):
                     # Meno ragionamento, piu' token per la risposta vera.
                     parametri["reasoning_effort"] = "low"
 
-                response = client.chat.completions.create(**parametri)
+                response = _chiedi_a_groq(**parametri)
                 contenuto = response.choices[0].message.content
                 if not contenuto:
                     print("[Samaritan Brain] Risposta vuota, riprovo.")
@@ -2001,6 +2040,9 @@ def genera_script_samaritan(tema=None):
                         script = ripulito
                         inventati = []
                     if inventati:
+                        print("[Samaritan Brain] Le frasi segnalate non si "
+                              "possono togliere senza rovinare lo script: "
+                              "riscrivo.")
                         ok = False
                         invenzioni_per_notizia[idx] = invenzioni_per_notizia.get(idx, 0) + 1
                         if invenzioni_per_notizia[idx] >= 2:

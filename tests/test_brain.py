@@ -571,3 +571,51 @@ class TestTogliFrasiInventate:
             self.SCRIPT, ["Nessuno l'aspettava", "sorriso acceso milioni chat",
                           "record dimostra controller", "Seguici su Poppone TV"],
             self.TITOLO) == ""
+
+
+class TestLimiteGroq:
+    ERRORE = ("Error code: 429 - {'error': {'message': 'Rate limit reached for "
+              "model `openai/gpt-oss-20b` on tokens per minute (TPM): Limit "
+              "8000, Used 4765, Requested 3390. Please try again in 1.1625s.'}}")
+
+    def _client(self, esiti):
+        chiamate = []
+
+        class FinteCompletions:
+            @staticmethod
+            def create(**kw):
+                chiamate.append(kw)
+                esito = esiti.pop(0)
+                if isinstance(esito, Exception):
+                    raise esito
+                return esito
+
+        class FintoClient:
+            class chat:
+                completions = FinteCompletions()
+
+        return FintoClient(), chiamate
+
+    def test_legge_l_attesa(self):
+        assert brain._attesa_limite_groq(self.ERRORE) == pytest.approx(1.6625)
+        assert brain._attesa_limite_groq("429 try again in 795ms") == pytest.approx(1.295)
+
+    def test_non_aspetta_attese_lunghe_o_altri_errori(self):
+        assert brain._attesa_limite_groq("429 Please try again in 12m3.5s") is None
+        assert brain._attesa_limite_groq("503 Service Unavailable") is None
+
+    def test_aspetta_e_riprova_una_volta(self, monkeypatch):
+        client, chiamate = self._client([RuntimeError(self.ERRORE), "ok"])
+        monkeypatch.setattr(brain, "client", client)
+        attese = []
+        monkeypatch.setattr(brain.time, "sleep", attese.append)
+        assert brain._chiedi_a_groq(model="m") == "ok"
+        assert len(chiamate) == 2
+        assert attese == [pytest.approx(1.6625)]
+
+    def test_un_altro_errore_passa_subito(self, monkeypatch):
+        client, chiamate = self._client([RuntimeError("400 json_validate_failed")])
+        monkeypatch.setattr(brain, "client", client)
+        with pytest.raises(RuntimeError):
+            brain._chiedi_a_groq(model="m")
+        assert len(chiamate) == 1
