@@ -218,6 +218,9 @@ jobs:
           ELEVENLABS_MODELLO: ${{ vars.ELEVENLABS_MODELLO }}
           WHISPER_MODEL: ${{ vars.WHISPER_MODEL || 'base' }}
           GROQ_MODELLI: ${{ vars.GROQ_MODELLI }}
+          # La notizia scelta si salva subito sul repository, cosi' due
+          # lavorazioni partite insieme non fanno la stessa: prenotazione.py.
+          SAMARITAN_PRENOTA: '1'
           # Passato via env e non interpolato nel comando: evita script injection
           TEMA: ${{ inputs.tema }}
         run: python main.py "$TEMA"
