@@ -23,6 +23,7 @@ import requests
 from groq import Groq
 
 import config
+import prenotazione
 import profilo
 
 client = Groq(api_key=config.GROQ_API_KEY)
@@ -381,11 +382,20 @@ def _normalizza(item):
     return {}
 
 
+# La riga di questa lavorazione, (timestamp, titolo): con la prenotazione la
+# cronologia si unisce a quella di altre lavorazioni e l'ultima riga del file
+# puo' non essere la nostra.
+_NOSTRA_VOCE = None
+
+
 def salva_in_cronologia(dati):
     """Aggiunge l'impronta del nuovo video alla memoria."""
+    global _NOSTRA_VOCE
     cronologia = carica_cronologia()
+    adesso = int(time.time())
+    _NOSTRA_VOCE = (adesso, dati["titolo"])
     cronologia.append({
-        "timestamp": int(time.time()),
+        "timestamp": adesso,
         "data": time.strftime("%Y-%m-%d"),
         "titolo": dati["titolo"],
         "lingua": (config.LINGUA or "it").lower(),
@@ -420,8 +430,15 @@ def aggiorna_ultimo_video_id(video_id):
     cronologia = carica_cronologia()
     if not cronologia:
         return
-    if isinstance(cronologia[-1], dict):
-        cronologia[-1]["video_id"] = video_id
+    voce = cronologia[-1]
+    if _NOSTRA_VOCE:
+        for candidata in reversed(cronologia):
+            if (isinstance(candidata, dict)
+                    and (candidata.get("timestamp"), candidata.get("titolo")) == _NOSTRA_VOCE):
+                voce = candidata
+                break
+    if isinstance(voce, dict):
+        voce["video_id"] = video_id
         with open(config.FILE_CRONOLOGIA, "w", encoding="utf-8") as f:
             json.dump(cronologia, f, ensure_ascii=False, indent=2)
 
@@ -1694,6 +1711,9 @@ def genera_script_samaritan(tema=None):
     Ritorna un dict: titolo, script, query_video, descrizione, fonte, stile.
     """
     tema = (tema or "").strip()
+    # Le notizie scelte da lavorazioni partite insieme a questa: vedi
+    # prenotazione.py.
+    prenotazione.riallinea_cronologia()
     cronologia = _stesso_formato(
         _stessa_lingua([_normalizza(i) for i in carica_cronologia()])
     )
@@ -1941,6 +1961,7 @@ def genera_script_samaritan(tema=None):
                     "stile": formato,
                 }
                 salva_in_cronologia(risultato)
+                prenotazione.prenota(titolo)
                 print(f"[Samaritan Brain] OK - '{titolo}' "
                       f"({len(script.split())} parole)")
                 if gioco:
