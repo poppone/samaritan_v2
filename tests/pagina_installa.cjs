@@ -26,6 +26,8 @@ async function finGitHub(p) {
   let albero = ALBERO_DEL_MODELLO;
   const risposte = {
     [`GET ${REPO}`]: { full_name: "mario/samaritan", private: true, default_branch: "main" },
+    // Una copia fatta senza la pagina del modello: esiste ma non ha rami.
+    ["GET /repos/mario/vuota"]: { full_name: "mario/vuota", private: true, default_branch: "main" },
     [`GET ${REPO}/git/ref/heads/main`]: { object: { sha: "c1" } },
     [`GET ${REPO}/git/commits/c1`]: { sha: "c1", tree: { sha: "t1" } },
     [`GET ${REPO}/git/trees/t1?recursive=1`]: () => ({ tree: albero }),
@@ -70,10 +72,18 @@ async function finGitHub(p) {
   await p.click("#verifica-github");
   risultato.poppone = await esito("esito-github");
 
+  await p.fill("#repo", "https://github.com/mario/vuota");
+  await p.click("#verifica-github");
+  await p.waitForFunction(() => document.getElementById("esito-github").textContent.includes("vuota"));
+  risultato.vuota = await esito("esito-github");
+  risultato.vuota_pulsante = await p.evaluate(() => document.getElementById("salva-canale").disabled);
+
   await p.fill("#repo", "https://github.com/mario/samaritan");
   await p.click("#verifica-github");
   await p.waitForFunction(() => document.getElementById("esito-github").className.includes("ok"));
   risultato.verifica = await esito("esito-github");
+  risultato.spuntati = await p.evaluate(() =>
+    [...document.querySelectorAll("#avanzamento a.fatto")].map((a) => a.dataset.passo));
 
   // Primo salvataggio: nel repository c'e' ancora la memoria del modello.
   await p.click("#salva-canale");
@@ -143,10 +153,13 @@ async function finGitHub(p) {
         memoria: { local: localStorage.length, session: sessionStorage.length },
       };
     }, casi);
-    risultato.errori_pagina = errori;
+    risultato.errori_pagina = errori.slice();
     risultato.richieste = richieste.slice();
     risultato.github = await finGitHub(p);
-    risultato.errori_pagina_github = errori.slice(risultato.errori_pagina.length);
+    // Le risposte 404 del GitHub finto il browser le scrive in console da
+    // solo: non sono errori della pagina.
+    risultato.errori_pagina_github = errori.slice(risultato.errori_pagina.length)
+      .filter((e) => !e.startsWith("Failed to load resource"));
     process.stdout.write(JSON.stringify(risultato));
   } finally {
     await browser.close();

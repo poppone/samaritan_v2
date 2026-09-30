@@ -110,29 +110,32 @@ E' il passo piu' lungo, e si fa una volta sola. Serve a dare a Samaritan il
 permesso di caricare video sul tuo canale e di leggerne le statistiche.
 Accedi a Google con **l'account del canale**.
 
-1. Apri la [Google Cloud Console](https://console.cloud.google.com/projectcreate)
-   e crea un progetto (il nome non conta).
-2. Nel menu, **API e servizi > Libreria**: cerca e attiva
-   **YouTube Data API v3**, poi cerca e attiva **YouTube Analytics API**.
-3. **API e servizi > Schermata di consenso OAuth**: tipo **Esterno**, compila
-   nome dell'app e le email richieste, salva.
-   Poi premi **Pubblica app**: lo stato deve diventare **In produzione**.
-   **Questo e' il punto dove si sbaglia piu' spesso.** Se l'app resta in
-   modalita' *Test*, dopo 7 giorni Google spegne il permesso e i video
-   smettono di uscire senza nessun avviso.
-4. **API e servizi > Credenziali > Crea credenziali > ID client OAuth**:
-   tipo **Applicazione web**. In **URI di reindirizzamento autorizzati**
-   aggiungi l'indirizzo che la pagina di installazione ti mostra al passo 5,
-   copiato esattamente. Crea.
-5. Copia **ID client** e **Client secret** nella pagina e premi
-   **Autorizza con Google**.
-6. Google ti chiede con quale account entrare: scegli quello del canale.
-   Vedrai l'avviso **"Google non ha verificato questa app"**: e' normale,
-   l'app e' tua e la usi solo tu. Premi *Avanzate* e poi *Vai a ...*, e dai
-   i permessi richiesti.
-7. Tornato sulla pagina, **incolla di nuovo il token GitHub** al passo 2 e
+La pagina di installazione ha un pulsante per ogni schermata, anche da
+telefono: i link si aprono in una nuova scheda, poi torni alla pagina.
+
+1. **Crea un progetto** nella Google Cloud Console (il nome non conta).
+2. **Attiva** YouTube Data API v3 e YouTube Analytics API.
+3. **Configura l'accesso**: *Inizia*, nome dell'app (il nome del canale), la
+   tua email, pubblico **Esterno**, di nuovo la tua email, *Crea*.
+4. **Branding**: home page e norme sulla privacy sono tutte e due l'indirizzo
+   della pagina di installazione; dominio autorizzato `poppone.github.io`. La
+   pagina li mostra con il pulsante *Copia*. Il logo lascialo vuoto.
+5. **Pubblico**: premi **Pubblica app**, lo stato deve diventare
+   **In produzione**. **Questo e' il punto dove si sbaglia piu' spesso.** In
+   *Test* Google blocca l'accesso ("l'app non ha completato la procedura di
+   verifica"), e comunque dopo 7 giorni spegne il permesso e i video smettono
+   di uscire senza avviso. Se il pulsante e' grigio, manca qualcosa in
+   Branding.
+6. **Crea il client**: tipo **Applicazione web**. In **URI di
+   reindirizzamento autorizzati** incolla l'indirizzo che la pagina ti mostra,
+   esattamente. Crea.
+7. Copia **ID client** e **Client secret** nella pagina e premi
+   **Autorizza con Google**. Scegli l'account e il canale giusti. All'avviso
+   **"Google non ha verificato questa app"** premi *Avanzate* e poi
+   *Vai a ...*: e' normale, l'app e' tua e la usi solo tu.
+8. Tornato sulla pagina, **incolla di nuovo il token GitHub** al passo 2 e
    premi *Verifica l'accesso* (la pagina non lo porta con se' durante il giro
-   su Google, apposta). Poi premi **Salva il collegamento**.
+   su Google, apposta). Il collegamento a YouTube si salva da solo.
 
 ## Passo 6: il video di prova
 
@@ -163,7 +166,9 @@ che hai scelto.
 | "il token non e' valido o e' scaduto" | Rifai il token del passo 2. |
 | "il repository non esiste o il token non puo' vederlo" | Nel token, *Only select repositories* deve includere la tua copia. |
 | "Questo e' il modello di Samaritan, non la tua copia" | Hai incollato l'indirizzo del modello: fai prima il passo 1. |
+| "La tua copia e' vuota" | La copia e' nata senza il modello: cancellala e rifai il passo 1 dal pulsante della pagina. |
+| Google: "Accesso bloccato: l'app non ha completato la procedura di verifica" | L'app e' ancora in *Test*: passo 5, punti 4 e 5. |
 | Google dice `redirect_uri_mismatch` | L'indirizzo al punto 4 del passo 5 non e' identico a quello mostrato dalla pagina. |
 | "Google non ha dato il refresh token" | Rifai *Autorizza con Google*. |
 | Un'email di GitHub "Run failed" | Apri il link: in alto c'e' il messaggio d'errore in italiano. Il piu' comune e' una chiave mancante (passo 4). |
-| I video smettono di uscire dopo una settimana | L'app Google e' rimasta in *Test*: fai **Pubblica app** (passo 5, punto 3) e ripeti i punti 5-7. |
+| I video smettono di uscire dopo una settimana | L'app Google e' rimasta in *Test*: fai **Pubblica app** (passo 5, punto 5) e ripeti i punti 7-8. |

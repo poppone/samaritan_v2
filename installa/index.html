@@ -48,16 +48,49 @@
   }
   label { display: block; font-weight: 600; margin: 12px 0 4px; }
   .nota { font-weight: 400; color: var(--tenue); font-size: .92em; }
-  input[type=text], input[type=password], input[type=time], select, textarea {
-    width: 100%; padding: 9px 10px; border: 1px solid var(--bordo); border-radius: 6px;
-    background: var(--sfondo); color: var(--testo); font: inherit;
+  /* 16px e 44px: sotto, iPhone ingrandisce la pagina e i tasti si mancano col dito. */
+  input[type=text], input[type=url], input[type=password], input[type=time], select, textarea {
+    width: 100%; min-height: 44px; padding: 9px 10px; border: 1px solid var(--bordo); border-radius: 8px;
+    background: var(--sfondo); color: var(--testo); font: inherit; font-size: 16px;
   }
   textarea { min-height: 88px; resize: vertical; }
   button {
     font: inherit; font-weight: 600; padding: 10px 16px; border-radius: 6px; border: 0;
     background: var(--accento); color: var(--accento-testo); cursor: pointer; margin-top: 12px;
   }
+  button { min-height: 44px; }
   button[disabled] { opacity: .5; cursor: not-allowed; }
+  button.secondario { background: transparent; color: var(--accento); border: 1px solid var(--accento); }
+  @media (max-width: 520px) { section > button:not(.copia) { width: 100%; } }
+  .copia {
+    margin: 0 0 0 6px; padding: 4px 10px; min-height: 32px; font-size: .85em; vertical-align: middle;
+    background: transparent; color: var(--accento); border: 1px solid var(--accento);
+  }
+  .valore { display: flex; align-items: center; gap: 6px; margin: 4px 0 8px; }
+  .valore code { flex: 1; padding: 6px 8px; }
+  .valore .copia { margin: 0; flex: none; }
+  .tasto {
+    display: inline-block; margin: 4px 0; padding: 8px 14px; border-radius: 8px; font-weight: 600;
+    border: 1px solid var(--accento); text-decoration: none;
+  }
+  /* L'avanzamento resta in cima mentre scorri: si vede a che punto sei. */
+  #avanzamento {
+    position: sticky; top: 0; z-index: 5; background: var(--sfondo); padding: 8px 0;
+    display: flex; gap: 6px; justify-content: space-between; border-bottom: 1px solid var(--bordo);
+  }
+  #avanzamento a {
+    flex: 1; text-align: center; text-decoration: none; color: var(--tenue); font-size: .8em;
+    padding: 4px 0; border-radius: 8px;
+  }
+  #avanzamento a span {
+    display: block; margin: 0 auto 2px; width: 30px; height: 30px; line-height: 28px; border-radius: 50%;
+    border: 2px solid var(--bordo); font-weight: 700; font-size: 1.1em; color: var(--testo);
+  }
+  #avanzamento a.fatto span { background: var(--accento); border-color: var(--accento); color: var(--accento-testo); }
+  #avanzamento a.fatto span::after { content: " \2713"; font-size: .7em; }
+  section.fatto { border-color: var(--accento); }
+  section.fatto h2::after { content: " \2713"; color: var(--accento); }
+  section { scroll-margin-top: 70px; }
   a { color: var(--accento); }
   code, pre { background: var(--codice); border-radius: 4px; font-size: .9em; }
   code { padding: 1px 4px; word-break: break-all; }
@@ -67,19 +100,31 @@
   .esito.ok { display: block; background: var(--ok-sfondo); color: var(--ok); }
   .avviso { background: var(--avviso-sfondo); padding: 8px 10px; border-radius: 6px; }
   .riga { display: grid; grid-template-columns: auto 1fr 1fr; gap: 8px; align-items: center; margin: 6px 0; }
-  .riga input[type=checkbox] { width: 20px; height: 20px; }
+  .riga input[type=checkbox], label input[type=checkbox] { width: 24px; height: 24px; vertical-align: middle; }
   .due { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   @media (max-width: 520px) { .due { grid-template-columns: 1fr; } }
   ol li, ul li { margin: 4px 0; }
   details { margin-top: 12px; }
-  summary { cursor: pointer; font-weight: 600; }
+  summary { cursor: pointer; font-weight: 600; padding: 8px 0; }
+  .passi { padding-left: 1.3em; }
+  .passi > li { margin: 10px 0; }
+  .passi > li .nota { display: block; }
 </style>
 </head>
 <body>
 <main>
   <h1>Installa Samaritan</h1>
-  <p class="sottotitolo">Sei passi per far partire Samaritan sul tuo canale YouTube, senza terminale e senza toccare il codice.</p>
-  <p class="avviso"><strong>Privacy.</strong> Questa pagina gira tutta nel tuo browser e parla solo con
+  <p class="sottotitolo">Sei passi per far partire Samaritan sul tuo canale YouTube, senza terminale e senza toccare il codice.
+    Si fa anche dal telefono: i link si aprono in una nuova scheda, poi torni qui.</p>
+  <nav id="avanzamento" aria-label="Avanzamento">
+    <a href="#passo-copia" data-passo="1"><span>1</span>Copia</a>
+    <a href="#passo-github" data-passo="2"><span>2</span>Accesso</a>
+    <a href="#passo-canale" data-passo="3"><span>3</span>Canale</a>
+    <a href="#passo-chiavi" data-passo="4"><span>4</span>Chiavi</a>
+    <a href="#passo-youtube" data-passo="5"><span>5</span>YouTube</a>
+    <a href="#passo-prova" data-passo="6"><span>6</span>Prova</a>
+  </nav>
+  <p class="avviso" id="privacy"><strong>Privacy.</strong> Questa pagina gira tutta nel tuo browser e parla solo con
     <code>api.github.com</code> e con i server di accesso di Google (<code>accounts.google.com</code>,
     <code>oauth2.googleapis.com</code>). Scarica solo una libreria di cifratura da <code>cdn.jsdelivr.net</code>.
     Token e chiavi restano in memoria finche' la pagina e' aperta e finiscono solo nei Secrets del
@@ -88,29 +133,33 @@
   <!-- 1 -->
   <section id="passo-copia">
     <h2><span class="numero">1</span>Copia Samaritan sul tuo GitHub</h2>
-    <ol>
+    <ol class="passi">
       <li>Se non hai un account GitHub, <a href="https://github.com/signup" target="_blank" rel="noopener">crealo qui</a>.</li>
-      <li>Apri <a id="link-template" href="#" target="_blank" rel="noopener">la pagina di copia di Samaritan</a>.</li>
+      <li><a id="link-template" class="tasto" href="#" target="_blank" rel="noopener">Apri la pagina di copia</a>
+        <span class="nota">In alto deve esserci scritto <strong>Create a new repository from samaritan-template</strong>. Se leggi
+        solo "Create a new repository", sei nella pagina sbagliata e la copia nascerebbe vuota.</span></li>
       <li>Scegli un nome (per esempio <code>samaritan</code>), seleziona <strong>Private</strong> e premi <strong>Create repository</strong>.</li>
-      <li>Copia l'indirizzo della tua copia: ti serve al passo 2.</li>
+      <li>Aspetta che compaiano i file, poi copia l'indirizzo della pagina: ti serve al passo 2.</li>
     </ol>
   </section>
 
   <!-- 2 -->
   <section id="passo-github">
     <h2><span class="numero">2</span>Dai a questa pagina l'accesso alla tua copia</h2>
-    <p>Crea un <strong>token fine-grained</strong> da
-      <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com/settings/personal-access-tokens/new</a>:</p>
-    <ul>
+    <p>Serve un <strong>token</strong>: una chiave temporanea che permette a questa pagina di scrivere solo nella tua copia.</p>
+    <ol class="passi">
+      <li><a id="link-token" class="tasto" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Crea il token</a>
+        <span class="nota">Il nome e la scadenza di 7 giorni di solito sono gia' compilati.</span></li>
       <li><strong>Repository access</strong>: <em>Only select repositories</em>, e scegli solo la tua copia di Samaritan.</li>
-      <li><strong>Repository permissions</strong>: <em>Contents</em> Read and write, <em>Secrets</em> Read and write,
-        <em>Actions</em> Read and write. <em>Metadata</em> Read-only si aggiunge da solo. Nient'altro.</li>
-      <li>Scadenza: bastano 7 giorni. Finita l'installazione puoi cancellarlo.</li>
-    </ul>
+      <li><strong>Permissions</strong>, <em>Repository permissions</em>: metti <strong>Read and write</strong> su
+        <em>Actions</em>, <em>Contents</em> e <em>Secrets</em>. Nient'altro (<em>Metadata</em> si aggiunge da solo).</li>
+      <li>In fondo premi <strong>Generate token</strong> e copia il codice che inizia con <code>github_pat_</code>:
+        GitHub lo mostra una volta sola. Finita l'installazione puoi cancellarlo.</li>
+    </ol>
     <label for="repo">Indirizzo della tua copia <span class="nota">(per esempio https://github.com/mario/samaritan)</span></label>
-    <input type="text" id="repo" autocomplete="off" spellcheck="false">
+    <input type="url" id="repo" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="url">
     <label for="token">Token GitHub <span class="nota">(resta solo in questa pagina, mai salvato)</span></label>
-    <input type="password" id="token" autocomplete="off" spellcheck="false">
+    <input type="password" id="token" autocomplete="off" autocapitalize="off" spellcheck="false">
     <button id="verifica-github">Verifica l'accesso</button>
     <div class="esito" id="esito-github"></div>
   </section>
@@ -202,21 +251,43 @@
   <!-- 5 -->
   <section id="passo-youtube">
     <h2><span class="numero">5</span>Collega YouTube</h2>
-    <ol>
-      <li>Apri la <a href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener">Google Cloud Console</a> con l'account del canale e crea un progetto.</li>
-      <li>In <em>API e servizi &gt; Libreria</em> attiva <strong>YouTube Data API v3</strong> e <strong>YouTube Analytics API</strong>.</li>
-      <li>In <em>Schermata di consenso OAuth</em> scegli <em>Esterno</em>, compila i campi obbligatori e poi premi
-        <strong>Pubblica app</strong>. Deve risultare <strong>In produzione</strong>: in modalita' <em>Test</em> Google spegne
-        l'autorizzazione dopo 7 giorni e i video smettono di uscire. L'avviso "app non verificata" che vedrai dopo e' normale:
-        l'app e' tua e la usi solo tu.</li>
-      <li>In <em>Credenziali</em> crea un <strong>ID client OAuth</strong> di tipo <strong>Applicazione web</strong>, e in
-        <em>URI di reindirizzamento autorizzati</em> incolla esattamente: <code id="redirect-uri"></code></li>
-      <li>Copia qui sotto ID client e client secret.</li>
+    <p>Qui dai a Samaritan il permesso di caricare video sul tuo canale. Si fa una volta sola, nella Google Cloud
+      Console, <strong>con l'account Google del canale</strong>. Sembra lungo, ma sono sette schermate.</p>
+    <ol class="passi">
+      <li><a class="tasto" href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener">Crea un progetto</a>
+        <span class="nota">Un nome qualsiasi, per esempio <em>samaritan</em>, poi <strong>Crea</strong>. Nelle schermate dopo
+        controlla in alto che sia selezionato questo progetto.</span></li>
+      <li><a class="tasto" href="https://console.cloud.google.com/apis/library/youtube.googleapis.com" target="_blank" rel="noopener">Attiva YouTube Data API</a>
+        e <a class="tasto" href="https://console.cloud.google.com/apis/library/youtubeanalytics.googleapis.com" target="_blank" rel="noopener">Attiva YouTube Analytics API</a>
+        <span class="nota">In ciascuna premi <strong>Abilita</strong>.</span></li>
+      <li><a class="tasto" href="https://console.cloud.google.com/auth/overview" target="_blank" rel="noopener">Configura l'accesso</a>
+        <span class="nota">Premi <strong>Inizia</strong>. Nome dell'app: il nome del tuo canale. Email per l'assistenza: la tua.
+        Pubblico: <strong>Esterno</strong>. Email di contatto: di nuovo la tua. Accetta e premi <strong>Crea</strong>.</span></li>
+      <li><a class="tasto" href="https://console.cloud.google.com/auth/branding" target="_blank" rel="noopener">Apri Branding</a>
+        <span class="nota">Google li chiede prima di pubblicare l'app. Il logo lascialo vuoto: con il logo Google vuole una
+        verifica lunga. Poi <strong>Salva</strong>.</span>
+        <span class="nota">Home page dell'applicazione e Link alle norme sulla privacy, lo stesso indirizzo:</span>
+        <span class="valore"><code id="indirizzo-home"></code><button type="button" class="copia" data-copia="indirizzo-home">Copia</button></span>
+        <span class="nota">Domini autorizzati:</span>
+        <span class="valore"><code id="dominio-pagina"></code><button type="button" class="copia" data-copia="dominio-pagina">Copia</button></span></li>
+      <li><a class="tasto" href="https://console.cloud.google.com/auth/audience" target="_blank" rel="noopener">Apri Pubblico</a>
+        <span class="nota">Premi <strong>Pubblica app</strong> e conferma: deve risultare <strong>In produzione</strong>. Se resti
+        in <em>Test</em>, Google blocca l'accesso ("l'app non ha completato la procedura di verifica") e comunque lo spegne
+        dopo 7 giorni, e i video smettono di uscire. Se il pulsante e' grigio, manca qualcosa in Branding.</span></li>
+      <li><a class="tasto" href="https://console.cloud.google.com/auth/clients/create" target="_blank" rel="noopener">Crea il client</a>
+        <span class="nota">Tipo di applicazione: <strong>Applicazione web</strong>. In <em>URI di reindirizzamento autorizzati</em>
+        premi <strong>Aggiungi URI</strong> e incolla esattamente:</span>
+        <span class="valore"><code id="redirect-uri"></code><button type="button" class="copia" data-copia="redirect-uri">Copia</button></span>
+        <span class="nota">Premi <strong>Crea</strong>: Google mostra ID client e client secret.</span></li>
+      <li>Incollali qui sotto e premi <strong>Autorizza con Google</strong>. Scegli <strong>il canale giusto</strong> se ne hai
+        piu' d'uno. All'avviso "Google non ha verificato questa app" premi <strong>Avanzate</strong> e poi
+        <strong>Vai a ...</strong>: e' normale, l'app e' tua e la usi solo tu. Spunta tutte le caselle e premi
+        <strong>Continua</strong>.</li>
     </ol>
     <p class="avviso" id="avviso-protocollo" hidden>Questa pagina e' aperta da file: Google accetta solo indirizzi https.
       Aprila dall'indirizzo web indicato nella guida.</p>
-    <label for="google_id">ID client</label><input type="text" id="google_id" spellcheck="false" autocomplete="off">
-    <label for="google_segreto">Client secret</label><input type="password" id="google_segreto" spellcheck="false" autocomplete="off">
+    <label for="google_id">ID client <span class="nota">(finisce con .apps.googleusercontent.com)</span></label><input type="text" id="google_id" spellcheck="false" autocomplete="off" autocapitalize="off">
+    <label for="google_segreto">Client secret</label><input type="password" id="google_segreto" spellcheck="false" autocomplete="off" autocapitalize="off">
     <button id="autorizza-google">Autorizza con Google</button>
     <button id="salva-youtube" disabled>Salva il collegamento</button>
     <div class="esito" id="esito-youtube"></div>
@@ -376,8 +447,8 @@ function moduloDaArgomento(chiave, base) {
 }
 
 const CHIAVI = [
-  { nome: "GROQ_API_KEY", obbligatoria: true, dove: "https://console.groq.com/keys", testo: "Scrive i testi. Gratuita, da console.groq.com." },
-  { nome: "PEXELS_API_KEY", obbligatoria: true, dove: "https://www.pexels.com/api/", testo: "Clip video senza diritti. Gratuita, da pexels.com/api." },
+  { nome: "GROQ_API_KEY", obbligatoria: true, dove: "https://console.groq.com/keys", testo: "Scrive i testi. Gratuita: premi Create API Key e copiala subito, Groq la mostra una volta sola." },
+  { nome: "PEXELS_API_KEY", obbligatoria: true, dove: "https://www.pexels.com/api/", testo: "Clip video senza diritti. Gratuita: la trovi nella pagina dopo il login." },
   { nome: "ELEVENLABS_API_KEY", obbligatoria: false, dove: "https://elevenlabs.io/app/settings/api-keys", testo: "Voce piu' realistica, a pagamento. Senza, si usa una voce gratuita." },
   { nome: "TELEGRAM_BOT_TOKEN", obbligatoria: false, dove: "https://t.me/BotFather", testo: "Avvisi su Telegram: il token del bot, da @BotFather." },
   { nome: "TELEGRAM_CHAT_ID", obbligatoria: false, dove: "https://t.me/userinfobot", testo: "Il tuo chat id, da @userinfobot." },
@@ -779,6 +850,45 @@ function esito(id, testo, ok) {
 
 function collegato() { return Boolean(stato.token && stato.ramo); }
 
+const PASSI = ["passo-copia", "passo-github", "passo-canale", "passo-chiavi", "passo-youtube", "passo-prova"];
+
+// Un passo riuscito si spunta, in cima e nella sua scheda, e la pagina scorre
+// al prossimo: dal telefono non si deve cercare dove continuare.
+function segnaFatto(...numeri) {
+  for (const n of numeri) {
+    document.getElementById(PASSI[n - 1]).classList.add("fatto");
+    document.querySelector(`#avanzamento a[data-passo="${n}"]`).classList.add("fatto");
+  }
+  const dopo = PASSI[Math.max(...numeri)];
+  if (dopo && !document.getElementById(dopo).classList.contains("fatto")) {
+    setTimeout(() => document.getElementById(dopo).scrollIntoView({ behavior: "smooth" }), 900);
+  }
+}
+
+async function copia(bottone) {
+  const testo = document.getElementById(bottone.dataset.copia).textContent;
+  try {
+    await navigator.clipboard.writeText(testo);
+  } catch (e) {
+    const r = document.createRange();
+    r.selectNodeContents(document.getElementById(bottone.dataset.copia));
+    getSelection().removeAllRanges(); getSelection().addRange(r);
+    document.execCommand("copy");
+  }
+  bottone.textContent = "Copiato";
+  setTimeout(() => { bottone.textContent = "Copia"; }, 1500);
+}
+
+// Il link del token arriva con nome, scadenza e permessi gia' scelti, dove
+// GitHub lo permette; il resto e' scritto nei passi.
+function aggiornaLinkToken() {
+  const indirizzo = leggiRepository(document.getElementById("repo").value);
+  const parametri = new URLSearchParams({ name: "Installazione Samaritan", expires_in: "7",
+    description: "Pagina di installazione di Samaritan", actions: "write", contents: "write", secrets: "write" });
+  if (indirizzo) parametri.set("target_name", indirizzo.owner);
+  document.getElementById("link-token").href = "https://github.com/settings/personal-access-tokens/new?" + parametri;
+}
+
 function aggiornaPulsanti() {
   document.getElementById("salva-canale").disabled = !collegato();
   document.getElementById("salva-chiavi").disabled = !collegato();
@@ -838,7 +948,7 @@ function preparaModulo() {
   const chiavi = document.getElementById("chiavi");
   for (const c of CHIAVI) {
     const blocco = document.createElement("div");
-    blocco.innerHTML = `<label for="k-${c.nome}"></label><input type="password" id="k-${c.nome}" autocomplete="off" spellcheck="false">`;
+    blocco.innerHTML = `<label for="k-${c.nome}"></label><input type="password" id="k-${c.nome}" autocomplete="off" autocapitalize="off" spellcheck="false">`;
     const etichetta = blocco.querySelector("label");
     etichetta.textContent = c.nome + (c.obbligatoria ? " " : " (facoltativa) ");
     const nota = document.createElement("span");
@@ -868,8 +978,20 @@ async function onVerifica() {
   Object.assign(stato, indirizzo);
   try {
     const repo = await gh("GET", `/repos/${stato.owner}/${stato.repo}`);
-    stato.ramo = repo.default_branch;
-    esito("esito-github", `Collegato a ${repo.full_name}${repo.private ? " (privato)" : ""}.`, true);
+    // Una copia fatta senza la pagina del modello nasce vuota: meglio dirlo
+    // qui che al passo 3 con un errore di GitHub.
+    const vuota = await gh("GET", `/repos/${stato.owner}/${stato.repo}/git/ref/heads/${repo.default_branch}`)
+      .then(() => false, (e) => (e.stato === 409 || e.stato === 404 ? true : Promise.reject(e)));
+    if (vuota) {
+      esito("esito-github", "La tua copia e' vuota. Se l'hai appena creata, aspetta un minuto e riprova. Se resta " +
+        "vuota e' nata senza il modello: cancellala (Settings, in fondo, Delete this repository) e rifai il passo 1 dal " +
+        "pulsante della pagina, dove deve comparire 'from samaritan-template'.", false);
+    } else {
+      stato.ramo = repo.default_branch;
+      esito("esito-github", `Collegato a ${repo.full_name}${repo.private ? " (privato)" : ""}.`, true);
+      segnaFatto(1, 2);
+      if (stato.youtube) await onSalvaYoutube();
+    }
   } catch (e) {
     const spiegazione = e.stato === 401 ? "il token non e' valido o e' scaduto."
       : e.stato === 404 ? "il repository non esiste o il token non puo' vederlo (controlla 'Only select repositories')."
@@ -886,7 +1008,11 @@ async function onSalvaCanale() {
   try {
     const azzerata = await salvaCanale(JSON.stringify(p, null, 2));
     esito("esito-canale", azzerata ? "canale.json salvato, memoria azzerata." : "canale.json aggiornato.", true);
-  } catch (e) { esito("esito-canale", e.message, false); }
+    segnaFatto(3);
+  } catch (e) {
+    esito("esito-canale", e.stato === 409
+      ? "La tua copia e' vuota: rifai il passo 1 dal pulsante della pagina e poi il passo 2." : e.message, false);
+  }
 }
 
 async function onSalvaChiavi() {
@@ -899,6 +1025,7 @@ async function onSalvaChiavi() {
   try {
     await salvaSegreti(valori);
     esito("esito-chiavi", `Salvate: ${Object.keys(valori).join(", ")}.`, true);
+    segnaFatto(4);
   } catch (e) { esito("esito-chiavi", e.message, false); }
 }
 
@@ -920,6 +1047,7 @@ async function onSalvaYoutube() {
     });
     stato.youtube = null;
     esito("esito-youtube", "YouTube collegato e salvato nei Secrets.", true);
+    segnaFatto(5);
   } catch (e) { esito("esito-youtube", e.message, false); }
   aggiornaPulsanti();
 }
@@ -932,6 +1060,7 @@ async function onProva() {
     const a = document.createElement("a");
     a.href = link; a.target = "_blank"; a.rel = "noopener"; a.textContent = link;
     el.append(a);
+    segnaFatto(6);
   } catch (e) { esito("esito-prova", e.message, false); }
 }
 
@@ -944,7 +1073,11 @@ async function ritornoDaGoogle() {
   sessionStorage.removeItem("samaritan-oauth");
   history.replaceState(null, "", indirizzoPagina());
   document.getElementById("passo-youtube").scrollIntoView();
-  if (parametri.has("error")) return esito("esito-youtube", "Google ha rifiutato: " + parametri.get("error"), false);
+  if (parametri.has("error")) {
+    return esito("esito-youtube", parametri.get("error") === "access_denied"
+      ? "Google non ha dato il permesso: hai premuto Annulla, oppure l'app e' ancora in Test. Pubblicala (passo 5, Apri Pubblico) e riprova."
+      : "Google ha rifiutato: " + parametri.get("error"), false);
+  }
   if (!salvato || salvato.stato !== parametri.get("state")) {
     return esito("esito-youtube", "Risposta di Google non riconosciuta: ripeti l'autorizzazione.", false);
   }
@@ -952,7 +1085,13 @@ async function ritornoDaGoogle() {
     const refreshToken = await scambiaCodice(parametri.get("code"), salvato);
     stato.youtube = { clientId: salvato.clientId, clientSecret: salvato.clientSecret, refreshToken };
     if (salvato.owner) document.getElementById("repo").value = `https://github.com/${salvato.owner}/${salvato.repo}`;
-    esito("esito-youtube", "Autorizzazione riuscita. Reincolla il token GitHub al passo 2, premi Verifica e poi Salva il collegamento.", true);
+    esito("esito-youtube", "Autorizzazione riuscita. Manca un ultimo gesto: reincolla il token GitHub qui sopra e premi Verifica l'accesso.", true);
+    esito("esito-github", "Google ha detto si'. Per sicurezza la pagina non ha tenuto il token GitHub: reincollalo e premi " +
+      "Verifica l'accesso, e il collegamento a YouTube si salva da solo.", true);
+    segnaFatto(1);
+    const campo = document.getElementById("token");
+    campo.scrollIntoView({ behavior: "smooth", block: "center" });
+    campo.focus({ preventScroll: true });
   } catch (e) { esito("esito-youtube", e.message, false); }
   aggiornaPulsanti();
 }
@@ -960,6 +1099,11 @@ async function ritornoDaGoogle() {
 function avvia() {
   document.getElementById("link-template").href = `https://github.com/${TEMPLATE_REPO}/generate`;
   document.getElementById("redirect-uri").textContent = indirizzoPagina();
+  document.getElementById("indirizzo-home").textContent = indirizzoPagina();
+  document.getElementById("dominio-pagina").textContent = location.hostname;
+  document.querySelectorAll(".copia").forEach((b) => b.addEventListener("click", () => copia(b)));
+  document.getElementById("repo").addEventListener("input", aggiornaLinkToken);
+  aggiornaLinkToken();
   document.getElementById("avviso-protocollo").hidden = location.protocol === "https:" || location.hostname === "localhost";
   preparaModulo();
   document.getElementById("verifica-github").addEventListener("click", onVerifica);

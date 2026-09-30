@@ -245,6 +245,17 @@ class TestPaginaConGitHubFinto:
         assert "errore" in g["poppone"]["classe"]
         assert g["verifica"]["testo"] == "Collegato a mario/samaritan (privato)."
 
+    def test_una_copia_vuota_si_riconosce_subito(self, pagina):
+        """Il 30 settembre 2026 una copia creata senza il modello ha dato un
+        409 di GitHub solo al passo 3: ora lo dice il passo 2, con il rimedio."""
+        g = pagina["github"]
+        assert "errore" in g["vuota"]["classe"]
+        assert "from samaritan-template" in g["vuota"]["testo"]
+        assert g["vuota_pulsante"] is True
+
+    def test_i_passi_riusciti_si_spuntano(self, pagina):
+        assert pagina["github"]["spuntati"] == ["1", "2"]
+
     def test_ogni_chiamata_porta_il_token(self, pagina):
         g = pagina["github"]
         tutte = g["chiamate_primo"] + g["chiamate_secondo"] + g["chiamate_prova"]
