@@ -63,6 +63,13 @@ a Samaritan non serve piu'.
 - **Di cosa parla**: *Videogiochi* oppure *Altro argomento*. Con un altro
   argomento scrivi come lo diresti dopo la parola "notizie" (per esempio "di
   cucina") e di cosa parla ogni video, al singolare (per esempio "ricetta").
+- **Stile telegiornale** (solo con un altro argomento): il canale diventa un
+  TG in Shorts. Racconta solo notizie con la fonte, con tono da conduttore;
+  in ogni video c'e' un cartello "Ultim'ora" con il titolo, la testata e la
+  scritta "Immagini di repertorio"; le notizie su morti, crimini, guerre e
+  tragedie vengono scartate, perche' su quelle YouTube toglie la pubblicita'
+  e le clip d'archivio sembrerebbero il filmato del fatto. Come categoria
+  scegli *Notizie e politica*.
 - **Ricerche di notizie**: una per riga, come le scriveresti su Google News.
   Samaritan racconta notizie vere, trovate con queste ricerche. Per i
   videogiochi puoi lasciarle vuote.

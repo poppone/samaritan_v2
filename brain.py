@@ -208,7 +208,26 @@ def _lingua():
     regole = dict(LINGUE[codice])
     regole["ricerche"] = p.ricerche_per(codice)
     regole["parole_calde"] = p.parole_calde_per(codice) or regole["parole_calde"]
+    regole["temi_esclusi"] = p.temi_esclusi_per(codice)
     return regole
+
+
+def _tema_escluso(testo, temi=None):
+    """La prima parola del profilo ('temi_esclusi') che compare nel testo, o ''.
+
+    Parole intere, senza accenti e in minuscolo: "morti" prende "cinque
+    morti" ma non "mortificato". Per un telegiornale sono le notizie su
+    morti, crimini e tragedie (profilo.TEMI_DELICATI).
+    """
+    temi = _lingua()["temi_esclusi"] if temi is None else temi
+    if not temi or not testo:
+        return ""
+    pulito = " " + " ".join(re.split(r"[^\w]+", _senza_accenti(testo).lower())) + " "
+    for tema in temi:
+        chiave = " ".join(re.split(r"[^\w]+", _senza_accenti(tema).lower())).strip()
+        if chiave and f" {chiave} " in pulito:
+            return tema
+    return ""
 
 
 def _lingua_di(voce):
@@ -594,6 +613,7 @@ def recupera_trend_gaming_online(max_notizie=8, tema=None, gioco_da_evitare=""):
     # punteggio. Chiave: l'impronta della notizia, non il titolo, perche'
     # testate diverse la scrivono con parole appena diverse.
     trovate = {}
+    scartate_per_tema = 0
     tema = (tema or "").strip()
     ricerche = ((tema,) if tema else ()) + tuple(_lingua()["ricerche"])
     for ricerca in ricerche:
@@ -613,6 +633,14 @@ def recupera_trend_gaming_online(max_notizie=8, tema=None, gioco_da_evitare=""):
 
             # Questa notizia e' gia' diventata un video: saltala.
             if impronta in notizie_passate:
+                continue
+
+            # Un tema che il canale non tratta (per un telegiornale: morti,
+            # crimini, tragedie). Si scarta qui e non dopo: la notizia non
+            # arriva nemmeno al modello.
+            escluso = _tema_escluso(titolo)
+            if escluso:
+                scartate_per_tema += 1
                 continue
 
             # Salta le notizie troppo simili a quelle gia' usate di recente.
@@ -646,6 +674,14 @@ def recupera_trend_gaming_online(max_notizie=8, tema=None, gioco_da_evitare=""):
     notizie = notizie[:max_notizie]
 
     _aggiungi_sommari(notizie)
+    # Il titolo puo' tacere quello che il sommario dice ("Lutto nel mondo
+    # della musica" -> "e' morto a 80 anni"): si guarda anche quello.
+    prima = len(notizie)
+    notizie = [n for n in notizie if not _tema_escluso(n.get("sommario", ""))]
+    scartate_per_tema += prima - len(notizie)
+    if scartate_per_tema:
+        print(f"[Samaritan Search] Scartate {scartate_per_tema} notizie su "
+              f"temi che il canale non tratta (profilo, 'temi_esclusi').")
 
     if notizie:
         print(f"[Samaritan Search] {len(notizie)} notizie fresche non ancora "
@@ -683,8 +719,20 @@ def scegli_formato(notizie_disponibili):
     except Exception:
         pesi = {}
 
+    # Un telegiornale racconta solo notizie: niente curiosita', classifiche o
+    # dilemmi. Senza notizie non c'e' telegiornale, e l'uscita la recupera la
+    # riserva invece di riempirla con un video che non c'entra.
+    if profilo.attivo().telegiornale:
+        if not notizie_disponibili:
+            raise RuntimeError(
+                "Nessuna notizia utilizzabile per il telegiornale: salto il "
+                "video invece di fare un contenuto senza fonte.")
+        formati = {n: m for n, m in FORMATI_VIDEO.items() if m["richiede_fatto"]}
+    else:
+        formati = FORMATI_VIDEO
+
     candidati, valori = [], []
-    for nome, meta in FORMATI_VIDEO.items():
+    for nome, meta in formati.items():
         if meta["richiede_fatto"] and not notizie_disponibili:
             continue                      # niente fatti -> niente formato factual
         if nome in stili_recenti:
@@ -694,7 +742,7 @@ def scegli_formato(notizie_disponibili):
 
     if not candidati:                     # tutti esclusi: allarga il campo
         candidati = [
-            n for n, m in FORMATI_VIDEO.items()
+            n for n, m in formati.items()
             if not m["richiede_fatto"] or notizie_disponibili
         ]
         valori = [max(pesi.get(n, 1.0), 0.05) for n in candidati]
@@ -1072,6 +1120,9 @@ def _riga_materiale(dati, materiale):
     stock = materiale.get("sorgenti_stock", 0)
 
     if not (ufficiali and nome):
+        if profilo.attivo().telegiornale:
+            return ("\nImmagini di repertorio a scopo illustrativo: non "
+                    "ritraggono i fatti raccontati.")
         return "\nFilmati d'archivio a scopo illustrativo."
 
     if stock:
@@ -1346,6 +1397,32 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti,
         chi_annuncia = "ai diretti interessati"
         senza_fonte = "curiosita', storia o consigli pratici"
 
+    blocco_tg = ""
+    if p.telegiornale:
+        blocco_tg = (
+            "STILE TELEGIORNALE (quando contraddice le regole qui sotto, vince "
+            "questo):\n"
+            "- Sei il conduttore di un telegiornale, non un creator: tono "
+            "neutro e asciutto, niente iperboli, niente 'incredibile', "
+            "'shock' o 'assurdo', niente accuse o domande provocatorie allo "
+            "spettatore.\n"
+            "- La prima frase e' il fatto principale della notizia, detto in "
+            "modo netto: e' quello l'hook.\n"
+            "- Nomina a voce la testata che riporta la notizia (per esempio "
+            "'Lo riporta ANSA' / 'according to Reuters').\n"
+            "- Nessuna opinione su partiti, politici, governi o religioni: "
+            "riferisci cosa e' successo e chi l'ha detto, con il suo ruolo.\n"
+            "- Il loop della regola 2 non serve: chiudi con la CTA.\n"
+            "- QUERY VIDEO: immagini di repertorio NEUTRE che non mostrino il "
+            "fatto e non sembrino il suo filmato (per esempio 'city skyline "
+            "aerial', 'newspaper printing press', 'stock market screen', "
+            "'world map globe'). Mai violenza, armi, incidenti, ospedali, "
+            "polizia, bandiere o persone riconoscibili.\n"
+            "- Il campo 'gioco' contiene il protagonista della notizia "
+            "(un'azienda, un paese, un'istituzione), mai una persona "
+            "privata.\n\n"
+        )
+
     return (
         f"Sei il Lead Social Media Manager di '{config.NOME_CANALE}', canale YouTube "
         f"{p.descrizione_canale}. Scrivi uno script per uno Short ad ALTISSIMA RETENTION "
@@ -1364,6 +1441,7 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti,
         f"{vincolo_fatti}"
         f"{vincolo_titolo}"
         f"{blocco_hook}\n"
+        f"{blocco_tg}"
         "REGOLE TASSATIVE:\n"
         "1. PRIMA FRASE = HOOK. Deve bloccare lo scroll in 3 secondi. "
         "VIETATO iniziare con saluti ('Ciao', 'Raga', 'Benvenuti', 'Oggi vi parlo'). "
@@ -1783,6 +1861,11 @@ def genera_script_samaritan(tema=None):
                     ok = False
                     motivo = (f"usa la notizia [{idx}], che non si puo' piu' "
                               f"usare. Scegline un'altra")
+                if ok and profilo.attivo().telegiornale and not fonte:
+                    ok = False
+                    motivo = ("non racconta nessuna delle notizie elencate, e "
+                              "un telegiornale racconta solo quelle: metti in "
+                              "'indice_notizia' la notizia usata")
                 if ok and _cronaca_senza_fonte(script, fonte):
                     ok = False
                     motivo = "afferma fatti di cronaca senza citare una notizia"

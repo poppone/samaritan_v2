@@ -66,7 +66,11 @@ MODULI = [
     _modulo(tipo="gaming", ricerche_it=""),
     _modulo(tipo="gaming", ricerche_it="", ricerche_en="indie games"),
     _modulo(tipo="gaming", handle="", ricerche_it=""),
+    _modulo(argomento="di attualita'", soggetto="tema", telegiornale=True,
+            ricerche_it="ultime notizie Italia", categoria_youtube="25"),
+    _modulo(tipo="gaming", ricerche_it="", telegiornale=True),     # ignorato
 ]
+TELEGIORNALE, GAMING_CON_TELEGIORNALE = len(MODULI) - 2, len(MODULI) - 1
 
 # Lunghezze intorno al blocco di 128 byte di BLAKE2b.
 BLAKE = [bytes(range(256))[:n] * 1 for n in (0, 1, 64, 127, 128, 129, 255)] + [
@@ -147,6 +151,18 @@ class TestPaginaNelBrowser:
         assert p.hashtag_canale == "CucinaLampo"
         assert p.nomi_grossi == ["cracco", "cannavacciuolo"]
         assert p.categoria_youtube == "26"
+
+    def test_lo_stile_telegiornale_arriva_nel_profilo(self, pagina):
+        caso = pagina["costruiti"][TELEGIORNALE]
+        assert caso["errori"] == []
+        p = profilo.da_dizionario(caso["profilo"])
+        assert p.telegiornale is True
+        assert p.temi_esclusi == profilo.TEMI_DELICATI
+        assert p.categoria_youtube == "25"
+
+    def test_un_canale_di_videogiochi_non_diventa_telegiornale(self, pagina):
+        caso = pagina["costruiti"][GAMING_CON_TELEGIORNALE]
+        assert "telegiornale" not in caso["profilo"]
 
     @pytest.mark.parametrize("indice", range(len(MODULI)))
     def test_pagina_e_profilo_py_sono_d_accordo(self, pagina, indice):

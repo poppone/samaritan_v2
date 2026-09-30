@@ -441,6 +441,74 @@ def crea_banner_titolo(testo, larghezza_max, font_size=64):
     return np.array(img)
 
 
+# Il cartello del telegiornale: etichetta rossa, titolo su fascia chiara e,
+# sotto, la testata e l'avviso che le immagini sono di repertorio. Sta in
+# cima per tutto il video, sopra il riquadro delle clip e lontano dai
+# sottotitoli (58-74% dell'altezza) e dai comandi dell'app Shorts in basso.
+Y_CARTELLO_TG = 0.05
+ETICHETTA_TG = {"it": "ULTIM'ORA", "en": "BREAKING NEWS"}
+REPERTORIO_TG = {"it": "Immagini di repertorio", "en": "Stock footage"}
+FONTE_TG = {"it": "Fonte", "en": "Source"}
+ROSSO_TG = (200, 16, 30)
+
+
+def testata_della_fonte(fonte):
+    """'Titolo della notizia (ANSA)' -> 'ANSA'. '' se non c'e'."""
+    trovata = re.search(r"\(([^()]+)\)\s*$", (fonte or "").strip())
+    return trovata.group(1).strip() if trovata else ""
+
+
+def crea_cartello_tg(titolo, testata, lingua="it", larghezza=None):
+    """Il cartello del telegiornale, come immagine RGBA."""
+    larghezza = larghezza or int(config.VIDEO_W * 0.92)
+    lingua = lingua if lingua in ETICHETTA_TG else "it"
+    misura = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+
+    font_etichetta = _carica_font(40)
+    font_titolo = _carica_font(52)
+    font_fonte = _carica_font(32)
+
+    etichetta = ETICHETTA_TG[lingua]
+    alto_etichetta = 70
+    largo_etichetta = int(misura.textlength(etichetta, font=font_etichetta)) + 48
+
+    righe = _manda_a_capo(misura, titolo.strip(), font_titolo, larghezza - 60)
+    if len(righe) > 2:
+        # Due righe al massimo: la terza si taglia con i puntini, e il titolo
+        # intero resta comunque quello del video.
+        righe = righe[:2]
+        while righe[1] and misura.textlength(righe[1] + "...", font=font_titolo) > larghezza - 60:
+            righe[1] = righe[1].rsplit(" ", 1)[0] if " " in righe[1] else righe[1][:-1]
+        righe[1] += "..."
+    alto_riga = 64
+    alto_titolo = alto_riga * max(len(righe), 1) + 28
+
+    piede = REPERTORIO_TG[lingua]
+    if testata:
+        piede = f"{FONTE_TG[lingua]}: {testata}  \u00b7  {piede}"
+    alto_piede = 54
+
+    img = Image.new("RGBA", (larghezza, alto_etichetta + alto_titolo + alto_piede),
+                    (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    draw.rectangle((0, 0, largo_etichetta, alto_etichetta), fill=ROSSO_TG + (255,))
+    draw.text((24, 12), etichetta, font=font_etichetta, fill="white")
+
+    y = alto_etichetta
+    draw.rectangle((0, y, larghezza, y + alto_titolo), fill=(245, 245, 245, 240))
+    for i, riga in enumerate(righe):
+        draw.text((30, y + 14 + i * alto_riga), riga, font=font_titolo,
+                  fill=(15, 15, 15))
+
+    y += alto_titolo
+    draw.rectangle((0, y, larghezza, y + alto_piede), fill=(15, 15, 15, 225))
+    while (misura.textlength(piede, font=font_fonte) > larghezza - 40
+           and getattr(font_fonte, "size", 0) > 20):
+        font_fonte = _carica_font(font_fonte.size - 2)
+    draw.text((20, y + 10), piede, font=font_fonte, fill=(230, 230, 230))
+    return np.array(img)
+
+
 def _manda_a_capo(draw, testo, font, larghezza_max):
     """Spezza il testo in righe che stanno dentro larghezza_max."""
     righe, corrente = [], ""
@@ -628,7 +696,7 @@ def genera_sottotitoli_clips(audio_path, titolo="", gioco="", stile=None):
 # ===========================================================================
 def assembla_video_finale(testo_per_audio=None, query_video="gameplay",
                           titolo="", gioco="", tema="Gaming",
-                          resoconto=None, audio_pronto=None):
+                          resoconto=None, audio_pronto=None, fonte=""):
     """Monta il video e lo scrive su disco. Ritorna il percorso, o None.
 
     `audio_pronto` e' il percorso di un audio gia' sintetizzato: lo passa il
@@ -650,6 +718,7 @@ def assembla_video_finale(testo_per_audio=None, query_video="gameplay",
         query_video = dati["query_video"]
         titolo = dati["titolo"]
         gioco = dati.get("gioco", "")
+        fonte = dati.get("fonte", "")
 
     audio_path = audio_pronto or genera_voce_samaritan(testo_per_audio)
     if not audio_path:
@@ -687,9 +756,25 @@ def assembla_video_finale(testo_per_audio=None, query_video="gameplay",
     sfondo = sfondo.with_duration(durata).with_audio(audio_clip)
     livelli = [sfondo]
 
+    # Un telegiornale ha il suo cartello fisso al posto del banner: titolo,
+    # testata e "immagini di repertorio" per tutta la durata. Senza l'avviso
+    # una clip stock sotto una notizia vera sembra il filmato della notizia.
+    telegiornale = profilo.attivo().telegiornale and not config.VIDEO_LUNGO
+    if telegiornale and titolo:
+        try:
+            livelli.append(
+                ImageClip(crea_cartello_tg(pulisci_testo(titolo),
+                                           testata_della_fonte(fonte),
+                                           config.LINGUA))
+                .with_start(0).with_duration(durata)
+                .with_position(("center", int(config.VIDEO_H * Y_CARTELLO_TG)))
+            )
+        except Exception as e:
+            print(f"[Warning Maker] Cartello del telegiornale saltato: {e}")
+
     # Banner e barra non ci sono in tutte le vesti: l'assenza e' una scelta,
     # non un errore, ed e' il modo piu' netto per far sembrare diverso il video.
-    if titolo and stile["banner"]:
+    if titolo and stile["banner"] and not telegiornale:
         altezza_banner, secondi_banner = stile["banner"]
         try:
             banner = (
