@@ -254,7 +254,7 @@ jobs:
           # nemmeno l'altro. performance.json nasce solo quando YouTube
           # Analytics risponde, quindi all'inizio non c'e': e' per questo che
           # la memoria non veniva mai salvata.
-          for file_memoria in cronologia_trend.json performance.json; do
+          for file_memoria in cronologia_trend.json performance.json canale_auto.json; do
             if [ -f "$file_memoria" ]; then
               git add -- "$file_memoria"
             fi
@@ -278,7 +278,7 @@ jobs:
           # sul contenuto (unisci_memoria.py).
           copia="$RUNNER_TEMP/memoria-nostra"
           mkdir -p "$copia"
-          for file_memoria in cronologia_trend.json performance.json; do
+          for file_memoria in cronologia_trend.json performance.json canale_auto.json; do
             if [ -f "$file_memoria" ]; then
               cp -- "$file_memoria" "$copia/"
             fi
@@ -289,7 +289,12 @@ jobs:
             git fetch origin "${GITHUB_REF_NAME}"
             git reset --hard "origin/${GITHUB_REF_NAME}"
             python unisci_memoria.py "$copia/cronologia_trend.json" "$copia/performance.json"
-            for file_memoria in cronologia_trend.json performance.json; do
+            # La definizione del canale (autoprofilo.py) non si fonde: la
+            # nostra e' la piu' recente.
+            if [ -f "$copia/canale_auto.json" ]; then
+              cp -- "$copia/canale_auto.json" canale_auto.json
+            fi
+            for file_memoria in cronologia_trend.json performance.json canale_auto.json; do
               if [ -f "$file_memoria" ]; then
                 git add -- "$file_memoria"
               fi

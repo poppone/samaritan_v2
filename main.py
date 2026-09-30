@@ -29,6 +29,7 @@ from brain import (
 )
 from maker import assembla_video_finale
 from uploader import carica_short
+import autoprofilo
 import notifier
 import orari
 
@@ -150,6 +151,17 @@ def _stampa_scheda(dati):
 
 def esegui_pipeline_samaritan(tema=None):
     if not prepara_uscita():
+        return None
+
+    # Un canale nato dal solo argomento ("Altro" nella pagina) si scrive da
+    # solo soggetto, ricerche e il resto, e ogni due settimane si ritara sui
+    # suoi numeri (autoprofilo.py). Un argomento che YouTube non ammette
+    # ferma tutto qui.
+    try:
+        autoprofilo.aggiorna_se_serve()
+    except autoprofilo.ArgomentoNonAmmesso as e:
+        print(f"[Autoprofilo] {e}")
+        notifier.notifica_errore(str(e))
         return None
 
     che_cosa = "VIDEO LUNGO" if config.VIDEO_LUNGO else "SHORT"
