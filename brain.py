@@ -772,7 +772,10 @@ def _pulisci_titolo(titolo):
     # Una sola emoji, e in fondo: in apertura i caratteri piu' preziosi del
     # titolo li deve occupare il nome del gioco, non una faccina.
     prima = _RE_EMOJI_SINGOLA.search(t)
-    if prima:
+    if prima and profilo.attivo().telegiornale:
+        # Un telegiornale non mette faccine nei titoli.
+        t = re.sub(r"\s+", " ", _RE_EMOJI.sub(" ", t)).strip(" -–—:")
+    elif prima:
         emoji = prima.group()
         t = _RE_EMOJI.sub(" ", t)
         t = re.sub(r"\s+", " ", t).strip(" -–—:")
@@ -823,6 +826,24 @@ def _gioco_nel_titolo(titolo, gioco):
     # Sigla: 'Grand Theft Auto VI' -> 'gtavi', che copre anche 'GTA 6'
     sigla = "".join(p[0] for p in parole)
     return len(sigla) >= 3 and (sigla in t or sigla[:3] in t)
+
+
+def _fuori_stile_tg(titolo, script):
+    """Il motivo per cui titolo o apertura non sono da telegiornale, o "".
+
+    La prima prova vera del canale di notizie (30 settembre 2026) e' uscita
+    come "Inter: assenza contro il Parma? 🤔", con lo script che apriva
+    "Inter assente contro il Parma? E' vero.": il tono di uno Short gaming,
+    non di un TG.
+    """
+    if "?" in titolo:
+        return ("il titolo e' una domanda: un telegiornale titola con "
+                "un'affermazione, senza punto di domanda")
+    prima = re.split(r"(?<=[.!?])\s", script.strip(), maxsplit=1)[0]
+    if prima.endswith("?"):
+        return ("lo script apre con una domanda: un telegiornale apre "
+                "dicendo il fatto")
+    return ""
 
 
 def valida_titolo(titolo, gioco=""):
@@ -1407,7 +1428,10 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti,
             "'shock' o 'assurdo', niente accuse o domande provocatorie allo "
             "spettatore.\n"
             "- La prima frase e' il fatto principale della notizia, detto in "
-            "modo netto: e' quello l'hook.\n"
+            "modo netto e AFFERMATIVO, mai come domanda: e' quello l'hook.\n"
+            "- TITOLO da telegiornale: un'affermazione, senza punto di domanda "
+            "e senza emoji (per esempio 'Inter: contro il Parma mancano tre "
+            "titolari').\n"
             "- Nomina a voce la testata che riporta la notizia (per esempio "
             "'Lo riporta ANSA' / 'according to Reuters').\n"
             "- Nessuna opinione su partiti, politici, governi o religioni: "
@@ -1861,6 +1885,9 @@ def genera_script_samaritan(tema=None):
                     ok = False
                     motivo = (f"usa la notizia [{idx}], che non si puo' piu' "
                               f"usare. Scegline un'altra")
+                if ok and profilo.attivo().telegiornale:
+                    motivo = _fuori_stile_tg(titolo, script)
+                    ok = not motivo
                 if ok and profilo.attivo().telegiornale and not fonte:
                     ok = False
                     motivo = ("non racconta nessuna delle notizie elencate, e "

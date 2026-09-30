@@ -22,8 +22,17 @@ def _profilo_predefinito(monkeypatch):
     """Ogni test parte dal profilo di Poppone TV, anche se sul disco c'e' un
     canale.json: i test dicono come si comporta il codice, non il canale di
     chi li lancia. I test sui profili se ne impostano uno loro."""
+    import config
     import profilo
-    monkeypatch.setattr(profilo, "_attivo", profilo.predefinito())
+    predefinito = profilo.predefinito()
+    monkeypatch.setattr(profilo, "_attivo", predefinito)
+    # config legge nome e handle dal canale.json una volta sola, all'import:
+    # nella copia di un cliente sarebbero i suoi, e i test fallirebbero a ogni
+    # salvataggio del canale.
+    monkeypatch.setattr(config, "PROFILO", predefinito)
+    monkeypatch.setattr(config, "NOME_CANALE", predefinito.nome_canale)
+    monkeypatch.setattr(config, "HANDLE_CANALE", predefinito.handle)
+    monkeypatch.setattr(config, "FUSO_USCITA", predefinito.fuso)
 
 
 @pytest.fixture(autouse=True)
