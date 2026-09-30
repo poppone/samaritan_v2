@@ -1688,6 +1688,61 @@ def _dettagli_inventati(titolo_notizia, script, sommario="", testata=""):
     return []
 
 
+def _togli_frasi_inventate(script, dettagli, notizia=""):
+    """Lo script senza le frasi che contengono i dettagli inventati.
+
+    Il 30 settembre 2026 l'uscita delle 14:00 e' saltata: sei tentativi su
+    sei scartati, quasi sempre per una frase di colore ("Nessuno
+    l'aspettava", "Seguici su Poppone TV") che la verifica prende per un
+    fatto. Riscrivere tutto da capo rifa' lo stesso errore da un'altra parte;
+    togliere le frasi indicate invece non puo' aggiungere niente di falso.
+
+    Un "dettaglio" che sta tutto nel titolo o nel sommario della notizia non
+    e' inventato (il 30 settembre la verifica ha segnalato "78", l'eta' che
+    il titolo diceva): si ignora, altrimenti si toglierebbe proprio la frase
+    con la notizia.
+
+    Stringa vuota quando non si puo': un dettaglio che non corrisponde a
+    nessuna frase, o piu' di meta' delle frasi da togliere. Il risultato va
+    comunque ripassato da valida_script (lunghezza, apertura).
+    """
+    frasi = [f for f in re.split(r"(?<=[.!?…])\s+", (script or "").strip()) if f]
+    if len(frasi) < 2 or not dettagli:
+        return ""
+
+    def parole(testo):
+        return [w for w in re.split(r"[^0-9a-z]+", _senza_accenti(testo).lower()) if w]
+
+    parole_notizia = set(parole(notizia))
+    parole_frasi = [set(parole(f)) for f in frasi]
+    compatte = [" ".join(parole(f)) for f in frasi]
+    da_togliere = set()
+    for dettaglio in dettagli:
+        cercate = parole(dettaglio)
+        if not cercate:
+            return ""
+        if set(cercate) <= parole_notizia:
+            continue
+        compatto = " ".join(cercate)
+        trovata = next((i for i, c in enumerate(compatte)
+                        if f" {compatto} " in f" {c} "), None)
+        if trovata is None:
+            # Il fact-checker a volte riassume invece di citare: basta che
+            # quasi tutte le parole piene del dettaglio stiano nella frase.
+            piene = [w for w in cercate if len(w) > 3]
+            if len(piene) < 2:
+                return ""
+            quote = [len(set(piene) & pf) / len(set(piene)) for pf in parole_frasi]
+            migliore = max(range(len(frasi)), key=lambda i: quote[i])
+            if quote[migliore] < 0.7:
+                return ""
+            trovata = migliore
+        da_togliere.add(trovata)
+    if len(da_togliere) * 2 > len(frasi):
+        return ""
+    return " ".join(f for i, f in enumerate(frasi) if i not in da_togliere)
+
+
 def _estrai_json(testo):
     """Ritaglia il primo oggetto JSON da una risposta in testo libero.
 
@@ -1926,6 +1981,25 @@ def genera_script_samaritan(tema=None):
                         notizie[idx]["titolo"], script,
                         notizie[idx].get("sommario", ""),
                         notizie[idx].get("fonte", ""))
+                    ripulito = _togli_frasi_inventate(
+                        script, inventati,
+                        notizie[idx]["titolo"] + " "
+                        + notizie[idx].get("sommario", "")) if inventati else ""
+                    if ripulito and valida_script(
+                            titolo, ripulito,
+                            () if ultima_spiaggia else impronte_aperture,
+                            () if ultima_spiaggia or scarti_per_schema >= 2
+                            else schemi_recenti)[0]:
+                        if ripulito == script:
+                            print("[Samaritan Brain] La verifica segnala solo "
+                                  "cose che la notizia dice gia' ("
+                                  + "; ".join(inventati) + "): lo script va bene.")
+                        else:
+                            print("[Samaritan Brain] Tolte dallo script le frasi "
+                                  "con dettagli che la notizia non dice ("
+                                  + "; ".join(inventati) + ").")
+                        script = ripulito
+                        inventati = []
                     if inventati:
                         ok = False
                         invenzioni_per_notizia[idx] = invenzioni_per_notizia.get(idx, 0) + 1

@@ -310,6 +310,18 @@ class TestDettagliInventati:
         assert len(verifiche) == 3
         assert risultato["fonte"].startswith("Hollow Knight Silksong")
 
+    def test_una_frase_di_colore_si_toglie_senza_riscrivere(self, monkeypatch):
+        """30 settembre 2026: sei tentativi su sei scartati per frasi come
+        "Nessuno l'aspettava", e l'uscita delle 14:00 e' saltata."""
+        colore = "Would you grind for it or just buy it on day one?"
+        risultato, prompt_visti, verifiche = self._genera(
+            monkeypatch, [self._risposta()],
+            ['{"dettagli_inventati": ["Would you grind for it or just buy it on day one"]}'])
+        assert len(prompt_visti) == 1
+        assert len(verifiche) == 1
+        assert colore not in risultato["script"]
+        assert risultato["script"].startswith("Two Xbox players got GTA 6")
+
     def test_la_verifica_vale_anche_all_ultimo_tentativo(self, monkeypatch):
         # Con la verifica spenta sull'ultimo tentativo, nella prova del 28
         # settembre 2026 e' passato uno Short su GTA 6 nato da una notizia su
@@ -523,3 +535,39 @@ class TestTestataNellaVerifica:
             "GTA 6, ce ne sono quasi 90", "Everyeye ne ha contate quasi 90.",
             testata="Everyeye.it") == []
         assert "TESTATA: Everyeye.it" in visti[0]
+
+
+class TestTogliFrasiInventate:
+    SCRIPT = ("A 78 anni una nonna ha conquistato il Guinness World Record con "
+              "Fortnite. Nessuno l'aspettava! Il suo sorriso ha acceso milioni "
+              "di chat. Il record dimostra che il controller non ha eta'. "
+              "Seguici su Poppone TV.")
+    TITOLO = "A 78 anni una nonna conquista il Guinness World Record con Fortnite"
+
+    def test_toglie_le_frasi_citate(self):
+        ripulito = brain._togli_frasi_inventate(
+            self.SCRIPT, ["Nessuno l’aspettava", "Il suo sorriso ha acceso milioni di chat"],
+            self.TITOLO)
+        assert "aspettava" not in ripulito
+        assert "sorriso" not in ripulito
+        assert ripulito.startswith("A 78 anni una nonna")
+
+    def test_riconosce_un_riassunto_della_frase(self):
+        ripulito = brain._togli_frasi_inventate(
+            self.SCRIPT, ["il record dimostra che il controller"], self.TITOLO)
+        assert "controller" not in ripulito
+
+    def test_un_dettaglio_che_la_notizia_dice_non_si_tocca(self):
+        # La verifica aveva segnalato "78", l'eta' scritta nel titolo.
+        assert brain._togli_frasi_inventate(
+            self.SCRIPT, ["78"], self.TITOLO) == self.SCRIPT
+
+    def test_un_dettaglio_che_non_si_trova_obbliga_a_riscrivere(self):
+        assert brain._togli_frasi_inventate(
+            self.SCRIPT, ["un glitch che salta l'acquisto"], self.TITOLO) == ""
+
+    def test_non_toglie_piu_di_meta_dello_script(self):
+        assert brain._togli_frasi_inventate(
+            self.SCRIPT, ["Nessuno l'aspettava", "sorriso acceso milioni chat",
+                          "record dimostra controller", "Seguici su Poppone TV"],
+            self.TITOLO) == ""
