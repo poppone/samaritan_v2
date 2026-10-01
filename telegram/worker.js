@@ -16,6 +16,12 @@
 // Dopo il primo Deploy si apre una volta nel browser
 //   https://<indirizzo-del-worker>/registra?chiave=<SEGRETO_WEBHOOK>
 // e da quel momento Telegram consegna qui i messaggi del bot.
+//
+// Lo stesso Worker fa anche partire le uscite del giorno all'ora giusta, se
+// su Cloudflare gli si aggiungono i Cron Trigger (Settings > Trigger Events):
+//   0,20,40 4,6 * * *
+//   0 5,7 * * *
+// Vedi PARTENZE_PUNTUALI qui sotto.
 
 const REPOSITORY = "poppone/samaritan_v2";
 const WORKFLOW = "samaritan.yml";
@@ -46,6 +52,27 @@ export function interpreta(testo) {
   return { ...scelta, tema };
 }
 
+// Le partenze delle uscite, in ora UTC. I cron di GitHub partono con ore di
+// ritardo (il 29 e il 30 settembre e il 1 ottobre 2026 nessuna partenza
+// notturna era arrivata alle 6 del mattino) e ogni mattina andavano lanciate
+// a mano: quelli di Cloudflare scattano al minuto. Ogni partenza lancia una
+// lavorazione con "slot", che pubblica all'orario dell'uscita (publishAt),
+// non subito. Il secondo giro, due ore dopo, e' la riprova per chi e' caduto
+// al primo: chi ha gia' il suo video si ferma col freno anti-doppioni, e
+// anche le partenze di GitHub, quando arrivano.
+// Uscite di Poppone TV: 1 = 14:00, 2 = 18:00, 3 = 20:00 (inglese),
+// 4 = 21:00 (inglese).
+export const PARTENZE_PUNTUALI = {
+  "04:00": "1", "04:20": "2", "04:40": "3", "05:00": "4",
+  "06:00": "1", "06:20": "2", "06:40": "3", "07:00": "4",
+};
+
+export function uscitaDaLanciare(quando) {
+  const t = new Date(quando);
+  const ora = `${String(t.getUTCHours()).padStart(2, "0")}:${String(t.getUTCMinutes()).padStart(2, "0")}`;
+  return PARTENZE_PUNTUALI[ora] || null;
+}
+
 async function rispondi(env, testo) {
   await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
     method: "POST",
@@ -54,7 +81,7 @@ async function rispondi(env, testo) {
   });
 }
 
-async function lancia(env, ordine) {
+async function lancia(env, ordine, inputs) {
   const r = await fetch(
     `https://api.github.com/repos/${REPOSITORY}/actions/workflows/${WORKFLOW}/dispatches`,
     {
@@ -68,7 +95,7 @@ async function lancia(env, ordine) {
       },
       body: JSON.stringify({
         ref: "main",
-        inputs: {
+        inputs: inputs || {
           tema: ordine.tema,
           privacy: ordine.privacy,
           lingua: ordine.lingua,
@@ -102,7 +129,20 @@ async function registra(request, env) {
   );
 }
 
+async function partenzaPuntuale(env, quando) {
+  const slot = uscitaDaLanciare(quando);
+  if (!slot) return;
+  const problema = await lancia(env, null, { slot });
+  // Un avviso solo se qualcosa non va: quando va bene arriva gia' la
+  // notifica della lavorazione, con il link o con "niente da fare".
+  if (problema) await rispondi(env, `La partenza dell'uscita ${slot} non e' partita. ${problema}`);
+}
+
 export default {
+  async scheduled(evento, env, ctx) {
+    ctx.waitUntil(partenzaPuntuale(env, evento.scheduledTime));
+  },
+
   async fetch(request, env) {
     const percorso = new URL(request.url).pathname;
     if (request.method === "GET" && percorso === "/registra") return registra(request, env);

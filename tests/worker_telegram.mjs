@@ -1,4 +1,4 @@
-import worker, { interpreta } from "../telegram/worker.js";
+import worker, { interpreta, uscitaDaLanciare } from "../telegram/worker.js";
 import assert from "node:assert";
 assert.deepEqual(interpreta("/video il nuovo trailer di GTA 6"), {lingua:"it",lungo:false,privacy:"public",cosa:"uno Short in italiano",tema:"il nuovo trailer di GTA 6"});
 assert.equal(interpreta("/en  Hollow Knight Silksong ").lingua, "en");
@@ -24,4 +24,29 @@ assert.ok(JSON.parse(chiamate[1].opz.body).text.startsWith("Parto"));
 await worker.fetch(req(42,"ciao"), env);
 assert.ok(JSON.parse(chiamate[2].opz.body).text.includes("/video argomento"));
 assert.equal((await worker.fetch(new Request("https://w.dev/registra?chiave=no"), env)).status, 403);
+// partenze puntuali dai Cron Trigger
+assert.equal(uscitaDaLanciare(Date.UTC(2026, 9, 1, 4, 0)), "1");
+assert.equal(uscitaDaLanciare(Date.UTC(2026, 9, 1, 4, 40)), "3");
+assert.equal(uscitaDaLanciare(Date.UTC(2026, 9, 1, 7, 0)), "4");
+assert.equal(uscitaDaLanciare(Date.UTC(2026, 9, 1, 5, 20)), null);
+const attese = [];
+const ctx = { waitUntil: (p) => attese.push(p) };
+chiamate.length = 0;
+await worker.scheduled({ scheduledTime: Date.UTC(2026, 9, 1, 6, 20) }, env, ctx);
+await Promise.all(attese);
+assert.equal(chiamate.length, 1);
+assert.ok(chiamate[0].url.endsWith("/actions/workflows/samaritan.yml/dispatches"));
+assert.deepEqual(JSON.parse(chiamate[0].opz.body), {ref:"main", inputs:{slot:"2"}});
+// un cron che non e' una partenza non lancia niente
+chiamate.length = 0;
+await worker.scheduled({ scheduledTime: Date.UTC(2026, 9, 1, 5, 40) }, env, ctx);
+await Promise.all(attese);
+assert.equal(chiamate.length, 0);
+// se GitHub rifiuta, arriva un avviso su Telegram
+globalThis.fetch = async (url, opz) => { chiamate.push({url, opz}); return url.includes("github") ? new Response("Bad credentials",{status:401}) : new Response("{}"); };
+await worker.scheduled({ scheduledTime: Date.UTC(2026, 9, 1, 5, 0) }, env, ctx);
+await Promise.all(attese);
+assert.equal(chiamate.length, 2);
+assert.ok(JSON.parse(chiamate[1].opz.body).text.includes("uscita 4"));
+assert.ok(JSON.parse(chiamate[1].opz.body).text.includes("401"));
 console.log("tutto ok");
