@@ -19,6 +19,7 @@
   "ricerche": {
     "it": [
       "ultime notizie Italia",
+      "governo OR Parlamento OR manovra OR elezioni",
       "economia OR bollette OR pensioni OR tasse",
       "tecnologia OR intelligenza artificiale OR smartphone",
       "cinema OR serie tv OR musica OR Sanremo",
@@ -26,6 +27,7 @@
     ],
     "en": [
       "top news",
+      "politics OR government OR election",
       "economy OR inflation OR stock market",
       "technology OR artificial intelligence",
       "entertainment OR movies OR music"

@@ -228,3 +228,42 @@ class TestCartello:
     def test_la_descrizione_dice_repertorio(self, tg):
         riga = brain._riga_materiale({"gioco": ""}, {"sorgenti_stock": 4})
         assert "repertorio" in riga
+
+
+class TestPoliticaNeutra:
+    """Dal 1 ottobre 2026 il canale notizie tratta anche la politica, ma
+    neutro: popponetv, "implementa con anche la politica ma deve rimanere
+    neutro"."""
+
+    @pytest.mark.parametrize("titolo", [
+        "Manovra: il governo asfalta l'opposizione",
+        "Elezioni regionali, batosta per il centrosinistra",
+        "Parlamento, la vergogna del voto notturno",
+    ])
+    def test_le_parole_di_parte_si_rigenerano(self, tg, titolo):
+        assert "prende posizione" in brain._fuori_stile_tg(
+            titolo, "Il voto e' arrivato ieri sera. Lo riporta ANSA.")
+
+    def test_anche_nello_script(self, tg):
+        assert brain._fuori_stile_tg(
+            "Manovra: approvato il testo in Consiglio dei ministri",
+            "Il Consiglio dei ministri ha approvato la manovra. Un trionfo "
+            "per la maggioranza. Lo riporta ANSA.")
+
+    def test_riferire_una_critica_va_bene(self, tg):
+        assert brain._fuori_stile_tg(
+            "Manovra: l'opposizione critica il taglio alle pensioni",
+            "Secondo la segretaria del Pd la manovra taglia le pensioni. "
+            "Il ministro dell'Economia ha risposto che i conti sono in "
+            "ordine. Lo riporta ANSA.") == ""
+
+    def test_il_prompt_chiede_la_neutralita(self, tg):
+        prompt = brain._costruisci_system_prompt("VIRAL_HOOK_NEWS", TestPrompt.NOTIZIE, [], [])
+        assert "NEUTRALITA'" in prompt
+        assert "attribuito a chi lo ha espresso" in prompt
+
+    def test_l_esempio_cerca_anche_la_politica(self):
+        with open(ESEMPIO_TG, encoding="utf-8") as f:
+            ricerche = json.load(f)["ricerche"]
+        assert any("governo" in r.lower() for r in ricerche["it"])
+        assert any("politics" in r.lower() for r in ricerche["en"])
