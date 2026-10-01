@@ -74,6 +74,31 @@ dal computer, in circa un quarto d'ora.
 Scrivi al bot `/prova Cyberpunk 2077`. Entro pochi secondi risponde "Parto", e
 fra dieci-quindici minuti arriva il video privato.
 
+## 5. Uscite puntuali, senza i ritardi di GitHub
+
+GitHub fa partire le lavorazioni programmate con ore di ritardo, a volte non le
+fa partire proprio. Lo stesso Worker puo' lanciarle lui, al minuto: il video
+viene montato la mattina presto e YouTube lo pubblica da solo all'orario
+dell'uscita.
+
+1. Pagina del Worker > **Settings** > **Trigger Events** (o **Triggers**) >
+   **Add** > **Cron Triggers**.
+2. Aggiungi questi due, uno per volta, scritti esattamente cosi':
+
+   | Cron | Cosa fa |
+   |---|---|
+   | `0,20,40 4,6 * * *` | lancia le uscite delle 14:00, 18:00 e 20:00 |
+   | `0 5,7 * * *` | lancia l'uscita delle 21:00 |
+
+   Sono in ora UTC: le prime partono verso le 6 italiane. Il secondo giro, due
+   ore dopo, riprova le uscite che al primo non ce l'hanno fatta; quelle che
+   hanno gia' il loro video si fermano da sole.
+3. Non serve altro: se una partenza non riesce a farsi accettare da GitHub (per
+   esempio il token e' scaduto) ti arriva un messaggio dal bot.
+
+Le partenze notturne di GitHub restano come riserva: quando arrivano trovano
+l'uscita gia' coperta e si fermano.
+
 ## Se qualcosa non va
 
 - **"GitHub ha risposto 401" o "403"**: il token GitHub e' sbagliato, scaduto,
