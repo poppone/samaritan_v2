@@ -696,6 +696,14 @@ def recupera_trend_gaming_online(max_notizie=8, tema=None, gioco_da_evitare=""):
     prima = len(notizie)
     notizie = [n for n in notizie if not _tema_escluso(n.get("sommario", ""))]
     scartate_per_tema += prima - len(notizie)
+    # Un telegiornale senza sommario ha solo il titolo per riempire un minuto,
+    # e il modello lo riempie inventando: il 30 settembre 2026 statistiche su
+    # "Serie A", il 1 ottobre le date dei "Pagamenti Inps ottobre", e due
+    # uscite sono saltate con tutti i tentativi scartati dal fact-check. Le
+    # notizie con sommario passano davanti; fra loro l'ordine resta quello
+    # per importanza.
+    if profilo.attivo().telegiornale:
+        notizie.sort(key=lambda n: not n.get("sommario"))
     if scartate_per_tema:
         print(f"[Samaritan Search] Scartate {scartate_per_tema} notizie su "
               f"temi che il canale non tratta (profilo, 'temi_esclusi').")

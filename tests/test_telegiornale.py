@@ -111,6 +111,29 @@ class TestTemiEsclusi:
         notizie = brain.recupera_trend_gaming_online()
         assert [n["titolo"] for n in notizie] == ["Pensioni, da gennaio aumento per tutti"]
 
+    def test_le_notizie_con_sommario_passano_davanti(self, tg, monkeypatch):
+        # 1 ottobre 2026: "Pagamenti Inps ottobre" senza sommario, il modello
+        # inventava le date e l'uscita e' saltata.
+        voci = [("Pagamenti Inps ottobre, le date da segnare", "Money.it", "u1"),
+                ("Manovra, il governo approva il documento", "ANSA", "u2")]
+        monkeypatch.setattr(brain, "_voci_rss", lambda ricerca: voci)
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: [])
+        monkeypatch.setattr(brain, "_sommario_bing", lambda t: (
+            "Il Consiglio dei ministri ha approvato il testo." if "Manovra" in t else ""))
+        notizie = brain.recupera_trend_gaming_online()
+        assert notizie[0]["titolo"] == "Manovra, il governo approva il documento"
+        assert len(notizie) == 2
+
+    def test_poppone_tv_resta_in_ordine_di_importanza(self, monkeypatch):
+        voci = [("GTA 6, nuovo trailer", "IGN", "u1"),
+                ("Un gioco indie esce domani", "Eurogamer", "u2")]
+        monkeypatch.setattr(brain, "_voci_rss", lambda ricerca: voci)
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: [])
+        monkeypatch.setattr(brain, "_sommario_bing", lambda t: (
+            "Esce domani su PC." if "indie" in t else ""))
+        notizie = brain.recupera_trend_gaming_online()
+        assert notizie[0]["titolo"] == "GTA 6, nuovo trailer"
+
 
 class TestFormati:
     def test_solo_formati_di_notizia(self, tg, monkeypatch):
