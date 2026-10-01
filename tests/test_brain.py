@@ -220,12 +220,16 @@ class TestDettagliInventati:
 
         return FintoClient()
 
-    def _genera(self, monkeypatch, scritti, verdetti):
+    # Con un sommario la notizia regge un secondo tentativo dopo
+    # un'invenzione; senza, si cambia subito notizia.
+    SOMMARIO = "Two players on Xbox found a way to get the game without paying."
+
+    def _genera(self, monkeypatch, scritti, verdetti, sommario=""):
         prompt_visti, verifiche = [], []
         monkeypatch.setattr(brain, "client", self._finto_client(
             scritti, verdetti, prompt_visti, verifiche))
         monkeypatch.setattr(brain, "recupera_trend_gaming_online",
-                            lambda **k: [dict(self.NOTIZIA)])
+                            lambda **k: [dict(self.NOTIZIA, sommario=sommario)])
         monkeypatch.setattr(brain, "carica_cronologia", lambda: [])
         monkeypatch.setattr(brain, "salva_in_cronologia", lambda r: None)
         return brain.genera_script_samaritan(), prompt_visti, verifiche
@@ -245,7 +249,7 @@ class TestDettagliInventati:
                      '"Microsoft patched it within hours"]}')
         risultato, prompt_visti, verifiche = self._genera(
             monkeypatch, [self._risposta(), self._risposta()],
-            [inventato, '{"dettagli_inventati": []}'])
+            [inventato, '{"dettagli_inventati": []}'], sommario=self.SOMMARIO)
 
         assert len(prompt_visti) == 2
         assert len(verifiche) == 2
@@ -269,7 +273,7 @@ class TestDettagliInventati:
             monkeypatch, [self._risposta(), self._risposta(pulito)],
             [RuntimeError("400 json_validate_failed"),
              _json.dumps({"dettagli_inventati": ["un glitch che salta l'acquisto"]}),
-             _json.dumps({"dettagli_inventati": []})])
+             _json.dumps({"dettagli_inventati": []})], sommario=self.SOMMARIO)
         assert len(verifiche) == 3
         assert len(prompt_visti) == 2
         assert "un glitch che salta l'acquisto" in prompt_visti[1][1]
@@ -298,8 +302,9 @@ class TestDettagliInventati:
              _json.dumps(su_altra)],
             [inventato, inventato, _json.dumps({"dettagli_inventati": []})],
             prompt_visti, verifiche))
+        con_sommario = dict(self.NOTIZIA, sommario=self.SOMMARIO)
         monkeypatch.setattr(brain, "recupera_trend_gaming_online",
-                            lambda **k: [dict(self.NOTIZIA), altra])
+                            lambda **k: [con_sommario, altra])
         monkeypatch.setattr(brain, "carica_cronologia", lambda: [])
         monkeypatch.setattr(brain, "salva_in_cronologia", lambda r: None)
         risultato = brain.genera_script_samaritan()
@@ -308,6 +313,37 @@ class TestDettagliInventati:
         # Il terzo tentativo ripropone la notizia vietata: scartato senza
         # nemmeno chiamare la verifica.
         assert len(verifiche) == 3
+        assert risultato["fonte"].startswith("Hollow Knight Silksong")
+
+    def test_una_notizia_senza_sommario_si_cambia_alla_prima_invenzione(self, monkeypatch):
+        """1 ottobre 2026: col solo titolo di una patch di No Man's Sky il
+        modello ha inventato dettagli a cinque tentativi su due lavorazioni."""
+        import json as _json
+        altra = {"titolo": "Hollow Knight Silksong sells a million copies",
+                 "fonte": "IGN", "link": "https://news.google.com/y",
+                 "apparizioni": 1, "punteggio": 8, "sul_tema": False}
+        su_altra = _json.loads(self._risposta(
+            "Hollow Knight Silksong just sold a million copies. A million "
+            "players waited years for this one, refreshing every trailer and "
+            "every rumor along the way. Now the number is here and it is "
+            "huge for a small team. Was it worth the wait for you, or did the "
+            "hype burn out? Tell me below, and follow Poppone TV for the next "
+            "twist in gaming."))
+        su_altra.update({"indice_notizia": 1, "gioco": "Hollow Knight Silksong",
+                         "titolo": "Silksong: a million players already"})
+        prompt_visti, verifiche = [], []
+        monkeypatch.setattr(brain, "client", self._finto_client(
+            [self._risposta(), _json.dumps(su_altra)],
+            [_json.dumps({"dettagli_inventati": ["un glitch"]}),
+             _json.dumps({"dettagli_inventati": []})],
+            prompt_visti, verifiche))
+        monkeypatch.setattr(brain, "recupera_trend_gaming_online",
+                            lambda **k: [dict(self.NOTIZIA), altra])
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: [])
+        monkeypatch.setattr(brain, "salva_in_cronologia", lambda r: None)
+        risultato = brain.genera_script_samaritan()
+        assert len(prompt_visti) == 2
+        assert "Non usare le notizie [0]" in prompt_visti[1][1]
         assert risultato["fonte"].startswith("Hollow Knight Silksong")
 
     def test_una_frase_di_colore_si_toglie_senza_riscrivere(self, monkeypatch):
