@@ -1930,7 +1930,8 @@ def genera_script_samaritan(tema=None):
     # stesso identico input e rifa' un tiro di dado. Dicendo al modello cosa
     # non e' andato, i tentativi diventano correzioni.
     motivo_scarto = ""
-    # Le notizie su cui lo script ha inventato dettagli due volte. Il 29
+    # Le notizie su cui lo script ha inventato dettagli due volte (una, se
+    # la notizia non ha sommario). Il 29
     # settembre 2026 una rassegna ("GTA VI, tutte le novita' che ridefiniscono
     # la serie") ha fatto inventare funzioni del gioco a tutti e quattro i
     # tentativi e l'uscita e' saltata: su una notizia cosi' il modello non
@@ -2092,7 +2093,15 @@ def genera_script_samaritan(tema=None):
                               "riscrivo.")
                         ok = False
                         invenzioni_per_notizia[idx] = invenzioni_per_notizia.get(idx, 0) + 1
-                        if invenzioni_per_notizia[idx] >= 2:
+                        # Una notizia senza sommario si cambia alla prima
+                        # invenzione: il 1 ottobre 2026 un titolo sull'update
+                        # di No Man's Sky ("critical bugs fixed and game
+                        # optimized for PlayStation 5") ha fatto inventare
+                        # dettagli della patch a cinque tentativi su due
+                        # lavorazioni, e l'uscita delle 21:00 e' saltata. Col
+                        # solo titolo il modello non ha altro con cui riempire.
+                        if invenzioni_per_notizia[idx] >= (
+                                2 if notizie[idx].get("sommario") else 1):
                             notizie_vietate.add(idx)
                         motivo = ("aggiunge alla notizia dettagli che il titolo "
                                   "non dice (" + "; ".join(inventati) + "). "
