@@ -573,6 +573,28 @@ class TestTestataNellaVerifica:
         assert "TESTATA: Everyeye.it" in visti[0]
 
 
+class TestInvitoAlPubblico:
+    """1 ottobre 2026: la verifica ha segnalato come fatti gli inviti a
+    commentare, e l'uscita delle 21:00 e' saltata."""
+
+    @pytest.mark.parametrize("dettaglio", [
+        "Viewers are encouraged to like the video.",
+        "Viewers are encouraged to share their opinions on Poppone TV.",
+        "Gli spettatori sono invitati a commentare",
+        "Subscribe for more updates",
+    ])
+    def test_gli_inviti_non_sono_fatti(self, dettaglio):
+        assert brain._invito_al_pubblico(dettaglio)
+
+    @pytest.mark.parametrize("dettaglio", [
+        "Loading times are faster after the update.",
+        "The patch eliminates crashes on PlayStation 5 consoles.",
+        "Rockstar ha annunciato la data di uscita",
+    ])
+    def test_i_fatti_restano(self, dettaglio):
+        assert not brain._invito_al_pubblico(dettaglio)
+
+
 class TestTogliFrasiInventate:
     SCRIPT = ("A 78 anni una nonna ha conquistato il Guinness World Record con "
               "Fortnite. Nessuno l'aspettava! Il suo sorriso ha acceso milioni "

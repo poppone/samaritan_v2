@@ -1676,6 +1676,23 @@ def _chiedi_a_groq(**parametri):
         return client.chat.completions.create(**parametri)
 
 
+# Parole di un "dettaglio" che parla a chi guarda il video, non della notizia.
+# Le istruzioni della verifica dicono gia' di non elencare gli inviti a
+# commentare o a iscriversi, ma il 1 ottobre 2026, sugli Short in inglese, ha
+# segnalato lo stesso "Viewers are encouraged to like the video" e "Viewers
+# are encouraged to share their opinions on Poppone TV": insieme ad altri
+# dettagli superavano la meta' delle frasi, lo script non si poteva ripulire
+# e l'uscita delle 21:00 e' saltata due volte.
+_PAROLE_INVITO = re.compile(
+    r"\b(viewers?|audience|spettator\w*|poppone|subscrib\w*|iscriv\w*|"
+    r"like the video|comment\w*)\b")
+
+
+def _invito_al_pubblico(dettaglio):
+    """True se il dettaglio segnalato e' un invito a chi guarda, non un fatto."""
+    return bool(_PAROLE_INVITO.search(_senza_accenti(dettaglio).lower()))
+
+
 _SCHEMA_VERIFICA = {
     "name": "verifica_fatti",
     "strict": True,
@@ -1765,7 +1782,8 @@ def _dettagli_inventati(titolo_notizia, script, sommario="", testata=""):
             dettagli = dati.get("dettagli_inventati", [])
             if not isinstance(dettagli, list):
                 return []
-            return [str(d).strip() for d in dettagli if str(d).strip()][:4]
+            return [str(d).strip() for d in dettagli
+                    if str(d).strip() and not _invito_al_pubblico(str(d))][:4]
         except Exception as e:
             print(f"[Samaritan Brain] Verifica dei fatti non riuscita "
                   f"(ragionamento {ragionamento}): {e}")
