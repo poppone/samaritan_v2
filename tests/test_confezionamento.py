@@ -668,6 +668,131 @@ class TestNotiziaGiaUsata:
         assert brain.recupera_trend_gaming_online() == []
 
 
+class TestStoriaGiaRaccontata:
+    """Il 27 settembre 2026 "FNAF Fortnite Collab Confirmed" ha fatto 740
+    visualizzazioni, il giorno dopo la stessa storia presa da un altro
+    articolo ne ha fatte 10. Il confronto esatto sulla notizia non poteva
+    vederla: l'articolo era un altro, le parole quasi tutte diverse."""
+
+    ADESSO = 1_790_900_000
+    GIA_RACCONTATA = ("FNAF Fortnite Collab Confirmed by Epic Games - Release "
+                      "Date, Skins and Mode Revealed (VICE)")
+    RIPETUTA = "Fortnite Five Nights at Freddy's Announcement is the Most Liked Reveal Ever"
+    NUOVA = "Hollow Knight Silksong ha una data"
+
+    _rss = TestNotiziaGiaUsata._rss
+
+    def _voce(self, giorni_fa, fonte=GIA_RACCONTATA, lingua="it"):
+        return {"titolo": "Fortnite: FNAF Collab Confirmed", "estratto_script": "",
+                "stile": "MYTH_BUSTING_VIRAL", "gioco": "Fortnite", "lingua": lingua,
+                "fonte": fonte, "timestamp": self.ADESSO - giorni_fa * 86400}
+
+    def _prepara(self, monkeypatch, cronologia, titoli, ripetute):
+        monkeypatch.setattr(brain.time, "time", lambda: self.ADESSO)
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: cronologia)
+        monkeypatch.setattr(brain.requests, "get", self._rss(titoli))
+        chiamate = []
+
+        def finto(candidate, raccontate):
+            chiamate.append((list(candidate), list(raccontate)))
+            return {candidate.index(t) for t in ripetute if t in candidate}
+
+        monkeypatch.setattr(brain, "_storie_gia_raccontate", finto)
+        return chiamate
+
+    def test_la_stessa_storia_da_un_altro_articolo_viene_saltata(self, monkeypatch):
+        chiamate = self._prepara(monkeypatch, [self._voce(1)],
+                                 [self.RIPETUTA, self.NUOVA], [self.RIPETUTA])
+
+        titoli = [n["titolo"] for n in brain.recupera_trend_gaming_online()]
+
+        assert titoli == [self.NUOVA]
+        assert chiamate[0][1] == [self.GIA_RACCONTATA]
+
+    def test_dopo_qualche_giorno_la_storia_si_puo_riprendere(self, monkeypatch):
+        chiamate = self._prepara(monkeypatch,
+                                 [self._voce(brain.GIORNI_STESSA_STORIA + 1)],
+                                 [self.RIPETUTA, self.NUOVA], [self.RIPETUTA])
+
+        titoli = [n["titolo"] for n in brain.recupera_trend_gaming_online()]
+
+        assert self.RIPETUTA in titoli
+        assert chiamate == [], "senza storie recenti Groq non va chiamato"
+
+    def test_la_storia_raccontata_in_un_altra_lingua_non_conta(self, monkeypatch):
+        chiamate = self._prepara(monkeypatch, [self._voce(1, lingua="en")],
+                                 [self.RIPETUTA, self.NUOVA], [self.RIPETUTA])
+
+        assert self.RIPETUTA in [n["titolo"] for n in brain.recupera_trend_gaming_online()]
+        assert chiamate == []
+
+    def test_se_sono_tutte_ripetute_si_tengono(self, monkeypatch):
+        """Meglio una storia ripetuta che un'uscita senza notizie."""
+        self._prepara(monkeypatch, [self._voce(1)],
+                      [self.RIPETUTA, self.NUOVA], [self.RIPETUTA, self.NUOVA])
+
+        assert len(brain.recupera_trend_gaming_online()) == 2
+
+    def test_il_tema_chiesto_non_viene_saltato(self, monkeypatch):
+        self._prepara(monkeypatch, [self._voce(1)],
+                      [self.RIPETUTA, self.NUOVA], [self.RIPETUTA])
+
+        titoli = [n["titolo"] for n in brain.recupera_trend_gaming_online(tema="fortnite")]
+
+        assert self.RIPETUTA in titoli
+
+
+class TestConfrontoStorieConGroq:
+    """_storie_gia_raccontate legge la risposta del modello senza fidarsi."""
+
+    ORIGINALE = staticmethod(brain._storie_gia_raccontate)
+
+    def _client(self, esito, viste):
+        class Completions:
+            @staticmethod
+            def create(**kw):
+                viste.append(kw)
+                if isinstance(esito, Exception):
+                    raise esito
+
+                class Scelta:
+                    class message:
+                        content = esito
+
+                class Risposta:
+                    choices = [Scelta()]
+
+                return Risposta()
+
+        class Client:
+            class chat:
+                completions = Completions()
+
+        return Client()
+
+    def test_tiene_solo_numeri_validi_e_li_porta_a_zero(self, monkeypatch):
+        viste = []
+        monkeypatch.setattr(brain, "client",
+                            self._client('{"ripetute": [2, 9, 0, true, "1"]}', viste))
+
+        assert self.ORIGINALE(["a", "b", "c"], ["storia vecchia (Testata)"]) == {1}
+        assert "1. a" in viste[0]["messages"][1]["content"]
+        assert "storia vecchia" in viste[0]["messages"][1]["content"]
+
+    def test_un_errore_di_groq_non_scarta_niente(self, monkeypatch):
+        monkeypatch.setattr(brain, "client",
+                            self._client(RuntimeError("500 boom"), []))
+
+        assert self.ORIGINALE(["a"], ["storia vecchia"]) == set()
+
+    def test_senza_storie_recenti_non_chiama_groq(self, monkeypatch):
+        viste = []
+        monkeypatch.setattr(brain, "client", self._client('{"ripetute": [1]}', viste))
+
+        assert self.ORIGINALE(["a"], []) == set()
+        assert viste == []
+
+
 class TestSchemaApertura:
     """Quattro Short di fila aperti con una domanda retorica.
 

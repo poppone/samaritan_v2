@@ -291,6 +291,19 @@ MAX_PAROLE_CERCATE = 2
 # a guardare tutto: quello non puo' sbagliare bersaglio.
 MEMORIA_PAROLE_TITOLI = 10
 
+# Per quanti giorni una STORIA gia' raccontata non si racconta di nuovo,
+# nemmeno da un articolo diverso. Il confronto esatto qui sopra riconosce
+# solo lo stesso articolo, e il filtro sulle parole non vede la stessa
+# storia scritta con parole diverse: il 27 settembre 2026 "FNAF Fortnite
+# Collab Confirmed" ha fatto 740 visualizzazioni, il giorno dopo "Fortnite
+# Five Nights at Freddy's Announcement is Now the Game's Most Liked Reveal"
+# ne ha fatte 10. Stessa cosa con il box da 400 euro di GTA 6 (1.031, poi
+# 384) e con il leak di L.A. Noire 2, raccontato il 28 e di nuovo il 30.
+GIORNI_STESSA_STORIA = 4
+# Quante notizie candidate confrontare: piu' di max_notizie, perche' il
+# confronto avviene prima del taglio (vedi recupera_trend_gaming_online).
+MAX_NOTIZIE_DA_CONFRONTARE = 15
+
 MIN_PAROLE_SCRIPT = 45
 
 # Tentativi di scrittura per ogni modello Groq: dispari lo schema vincolato,
@@ -584,6 +597,89 @@ def _aggiungi_sommari(notizie):
               f"{len(notizie)}.")
 
 
+_SCHEMA_STORIE = {
+    "name": "storie_ripetute",
+    "strict": True,
+    "schema": {
+        "type": "object",
+        "properties": {
+            "ripetute": {"type": "array", "items": {"type": "integer"}},
+        },
+        "required": ["ripetute"],
+        "additionalProperties": False,
+    },
+}
+
+
+def _storie_raccontate_di_recente(voci, adesso=None):
+    """Le notizie da cui sono nati i video degli ultimi GIORNI_STESSA_STORIA
+    giorni, fra le voci passate (gia' della lingua di adesso)."""
+    limite = (adesso if adesso is not None else time.time()) - GIORNI_STESSA_STORIA * 86400
+    return [v["fonte"].strip() for v in voci
+            if (v.get("fonte") or "").strip()
+            and isinstance(v.get("timestamp"), (int, float))
+            and v["timestamp"] >= limite]
+
+
+def _storie_gia_raccontate(candidate, raccontate):
+    """Gli indici delle notizie candidate che raccontano un fatto gia'
+    raccontato da uno dei video recenti, anche con un altro articolo.
+
+    Le parole non bastano: "FNAF Fortnite Collab Confirmed" e "Fortnite Five
+    Nights at Freddy's Announcement is Now the Game's Most Liked Reveal" non
+    hanno quasi nessuna parola in comune, e sono la stessa storia. Serve un
+    modello che legga, e gira sull'ultimo dell'elenco come la verifica dei
+    fatti, per non pesare sul limite di token di quello che scrive.
+
+    Insieme vuoto se non c'e' niente da confrontare o se Groq non risponde:
+    un errore qui deve costare al massimo una ripetizione, mai il video.
+    """
+    if not candidate or not raccontate:
+        return set()
+    p = profilo.attivo()
+    istruzioni = (
+        f"Ricevi le notizie {p.argomento} GIA' RACCONTATE da un canale negli "
+        "ultimi giorni e un elenco numerato di notizie CANDIDATE. Indica i "
+        "numeri delle candidate che raccontano lo STESSO FATTO di una notizia "
+        "gia' raccontata, anche se scritte da un'altra testata, con parole "
+        "diverse o da un'altra angolazione: per esempio l'annuncio di una "
+        "collaborazione e il record di like di quello stesso annuncio, o un "
+        "vecchio leak che 'riemerge' e lo stesso leak che 'torna a far "
+        "discutere'. NON e' lo stesso fatto una notizia nuova su "
+        f"{p.g('un')} {p.soggetto} gia' raccontat{p.g('o')} (per esempio il "
+        "prezzo dopo la data di uscita, o una nuova serie di immagini dopo un "
+        "trailer). Nel dubbio non indicare. Rispondi in JSON con la chiave "
+        "'ripetute' (lista di numeri, vuota se non ce ne sono)."
+    )
+    testo = ("GIA' RACCONTATE:\n"
+             + "\n".join(f"- {r}" for r in raccontate)
+             + "\n\nCANDIDATE:\n"
+             + "\n".join(f"{i}. {c}" for i, c in enumerate(candidate, 1)))
+    modello = config.GROQ_MODELLI[-1]
+    try:
+        risposta = _chiedi_a_groq(
+            model=modello,
+            messages=[
+                {"role": "system", "content": istruzioni},
+                {"role": "user", "content": testo},
+            ],
+            temperature=0,
+            max_tokens=2000,
+            response_format={"type": "json_schema",
+                             "json_schema": _SCHEMA_STORIE},
+            **({"reasoning_effort": "low"} if "gpt-oss" in modello else {}),
+        )
+        numeri = _estrai_json(risposta.choices[0].message.content).get("ripetute", [])
+    except Exception as e:
+        print(f"[Samaritan Search] Confronto con le storie gia' raccontate "
+              f"non riuscito ({e}): nessuna notizia scartata.")
+        return set()
+    if not isinstance(numeri, list):
+        return set()
+    return {n - 1 for n in numeri
+            if isinstance(n, int) and not isinstance(n, bool) and 1 <= n <= len(candidate)}
+
+
 def recupera_trend_gaming_online(max_notizie=8, tema=None, gioco_da_evitare=""):
     """Scarica notizie gaming fresche e scarta quelle gia' sfruttate.
 
@@ -681,6 +777,22 @@ def recupera_trend_gaming_online(max_notizie=8, tema=None, gioco_da_evitare=""):
     # per prima. A parita' di punteggio l'ordine e' quello di arrivo.
     notizie = sorted(trovate.values(),
                      key=lambda v: (not v["sul_tema"], -v["punteggio"]))
+    # Le storie gia' raccontate con un altro articolo escono prima del taglio
+    # a max_notizie, per la stessa ragione del gioco qui sotto. Il tema
+    # chiesto non si tocca, e se fossero tutte ripetute si tengono: una
+    # storia ripetuta costa meno di un'uscita saltata.
+    raccontate = _storie_raccontate_di_recente(voci)
+    if raccontate and notizie:
+        da_confrontare = notizie[:MAX_NOTIZIE_DA_CONFRONTARE]
+        ripetute = {i for i in _storie_gia_raccontate(
+                        [n["titolo"] for n in da_confrontare], raccontate)
+                    if not da_confrontare[i]["sul_tema"]}
+        if ripetute and len(ripetute) < len(notizie):
+            for i in sorted(ripetute):
+                print(f"[Samaritan Search] Storia gia' raccontata negli "
+                      f"ultimi {GIORNI_STESSA_STORIA} giorni, la salto: "
+                      f"{da_confrontare[i]['titolo']}")
+            notizie = [n for i, n in enumerate(notizie) if i not in ripetute]
     if gioco_da_evitare.strip():
         altre = [n for n in notizie
                  if not _gioco_nel_titolo(n["titolo"], gioco_da_evitare)]

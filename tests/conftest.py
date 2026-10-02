@@ -40,3 +40,12 @@ def _niente_sommari_dalla_rete(monkeypatch):
     """Il sommario delle notizie si cerca su Bing: nei test niente rete."""
     import brain
     monkeypatch.setattr(brain, "_sommario_bing", lambda titolo: "")
+
+
+@pytest.fixture(autouse=True)
+def _niente_confronto_storie_dalla_rete(monkeypatch):
+    """Il confronto con le storie gia' raccontate chiede a Groq: nei test
+    niente rete. I test su quel confronto ne mettono uno loro."""
+    import brain
+    monkeypatch.setattr(brain, "_storie_gia_raccontate",
+                        lambda candidate, raccontate: set())
