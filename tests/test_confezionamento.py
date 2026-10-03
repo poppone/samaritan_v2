@@ -250,10 +250,10 @@ class TestRigenerazioneInformata:
     def test_il_motivo_dello_scarto_arriva_al_tentativo_dopo(self, monkeypatch):
         import json as _json
 
-        # Primo titolo: 70 caratteri, viene scartato. Secondo: valido.
+        # Primo titolo: tutto maiuscolo, viene scartato. Secondo: valido.
+        # (Un titolo troppo lungo non si scarta piu': si accorcia.)
         scartato = _json.dumps({
-            "titolo": "Elden Ring: il boss segreto che quasi nessun giocatore "
-                      "ha mai battuto davvero",
+            "titolo": "ELDEN RING: IL BOSS SEGRETO DELLA CASCATA",
             "script": self._SCRIPT,
             "gioco": "Elden Ring", "query_video": "elden ring gameplay",
             "descrizione": "Un segreto.", "indice_notizia": -1,
@@ -276,7 +276,7 @@ class TestRigenerazioneInformata:
 
         assert len(prompt_visti) == 2
         assert "scartato" not in prompt_visti[0].lower()
-        assert "troppo lungo" in prompt_visti[1], prompt_visti[1]
+        assert "maiuscolo" in prompt_visti[1], prompt_visti[1]
         assert risultato["titolo"] == "Elden Ring: il boss dietro la cascata"
 
 
@@ -981,7 +981,7 @@ class TestUltimaSpiaggia:
             "fonte": "", "video_id": "hBMDcRhugbA",
         }]
 
-    def test_dopo_due_scarti_per_la_forma_lo_script_passa(self, monkeypatch):
+    def test_dopo_uno_scarto_per_la_forma_lo_script_passa(self, monkeypatch):
         prompt_visti = []
         finto = TestRigenerazioneInformata()._finto_client(
             [self._risposta()] * 6, prompt_visti
@@ -993,14 +993,15 @@ class TestUltimaSpiaggia:
 
         risultato = brain.genera_script_samaritan()
 
-        # Scartato due volte per la forma dell'apertura, accettato al terzo
-        # invece di bruciare tutti i tentativi e far saltare il video (29
-        # settembre 2026, uscita delle 20:00).
-        assert len(prompt_visti) == 3
+        # Scartato una volta per la forma dell'apertura, accettato al
+        # secondo invece di bruciare tentativi e far saltare il video (29
+        # settembre 2026, uscita delle 20:00; 3 ottobre, 20:00 e 21:00).
+        assert len(prompt_visti) == brain.SCARTI_SCHEMA_MAX + 1
         assert risultato["script"] == self._SCRIPT
 
-    def test_prima_dell_ultimo_tentativo_la_regola_vale(self, monkeypatch):
-        # Con un solo modello i tentativi sono tre: i primi due scartano.
+    def test_al_primo_tentativo_la_regola_vale(self, monkeypatch):
+        # Con un solo modello i tentativi sono tre: il primo scarta e il
+        # secondo sa perche'.
         prompt_visti = []
         finto = TestRigenerazioneInformata()._finto_client(
             [self._risposta()] * 3, prompt_visti
@@ -1013,9 +1014,58 @@ class TestUltimaSpiaggia:
 
         brain.genera_script_samaritan()
 
-        assert len(prompt_visti) == 3
+        assert len(prompt_visti) == 2
         assert "apre con una domanda" in prompt_visti[1]
-        assert "apre con una domanda" in prompt_visti[2]
+
+
+class TestTitoloAccorciato:
+    """Un titolo troppo lungo si accorcia invece di costare un tentativo: il
+    3 ottobre 2026 l'uscita delle 21:00 e' saltata con l'ultimo tentativo
+    scartato per un titolo di 73 caratteri."""
+
+    def test_taglia_la_coda_e_tiene_l_emoji(self):
+        titolo = ("GTA 6: $400 Collector's Box vs. Creator Bundle and what "
+                  "fans think of the 🤔")
+        corto = brain._accorcia_titolo(titolo)
+        assert corto == "GTA 6: $400 Collector's Box vs. Creator Bundle 🤔"
+        assert len(corto) <= brain.MAX_CARATTERI_TITOLO
+
+    def test_non_lascia_parole_deboli_in_fondo(self):
+        corto = brain._accorcia_titolo(
+            "GTA 6: Lucia e Jason, le nuove immagini svelano molto di più sulla storia")
+        assert len(corto) <= brain.MAX_CARATTERI_TITOLO
+        ultima = corto.split()[-1].lower()
+        assert ultima not in brain._PAROLE_DEBOLI | brain._PAROLE_DEBOLI_EN
+
+    def test_un_titolo_giusto_non_si_tocca(self):
+        titolo = "Gears of War: E-Day: Early Access drops Metallica surprise 🎸"
+        assert brain._accorcia_titolo(titolo) == titolo
+
+    def test_senza_parole_da_tenere_resta_com_era(self):
+        titolo = "Supercalifragilistichespiralidosoelunghissimissimaparolaunica1234 🎮"
+        assert brain._accorcia_titolo(titolo) == titolo
+
+    def test_il_titolo_lungo_passa_al_primo_tentativo(self, monkeypatch):
+        import json as _json
+        risposta = _json.dumps({
+            "titolo": "Elden Ring: il boss dietro la cascata che quasi nessun "
+                      "giocatore ha mai battuto",
+            "script": TestRigenerazioneInformata._SCRIPT,
+            "gioco": "Elden Ring", "query_video": "elden ring gameplay",
+            "descrizione": "Un segreto.", "indice_notizia": -1,
+        })
+        prompt_visti = []
+        monkeypatch.setattr(brain, "client", TestRigenerazioneInformata()
+                            ._finto_client([risposta], prompt_visti))
+        monkeypatch.setattr(brain, "recupera_trend_gaming_online", lambda **k: [])
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: [])
+        monkeypatch.setattr(brain, "salva_in_cronologia", lambda r: None)
+
+        risultato = brain.genera_script_samaritan()
+
+        assert len(prompt_visti) == 1
+        assert len(risultato["titolo"]) <= brain.MAX_CARATTERI_TITOLO
+        assert risultato["titolo"].startswith("Elden Ring: il boss dietro la cascata")
 
 
 class TestNotiziaPiuGrossa:
