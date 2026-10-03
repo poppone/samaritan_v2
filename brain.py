@@ -101,6 +101,13 @@ PAROLE_APERTURA = 3
 # uno dei quattro tentativi.
 MEMORIA_SCHEMI = 2
 
+# Dopo quanti scarti per la forma dell'attacco la regola si spegne, dentro una
+# lavorazione. Erano due: il 2 e il 3 ottobre 2026 sette tentativi in un
+# giorno e quattro in due lavorazioni sono andati persi cosi', in italiano e
+# in inglese, e le uscite delle 20:00 e 21:00 del 3 sono saltate. Al primo
+# scarto il modello ha gia' ricevuto l'avviso; ripeterlo non lo cambia.
+SCARTI_SCHEMA_MAX = 1
+
 SCHEMA_DOMANDA = "una domanda"
 SCHEMA_SECONDA_PERSONA = "una frase rivolta allo spettatore"
 
@@ -349,6 +356,14 @@ _PAROLE_DEBOLI = {
     "non", "ma", "se", "come", "piu", "ha", "hanno", "ci", "si", "ne", "sul",
     "quasi", "molto", "tanto", "cosi", "ogni", "questo", "questa", "quel",
     "quella", "tra", "fra", "senza", "dal", "dalla", "suo", "sua", "loro",
+}
+# Le stesse, per i titoli in inglese: "GTA 6: what Rockstar showed in the"
+# non si pubblica.
+_PAROLE_DEBOLI_EN = {
+    "the", "a", "an", "of", "to", "and", "or", "for", "with", "in", "on",
+    "at", "by", "is", "are", "was", "vs", "as", "from", "that", "this",
+    "your", "its", "it", "not", "but", "into", "than", "who", "what",
+    "how", "why", "just", "so", "be", "has", "have",
 }
 
 # Il tema in hashtag di ogni formato e i tag fissi di ogni video stanno nel
@@ -899,8 +914,9 @@ def _pulisci_titolo(titolo):
 
     Sistema meccanicamente quello che si puo' sistemare senza rigenerare:
     l'hashtag inutile, le emoji in eccesso e soprattutto l'emoji in apertura,
-    che ruba il posto alla keyword del gioco. Quello che non si puo' aggiustare
-    da fuori (titolo troppo lungo, tutto maiuscolo) lo rifiuta valida_titolo().
+    che ruba il posto alla keyword del gioco. La lunghezza la sistema
+    _accorcia_titolo(); quello che non si puo' aggiustare da fuori (tutto
+    maiuscolo, gioco non nominato) lo rifiuta valida_titolo().
     """
     t = titolo.strip().strip('"').strip("'")
     # "#Shorts" nel titolo non serve piu' dal 2023 e ruba caratteri utili
@@ -920,6 +936,37 @@ def _pulisci_titolo(titolo):
 
     t = re.sub(r"\s+", " ", t).strip()
     return t[:100]                        # limite duro YouTube
+
+
+def _accorcia_titolo(titolo):
+    """Il titolo riportato entro MAX_CARATTERI_TITOLO togliendo parole in fondo.
+
+    Il 3 ottobre 2026 l'uscita delle 21:00 e' saltata con l'ultimo tentativo
+    scartato per un titolo di 73 caratteri, e il giorno prima due tentativi
+    erano andati persi per titoli di 66 e 99: riscrivere tutto per una coda
+    troppo lunga costa un tentativo intero. Il nome del gioco sta in testa,
+    quindi tagliare la coda lo lascia; l'emoji finale resta dov'e'. Le parole
+    deboli rimaste in fondo si tolgono ("...arriva con la" non dice niente).
+    Se resta meno di due parole il titolo torna com'era e lo scarta
+    valida_titolo(), come prima.
+    """
+    if len(titolo) <= MAX_CARATTERI_TITOLO:
+        return titolo
+    parole = titolo.split()
+    emoji = ""
+    if parole and not _RE_EMOJI.sub("", parole[-1]):
+        emoji = parole.pop()
+    spazio = MAX_CARATTERI_TITOLO - (len(emoji) + 1 if emoji else 0)
+    while parole and len(" ".join(parole)) > spazio:
+        parole.pop()
+    deboli = _PAROLE_DEBOLI | _PAROLE_DEBOLI_EN
+    while parole and (_senza_accenti(parole[-1]).lower().strip(".,;:!?-–—'\"")
+                      in deboli or not re.search(r"\w", parole[-1])):
+        parole.pop()
+    testo = " ".join(parole).rstrip(" -–—:;,")
+    if len(testo.split()) < 2:
+        return titolo
+    return f"{testo} {emoji}" if emoji else testo
 
 
 def _senza_accenti(testo):
@@ -2074,7 +2121,7 @@ def genera_script_samaritan(tema=None):
     # Il 29 settembre 2026 l'uscita delle 20:00 e' saltata con tre tentativi
     # su quattro scartati perche' aprivano con una domanda come i video
     # recenti: il modello non riesce a uscirne, e un'apertura gia' vista vale
-    # piu' di un buco. Dopo due scarti cosi' la regola si spegne.
+    # piu' di un buco. Dopo SCARTI_SCHEMA_MAX scarti cosi' la regola si spegne.
     scarti_per_schema = 0
 
     for n_modello, modello in enumerate(modelli):
@@ -2139,6 +2186,12 @@ def genera_script_samaritan(tema=None):
                 data = json.loads(contenuto) if con_schema \
                     else _estrai_json(contenuto)
                 titolo = _pulisci_titolo(str(data.get("titolo", "")))
+                accorciato = _accorcia_titolo(titolo)
+                if accorciato != titolo:
+                    print(f"[Samaritan Brain] Titolo accorciato da "
+                          f"{len(titolo)} a {len(accorciato)} caratteri: "
+                          f"{accorciato}")
+                    titolo = accorciato
                 script = str(data.get("script", "")).strip()
                 intero = script
                 script = _senza_coda_troncata(script)
@@ -2165,7 +2218,7 @@ def genera_script_samaritan(tema=None):
                 ok, motivo = valida_script(
                     titolo, script,
                     () if ultima_spiaggia else impronte_aperture,
-                    () if ultima_spiaggia or scarti_per_schema >= 2
+                    () if ultima_spiaggia or scarti_per_schema >= SCARTI_SCHEMA_MAX
                     else schemi_recenti,
                 )
                 if not ok and motivo.startswith("apre con ") \
@@ -2205,7 +2258,7 @@ def genera_script_samaritan(tema=None):
                     if ripulito and valida_script(
                             titolo, ripulito,
                             () if ultima_spiaggia else impronte_aperture,
-                            () if ultima_spiaggia or scarti_per_schema >= 2
+                            () if ultima_spiaggia or scarti_per_schema >= SCARTI_SCHEMA_MAX
                             else schemi_recenti)[0]:
                         if ripulito == script:
                             print("[Samaritan Brain] La verifica segnala solo "
