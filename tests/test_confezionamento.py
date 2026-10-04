@@ -668,6 +668,46 @@ class TestNotiziaGiaUsata:
         assert brain.recupera_trend_gaming_online() == []
 
 
+class TestCaricamentoFallito:
+    """Il 4 ottobre 2026 il token YouTube era scaduto: nove lavorazioni hanno
+    scritto righe senza video e ognuna evitava la notizia della precedente,
+    che non era mai uscita."""
+
+    ADESSO = 1_791_100_000
+    NOTIZIA = TestNotiziaGiaUsata.NOTIZIA
+    IN_CRONOLOGIA = TestNotiziaGiaUsata.IN_CRONOLOGIA
+    _rss = TestNotiziaGiaUsata._rss
+
+    def _voce(self, video_id, minuti_fa):
+        return {"titolo": "No Man's Sky: arriva Cosmos", "estratto_script": "",
+                "stile": "SEAMLESS_LOOP_FACTS", "gioco": "No Mans Sky",
+                "lingua": "it", "fonte": self.IN_CRONOLOGIA,
+                "video_id": video_id, "timestamp": self.ADESSO - minuti_fa * 60}
+
+    def test_tiene_usciti_in_corso_e_vecchio_formato(self):
+        uscita = self._voce("abc", 600)
+        in_corso = self._voce(None, 10)
+        fallita = self._voce(None, 120)
+        vecchia = {"titolo": "senza campo video_id"}
+        assert brain._uscite_o_in_corso(
+            [uscita, in_corso, fallita, vecchia, "stringa"], adesso=self.ADESSO
+        ) == [uscita, in_corso, vecchia, "stringa"]
+
+    def test_la_notizia_di_un_caricamento_fallito_si_puo_usare(self, monkeypatch):
+        monkeypatch.setattr(brain.time, "time", lambda: self.ADESSO)
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: [self._voce(None, 120)])
+        monkeypatch.setattr(brain.requests, "get", self._rss([self.NOTIZIA]))
+
+        assert [n["titolo"] for n in brain.recupera_trend_gaming_online()] == [self.NOTIZIA]
+
+    def test_la_notizia_di_una_lavorazione_in_corso_resta_presa(self, monkeypatch):
+        monkeypatch.setattr(brain.time, "time", lambda: self.ADESSO)
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: [self._voce(None, 10)])
+        monkeypatch.setattr(brain.requests, "get", self._rss([self.NOTIZIA]))
+
+        assert brain.recupera_trend_gaming_online() == []
+
+
 class TestStoriaGiaRaccontata:
     """Il 27 settembre 2026 "FNAF Fortnite Collab Confirmed" ha fatto 740
     visualizzazioni, il giorno dopo la stessa storia presa da un altro
