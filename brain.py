@@ -410,6 +410,36 @@ def _normalizza(item):
     return {}
 
 
+# Oltre quanti secondi una riga senza video_id e' un caricamento fallito e non
+# una lavorazione ancora in corso. Una lavorazione dura 10-15 minuti; un'ora
+# lascia margine anche a una coda lenta su GitHub.
+DURATA_MAX_LAVORAZIONE = 3600
+
+
+def _uscite_o_in_corso(voci, adesso=None):
+    """Le voci di cronologia di video usciti davvero, o ancora in lavorazione.
+
+    Una lavorazione scrive la sua riga prima di caricare il video, e il
+    video_id arriva solo a caricamento riuscito. Il 4 ottobre 2026 il token
+    YouTube era scaduto: nove lavorazioni hanno scritto dieci righe senza
+    video e ognuna ha evitato la notizia e il gioco della precedente, che
+    nessuno aveva visto. Per le regole anti-ripetizione quelle righe non
+    contano. Restano le righe vecchie senza il campo (scritte prima che
+    esistesse) e quelle recenti, che possono essere di una lavorazione
+    ancora in corso: la prenotazione serve proprio a vederle.
+    """
+    adesso = adesso if adesso is not None else time.time()
+    tenute = []
+    for voce in voci:
+        if not isinstance(voce, dict) or "video_id" not in voce or voce["video_id"]:
+            tenute.append(voce)
+            continue
+        quando = voce.get("timestamp")
+        if isinstance(quando, (int, float)) and adesso - quando < DURATA_MAX_LAVORAZIONE:
+            tenute.append(voce)
+    return tenute
+
+
 # La riga di questa lavorazione, (timestamp, titolo): con la prenotazione la
 # cronologia si unisce a quella di altre lavorazioni e l'ultima riga del file
 # puo' non essere la nostra.
@@ -722,7 +752,7 @@ def recupera_trend_gaming_online(max_notizie=8, tema=None, gioco_da_evitare=""):
         print(f"[Samaritan Search] Ricerche del pubblico non leggibili ({e}).")
         cercate = frozenset()
 
-    cronologia = carica_cronologia()
+    cronologia = _uscite_o_in_corso(carica_cronologia())
     voci = _stessa_lingua([_normalizza(i) for i in cronologia])
     # Solo gli ultimi titoli: vedi MEMORIA_PAROLE_TITOLI.
     titoli_passati = " ".join(
@@ -862,7 +892,7 @@ def scegli_formato(notizie_disponibili):
     che trattengono lo spettatore piu' a lungo escono piu' spesso.
     Se non ci sono ancora dati, la scelta e' uniforme.
     """
-    cronologia = carica_cronologia()
+    cronologia = _uscite_o_in_corso(carica_cronologia())
     stili_recenti = [_normalizza(i).get("stile", "") for i in cronologia[-4:]]
 
     try:
@@ -2033,7 +2063,8 @@ def genera_script_samaritan(tema=None):
     # prenotazione.py.
     prenotazione.riallinea_cronologia()
     cronologia = _stesso_formato(
-        _stessa_lingua([_normalizza(i) for i in carica_cronologia()])
+        _stessa_lingua([_normalizza(i)
+                        for i in _uscite_o_in_corso(carica_cronologia())])
     )
     # Il gioco si blocca solo sull'ultimo video, non su tutta la finestra:
     # vedi _doppione_recente per il perche'.
