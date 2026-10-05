@@ -2099,6 +2099,73 @@ def _togli_frasi_inventate(script, dettagli, notizia=""):
     return " ".join(f for i, f in enumerate(frasi) if i not in da_togliere)
 
 
+
+_SCHEMA_CORREZIONE = {
+    "name": "script_corretto",
+    "strict": True,
+    "schema": {
+        "type": "object",
+        "properties": {"script": {"type": "string"}},
+        "required": ["script"],
+        "additionalProperties": False,
+    },
+}
+
+
+def _correggi_script(script, dettagli, titolo_notizia, sommario=""):
+    """Lo script riscritto senza i dettagli inventati, con tutto il resto.
+
+    Togliere le frasi non basta quando i dettagli sono sparsi in piu' di
+    meta' dello script: il 4 ottobre 2026 due lavorazioni su sei sono cadute
+    con tutti e sei i tentativi scartati, e ogni volta il log diceva "Le
+    frasi segnalate non si possono togliere senza rovinare lo script:
+    riscrivo". Riscrivere da capo rifa' lo stesso errore da un'altra parte
+    (sul bundle Fortnite x Black Clover si e' inventato tre volte un prezzo
+    diverso); correggere uno script che va gia' bene in tutto il resto no.
+
+    Stringa vuota se Groq non risponde: si torna alla riscrittura da capo.
+    Il risultato va ripassato dalla verifica dei fatti e da valida_script.
+    """
+    if not script or not dettagli or not titolo_notizia:
+        return ""
+    istruzioni = (
+        "Correggi lo SCRIPT di uno Short che racconta una notizia. Contiene "
+        "affermazioni che la notizia NON dice: toglile, o sostituiscile con "
+        "cose che titolo e sommario dicono davvero, oppure con una reazione, "
+        "un'opinione o una domanda a chi guarda. NON aggiungere nessun fatto "
+        "nuovo: niente numeri, prezzi, date, contenuti o citazioni che titolo "
+        "e sommario non contengono. Tieni tutto il resto: apertura, tono, "
+        f"chiusura, e una lunghezza simile (almeno {MIN_PAROLE_SCRIPT + 15} "
+        f"parole). Scrivi in {_lingua()['nome']}. Rispondi in JSON con la "
+        "chiave 'script'."
+    )
+    notizia = f"TITOLO: {titolo_notizia}"
+    if sommario:
+        notizia += f"\nSOMMARIO: {sommario}"
+    da_togliere = "\n".join(f"- {d}" for d in dettagli)
+    modello = config.GROQ_MODELLI[0]
+    try:
+        risposta = _chiedi_a_groq(
+            model=modello,
+            messages=[
+                {"role": "system", "content": istruzioni},
+                {"role": "user", "content": (
+                    f"{notizia}\n\nAFFERMAZIONI DA TOGLIERE:\n{da_togliere}"
+                    f"\n\nSCRIPT: {script}")},
+            ],
+            temperature=0.3,
+            max_tokens=3000,
+            response_format={"type": "json_schema",
+                             "json_schema": _SCHEMA_CORREZIONE},
+            **({"reasoning_effort": "low"} if "gpt-oss" in modello else {}),
+        )
+        corretto = _estrai_json(risposta.choices[0].message.content).get("script", "")
+        return str(corretto).strip() if isinstance(corretto, str) else ""
+    except Exception as e:
+        print(f"[Samaritan Brain] Correzione dello script non riuscita: {e}")
+        return ""
+
+
 def _estrai_json(testo):
     """Ritaglia il primo oggetto JSON da una risposta in testo libero.
 
@@ -2365,9 +2432,26 @@ def genera_script_samaritan(tema=None):
                         script = ripulito
                         inventati = []
                     if inventati:
+                        corretto = _correggi_script(
+                            script, inventati, notizie[idx]["titolo"],
+                            notizie[idx].get("sommario", ""))
+                        if corretto and valida_script(
+                                titolo, corretto,
+                                () if ultima_spiaggia else impronte_aperture,
+                                () if ultima_spiaggia or scarti_per_schema >= SCARTI_SCHEMA_MAX
+                                else schemi_recenti)[0] \
+                                and not _dettagli_inventati(
+                                    notizie[idx]["titolo"], corretto,
+                                    notizie[idx].get("sommario", ""),
+                                    notizie[idx].get("fonte", "")):
+                            print("[Samaritan Brain] Corretto lo script senza "
+                                  "i dettagli che la notizia non dice ("
+                                  + "; ".join(inventati) + ").")
+                            script = corretto
+                            inventati = []
+                    if inventati:
                         print("[Samaritan Brain] Le frasi segnalate non si "
-                              "possono togliere senza rovinare lo script: "
-                              "riscrivo.")
+                              "possono togliere ne' correggere: riscrivo.")
                         ok = False
                         invenzioni_per_notizia[idx] = invenzioni_per_notizia.get(idx, 0) + 1
                         # Una notizia senza sommario si cambia alla prima

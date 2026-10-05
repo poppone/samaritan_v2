@@ -49,3 +49,12 @@ def _niente_confronto_storie_dalla_rete(monkeypatch):
     import brain
     monkeypatch.setattr(brain, "_storie_gia_raccontate",
                         lambda candidate, raccontate: set())
+
+
+@pytest.fixture(autouse=True)
+def _niente_correzione_dalla_rete(monkeypatch):
+    """La correzione dello script chiede a Groq: nei test niente rete. I test
+    su quella correzione ne mettono una loro."""
+    import brain
+    monkeypatch.setattr(brain, "_correggi_script",
+                        lambda script, dettagli, titolo_notizia, sommario="": "")
