@@ -87,12 +87,15 @@ dell'uscita.
 
    | Cron | Cosa fa |
    |---|---|
-   | `0,20,40 4,6 * * *` | lancia le uscite delle 14:00, 18:00 e 20:00 |
-   | `0 5,7 * * *` | lancia l'uscita delle 21:00 |
+   | `0 9,13,15,16 * * *` | lancia ogni uscita circa tre ore prima del suo orario |
+   | `30 10,14,16,17 * * *` | riprova le uscite che al primo giro non ce l'hanno fatta |
 
-   Sono in ora UTC: le prime partono verso le 6 italiane. Il secondo giro, due
-   ore dopo, riprova le uscite che al primo non ce l'hanno fatta; quelle che
-   hanno gia' il loro video si fermano da sole.
+   Sono in ora UTC: per le uscite delle 14:00, 18:00, 20:00 e 21:00 italiane
+   partono alle 11:00, 15:00, 17:00 e 18:00 (un'ora prima con l'ora solare).
+   Cosi' la notizia si sceglie poche ore prima di uscire, quando e' ancora
+   fresca. Il secondo giro, un'ora e mezza dopo, riprova le uscite che al
+   primo non ce l'hanno fatta; quelle che hanno gia' il loro video si fermano
+   da sole.
 3. Non serve altro: se una partenza non riesce a farsi accettare da GitHub (per
    esempio il token e' scaduto) ti arriva un messaggio dal bot.
 
