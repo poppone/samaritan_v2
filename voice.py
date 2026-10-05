@@ -271,12 +271,12 @@ def _sintetizza_elevenlabs(testo, output_filename):
         f.write(risposta.content)
 
 
-async def _sintetizza_edge(testo, output_filename):
+async def _sintetizza_edge(testo, output_filename, voce=None):
     import edge_tts
 
     communicate = edge_tts.Communicate(
         text=testo,
-        voice=config.VOCE_TTS,
+        voice=voce or config.VOCE_TTS,
         rate=config.VOCE_VELOCITA,
         pitch=config.VOCE_PITCH,
     )
@@ -323,18 +323,26 @@ def genera_voce_samaritan(testo, output_filename=None, permetti_elevenlabs=True)
                   f"Il video usera' la voce Microsoft.")
 
     # --- Tentativo 2: Edge-TTS (voce neurale gratuita) ---
-    try:
-        print(f"[Samaritan Voice] Sintesi neurale con {config.VOCE_TTS} "
-              f"(velocita {config.VOCE_VELOCITA})...")
-        asyncio.run(_sintetizza_edge(testo_pulito, output_filename))
+    # Prima la voce scelta, poi la classica della stessa lingua: se Microsoft
+    # rifiuta una voce nuova, meglio la voce di prima che quella robotica.
+    riserva = config.VOCE_TTS_RISERVA.get((config.LINGUA or "it").lower())
+    voci = [config.VOCE_TTS] + ([riserva] if riserva and riserva != config.VOCE_TTS else [])
+    for voce in voci:
+        try:
+            print(f"[Samaritan Voice] Sintesi neurale con {voce} "
+                  f"(velocita {config.VOCE_VELOCITA})...")
+            asyncio.run(_sintetizza_edge(testo_pulito, output_filename)
+                        if voce == config.VOCE_TTS
+                        else _sintetizza_edge(testo_pulito, output_filename, voce))
 
-        if os.path.exists(output_filename) and os.path.getsize(output_filename) > 1024:
-            print(f"[Samaritan Voice] Audio neurale salvato: {output_filename}")
-            return output_filename
-        raise RuntimeError("Edge-TTS ha prodotto un file vuoto")
+            if os.path.exists(output_filename) and os.path.getsize(output_filename) > 1024:
+                print(f"[Samaritan Voice] Audio neurale salvato: {output_filename}")
+                return output_filename
+            raise RuntimeError("Edge-TTS ha prodotto un file vuoto")
 
-    except Exception as e:
-        print(f"[Warning Voice] Edge-TTS non disponibile ({e}). Passo al fallback gTTS.")
+        except Exception as e:
+            print(f"[Warning Voice] Edge-TTS non disponibile con {voce} ({e}).")
+    print("[Warning Voice] Passo al fallback gTTS.")
 
     # --- Tentativo 3: gTTS (ripiego robotico) ---
     try:

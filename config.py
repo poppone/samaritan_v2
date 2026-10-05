@@ -112,8 +112,12 @@ USCITA = None
 # La run di recupero non sa in partenza quale uscita le tocchera': lo decide
 # leggendo la cronologia, e con esso sceglie lingua e voce fra queste due.
 RECUPERO = _get("RECUPERO", "") not in ("", "0", "false", "False")
-VOCE_TTS_IT = _get("VOCE_TTS_IT", "it-IT-DiegoNeural")
-VOCE_TTS_EN = _get("VOCE_TTS_EN", "en-US-AndrewNeural")
+VOCE_TTS_IT = _get("VOCE_TTS_IT", "it-IT-GiuseppeMultilingualNeural")
+VOCE_TTS_EN = _get("VOCE_TTS_EN", "en-US-AndrewMultilingualNeural")
+# Le voci "Multilingual" sono le piu' nuove di Microsoft e suonano meno
+# sintetiche. Se un giorno Edge-TTS ne rifiuta una, voice.py riprova con la
+# voce classica della stessa lingua prima di cadere su gTTS.
+VOCE_TTS_RISERVA = {"it": "it-IT-DiegoNeural", "en": "en-US-AndrewNeural"}
 
 
 def risolvi_uscita():
@@ -179,13 +183,15 @@ YOUTUBE_REFRESH_TOKEN = _get("YOUTUBE_REFRESH_TOKEN")
 
 # ------------------------------------------------------------------ Voce (TTS)
 # Voce neurale Microsoft Edge. Voci italiane disponibili:
-#   it-IT-DiegoNeural     (maschile, energico  -> consigliata per il gaming)
+#   it-IT-GiuseppeMultilingualNeural (maschile, la piu' naturale -> predefinita)
+#   it-IT-DiegoNeural     (maschile, energico, riserva)
 #   it-IT-IsabellaNeural  (femminile, brillante)
 #   it-IT-GiuseppeNeural  (maschile, caldo)
 # VOCE_TTS, la voce di questa run, la sceglie risolvi_uscita() in base alla
 # lingua: VOCE_TTS_IT o VOCE_TTS_EN, se la variabile non c'e'.
 VOCE_VELOCITA = _get("VOCE_VELOCITA", "+12%")   # gli Shorts virali parlano veloce
-VOCE_PITCH = _get("VOCE_PITCH", "+8Hz")         # leggermente piu alto = piu "sveglio"
+# Tono naturale: alzarlo (era +8Hz) rendeva la voce piu' metallica.
+VOCE_PITCH = _get("VOCE_PITCH", "+0Hz")
 
 # -------------------------------------------------------------- Formato video
 # Samaritan produce due cose diverse con la stessa pipeline:

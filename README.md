@@ -439,7 +439,7 @@ Tutto si regola da `.env`, senza toccare il codice:
 
 | Variabile | Effetto |
 |---|---|
-| `VOCE_TTS` | `it-IT-DiegoNeural`, `it-IT-IsabellaNeural`, `it-IT-GiuseppeNeural` |
+| `VOCE_TTS` | `it-IT-GiuseppeMultilingualNeural` di default; anche `it-IT-DiegoNeural`, `it-IT-IsabellaNeural` |
 | `VOCE_VELOCITA` | `+12%` di default. Piu' alto = piu' concitato |
 | `STACCO_MIN` / `STACCO_MAX` | durata degli stacchi di montaggio |
 | `NUM_CLIP_SFONDO` | quante clip diverse scaricare |
