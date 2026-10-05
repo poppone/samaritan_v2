@@ -114,7 +114,7 @@ def _carica_cronologia():
         return []
 
 
-def _ultima_voce_usata():
+def _ultima_voce_usata(fra=None):
     """Il nome della voce dell'ultimo video che l'ha annotata.
 
     La rotazione si ricorda dove era arrivata guardando qui, non contando i
@@ -123,7 +123,10 @@ def _ultima_voce_usata():
     """
     for elemento in reversed(_carica_cronologia()):
         if isinstance(elemento, dict) and elemento.get("voce"):
-            return elemento["voce"]
+            # Con voci diverse per lingua conta l'ultima della stessa lista,
+            # altrimenti un video italiano farebbe ripartire da capo l'inglese.
+            if fra is None or elemento["voce"] in fra:
+                return elemento["voce"]
     return None
 
 
@@ -195,6 +198,8 @@ def _risolvi_voce(chiave):
         raise RuntimeError("l'account ElevenLabs non ha nessuna voce")
 
     richieste = config.ELEVENLABS_VOCI
+    if (config.LINGUA or "it").lower() == "en" and config.ELEVENLABS_VOCI_EN:
+        richieste = config.ELEVENLABS_VOCI_EN
     if not richieste:
         _voce_risolta = voci[0]["voice_id"]
         print(f"[Samaritan Voice] Nessuna voce indicata: uso "
@@ -205,7 +210,7 @@ def _risolvi_voce(chiave):
     # elenco (lista cambiata) si ricomincia dall'inizio. Un nome scritto male
     # fa saltare il suo turno, non l'intera sintesi.
     partenza = 0
-    precedente = _ultima_voce_usata()
+    precedente = _ultima_voce_usata(richieste)
     if precedente in richieste:
         partenza = (richieste.index(precedente) + 1) % len(richieste)
     ordinate = richieste[partenza:] + richieste[:partenza]

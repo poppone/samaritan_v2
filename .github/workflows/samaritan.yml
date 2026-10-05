@@ -215,6 +215,7 @@ jobs:
           VOCE_TTS_IT: ${{ vars.VOCE_TTS || 'it-IT-GiuseppeMultilingualNeural' }}
           VOCE_TTS_EN: ${{ vars.VOCE_TTS_EN || 'en-US-AndrewMultilingualNeural' }}
           ELEVENLABS_VOCE: ${{ vars.ELEVENLABS_VOCE }}
+          ELEVENLABS_VOCE_EN: ${{ vars.ELEVENLABS_VOCE_EN }}
           ELEVENLABS_MODELLO: ${{ vars.ELEVENLABS_MODELLO }}
           WHISPER_MODEL: ${{ vars.WHISPER_MODEL || 'base' }}
           GROQ_MODELLI: ${{ vars.GROQ_MODELLI }}

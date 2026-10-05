@@ -51,6 +51,10 @@ ELEVENLABS_API_KEY = _get("ELEVENLABS_API_KEY")
 # virgola: in quel caso Samaritan li alterna, un video a testa a giro.
 ELEVENLABS_VOCE = _get("ELEVENLABS_VOCE", "")
 ELEVENLABS_VOCI = [v.strip() for v in ELEVENLABS_VOCE.split(",") if v.strip()]
+# Voci per i video in inglese, stesso formato. Vuoto = le stesse dell'italiano,
+# che pero' in inglese possono portarsi dietro l'accento.
+ELEVENLABS_VOCE_EN = _get("ELEVENLABS_VOCE_EN", "")
+ELEVENLABS_VOCI_EN = [v.strip() for v in ELEVENLABS_VOCE_EN.split(",") if v.strip()]
 # multilingual_v2 e' il modello con la resa migliore in italiano; turbo costa
 # meno della meta' ma suona piu' piatto.
 ELEVENLABS_MODELLO = _get("ELEVENLABS_MODELLO", "eleven_multilingual_v2")

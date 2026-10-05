@@ -62,7 +62,7 @@ def _chiedi(monkeypatch, valore, precedente=None):
     monkeypatch.setattr(
         config, "ELEVENLABS_VOCI", [v.strip() for v in valore.split(",") if v.strip()]
     )
-    monkeypatch.setattr(voice, "_ultima_voce_usata", lambda: precedente)
+    monkeypatch.setattr(voice, "_ultima_voce_usata", lambda fra=None: precedente)
     monkeypatch.setattr(voice, "_segna_voce_usata", lambda nome: None)
 
 
@@ -441,3 +441,37 @@ class TestPronunciaDelCanale:
             sorgente = f.read()
         assert 'grafia_canale(info["word"])' in sorgente
         assert 'grafia_canale(segmento.get("text")' in sorgente
+
+
+class TestVociPerLingua:
+    def _con_voci(self, monkeypatch):
+        monkeypatch.setattr(
+            voice.requests, "get", lambda *a, **k: RispostaFinta(dati=VOCI)
+        )
+
+    def test_video_inglese_usa_le_voci_inglesi(self, monkeypatch):
+        self._con_voci(monkeypatch)
+        _chiedi(monkeypatch, "Marco")
+        monkeypatch.setattr(config, "ELEVENLABS_VOCI_EN", ["Giulia"])
+        monkeypatch.setattr(config, "LINGUA", "en")
+        assert voice._risolvi_voce("k") == "id-secondo"
+
+    def test_video_italiano_ignora_le_voci_inglesi(self, monkeypatch):
+        self._con_voci(monkeypatch)
+        _chiedi(monkeypatch, "Marco")
+        monkeypatch.setattr(config, "ELEVENLABS_VOCI_EN", ["Giulia"])
+        monkeypatch.setattr(config, "LINGUA", "it")
+        assert voice._risolvi_voce("k") == "id-primo"
+
+    def test_senza_voci_inglesi_si_usano_quelle_di_sempre(self, monkeypatch):
+        self._con_voci(monkeypatch)
+        _chiedi(monkeypatch, "Marco")
+        monkeypatch.setattr(config, "ELEVENLABS_VOCI_EN", [])
+        monkeypatch.setattr(config, "LINGUA", "en")
+        assert voice._risolvi_voce("k") == "id-primo"
+
+    def test_la_rotazione_guarda_l_ultima_della_stessa_lista(self, monkeypatch):
+        monkeypatch.setattr(voice, "_carica_cronologia", lambda: [
+            {"voce": "Giulia"}, {"voce": "Marco"}])
+        assert voice._ultima_voce_usata(["Giulia", "Luca"]) == "Giulia"
+        assert voice._ultima_voce_usata() == "Marco"
