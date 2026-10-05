@@ -114,7 +114,7 @@ def _carica_cronologia():
         return []
 
 
-def _ultima_voce_usata():
+def _ultima_voce_usata(fra=None):
     """Il nome della voce dell'ultimo video che l'ha annotata.
 
     La rotazione si ricorda dove era arrivata guardando qui, non contando i
@@ -123,7 +123,10 @@ def _ultima_voce_usata():
     """
     for elemento in reversed(_carica_cronologia()):
         if isinstance(elemento, dict) and elemento.get("voce"):
-            return elemento["voce"]
+            # Con voci diverse per lingua conta l'ultima della stessa lista,
+            # altrimenti un video italiano farebbe ripartire da capo l'inglese.
+            if fra is None or elemento["voce"] in fra:
+                return elemento["voce"]
     return None
 
 
@@ -195,6 +198,8 @@ def _risolvi_voce(chiave):
         raise RuntimeError("l'account ElevenLabs non ha nessuna voce")
 
     richieste = config.ELEVENLABS_VOCI
+    if (config.LINGUA or "it").lower() == "en" and config.ELEVENLABS_VOCI_EN:
+        richieste = config.ELEVENLABS_VOCI_EN
     if not richieste:
         _voce_risolta = voci[0]["voice_id"]
         print(f"[Samaritan Voice] Nessuna voce indicata: uso "
@@ -205,7 +210,7 @@ def _risolvi_voce(chiave):
     # elenco (lista cambiata) si ricomincia dall'inizio. Un nome scritto male
     # fa saltare il suo turno, non l'intera sintesi.
     partenza = 0
-    precedente = _ultima_voce_usata()
+    precedente = _ultima_voce_usata(richieste)
     if precedente in richieste:
         partenza = (richieste.index(precedente) + 1) % len(richieste)
     ordinate = richieste[partenza:] + richieste[:partenza]
@@ -271,12 +276,12 @@ def _sintetizza_elevenlabs(testo, output_filename):
         f.write(risposta.content)
 
 
-async def _sintetizza_edge(testo, output_filename):
+async def _sintetizza_edge(testo, output_filename, voce=None):
     import edge_tts
 
     communicate = edge_tts.Communicate(
         text=testo,
-        voice=config.VOCE_TTS,
+        voice=voce or config.VOCE_TTS,
         rate=config.VOCE_VELOCITA,
         pitch=config.VOCE_PITCH,
     )
@@ -323,18 +328,26 @@ def genera_voce_samaritan(testo, output_filename=None, permetti_elevenlabs=True)
                   f"Il video usera' la voce Microsoft.")
 
     # --- Tentativo 2: Edge-TTS (voce neurale gratuita) ---
-    try:
-        print(f"[Samaritan Voice] Sintesi neurale con {config.VOCE_TTS} "
-              f"(velocita {config.VOCE_VELOCITA})...")
-        asyncio.run(_sintetizza_edge(testo_pulito, output_filename))
+    # Prima la voce scelta, poi la classica della stessa lingua: se Microsoft
+    # rifiuta una voce nuova, meglio la voce di prima che quella robotica.
+    riserva = config.VOCE_TTS_RISERVA.get((config.LINGUA or "it").lower())
+    voci = [config.VOCE_TTS] + ([riserva] if riserva and riserva != config.VOCE_TTS else [])
+    for voce in voci:
+        try:
+            print(f"[Samaritan Voice] Sintesi neurale con {voce} "
+                  f"(velocita {config.VOCE_VELOCITA})...")
+            asyncio.run(_sintetizza_edge(testo_pulito, output_filename)
+                        if voce == config.VOCE_TTS
+                        else _sintetizza_edge(testo_pulito, output_filename, voce))
 
-        if os.path.exists(output_filename) and os.path.getsize(output_filename) > 1024:
-            print(f"[Samaritan Voice] Audio neurale salvato: {output_filename}")
-            return output_filename
-        raise RuntimeError("Edge-TTS ha prodotto un file vuoto")
+            if os.path.exists(output_filename) and os.path.getsize(output_filename) > 1024:
+                print(f"[Samaritan Voice] Audio neurale salvato: {output_filename}")
+                return output_filename
+            raise RuntimeError("Edge-TTS ha prodotto un file vuoto")
 
-    except Exception as e:
-        print(f"[Warning Voice] Edge-TTS non disponibile ({e}). Passo al fallback gTTS.")
+        except Exception as e:
+            print(f"[Warning Voice] Edge-TTS non disponibile con {voce} ({e}).")
+    print("[Warning Voice] Passo al fallback gTTS.")
 
     # --- Tentativo 3: gTTS (ripiego robotico) ---
     try:

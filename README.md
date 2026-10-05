@@ -204,9 +204,11 @@ Poi compila `.env`:
 > successiva. L'annotazione arriva solo se ElevenLabs ha prodotto l'audio
 > davvero, cosi' il campo `voce` dice con che voce parla il video e non quale
 > era stata scelta; se e' entrato un ripiego, il turno non e' speso. Un nome che nell'account non esiste salta il proprio turno
-> invece di far ripiegare tutto sulla voce Microsoft. Uno Short da 400 caratteri costa circa 400 crediti, quindi due
-> video al giorno stanno dentro il piano da 30.000 al mese e non dentro quello
-> gratuito da 10.000.
+> invece di far ripiegare tutto sulla voce Microsoft. `ELEVENLABS_VOCE_EN`, stesso
+> formato, sceglie le voci dei video in inglese; vuota, si usano quelle di
+> `ELEVENLABS_VOCE`. Uno Short da 400 caratteri costa circa 400 crediti: due
+> video al giorno stanno dentro un piano da 30.000 al mese, quattro al giorno
+> ne consumano circa 48.000.
 
 > Groq sposta i modelli fra i piani senza preavviso: quando quelli in uso
 > diventano irraggiungibili la chiamata risponde `404 model_not_found`. In quel
@@ -439,7 +441,7 @@ Tutto si regola da `.env`, senza toccare il codice:
 
 | Variabile | Effetto |
 |---|---|
-| `VOCE_TTS` | `it-IT-DiegoNeural`, `it-IT-IsabellaNeural`, `it-IT-GiuseppeNeural` |
+| `VOCE_TTS` | `it-IT-GiuseppeMultilingualNeural` di default; anche `it-IT-DiegoNeural`, `it-IT-IsabellaNeural` |
 | `VOCE_VELOCITA` | `+12%` di default. Piu' alto = piu' concitato |
 | `STACCO_MIN` / `STACCO_MAX` | durata degli stacchi di montaggio |
 | `NUM_CLIP_SFONDO` | quante clip diverse scaricare |

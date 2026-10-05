@@ -212,9 +212,10 @@ jobs:
           # La voce di questa run la sceglie config fra le due qui sotto, in
           # base alla lingua. La riserva sceglie la lingua solo a lavorazione
           # iniziata, quindi le servono tutt'e due gia' pronte.
-          VOCE_TTS_IT: ${{ vars.VOCE_TTS || 'it-IT-DiegoNeural' }}
-          VOCE_TTS_EN: ${{ vars.VOCE_TTS_EN || 'en-US-AndrewNeural' }}
+          VOCE_TTS_IT: ${{ vars.VOCE_TTS || 'it-IT-GiuseppeMultilingualNeural' }}
+          VOCE_TTS_EN: ${{ vars.VOCE_TTS_EN || 'en-US-AndrewMultilingualNeural' }}
           ELEVENLABS_VOCE: ${{ vars.ELEVENLABS_VOCE }}
+          ELEVENLABS_VOCE_EN: ${{ vars.ELEVENLABS_VOCE_EN }}
           ELEVENLABS_MODELLO: ${{ vars.ELEVENLABS_MODELLO }}
           WHISPER_MODEL: ${{ vars.WHISPER_MODEL || 'base' }}
           GROQ_MODELLI: ${{ vars.GROQ_MODELLI }}
