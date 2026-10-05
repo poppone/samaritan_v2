@@ -545,6 +545,119 @@ class TestNotiziaSulGiocoPrecedente:
         assert "[0] GTA 6" in visti[0]
 
 
+class TestCorrezioneDelloScript:
+    """4 ottobre 2026: due lavorazioni su sei cadute con tutti i tentativi
+    scartati, perche' i dettagli inventati stavano in piu' di meta' delle
+    frasi e lo script non si poteva ripulire. Ora prima di riscrivere da
+    capo si chiede di correggere solo quelle affermazioni."""
+
+    BASE = TestDettagliInventati()
+    PULITO = BASE.SCRIPT.replace("Two Xbox", "Some Xbox")
+
+    def _genera(self, monkeypatch, scritti, verdetti, corretto):
+        richieste = []
+
+        def finta_correzione(script, dettagli, titolo_notizia, sommario=""):
+            richieste.append((script, list(dettagli), titolo_notizia))
+            return corretto
+
+        monkeypatch.setattr(brain, "_correggi_script", finta_correzione)
+        risultato, prompt_visti, verifiche = self.BASE._genera(
+            monkeypatch, scritti, verdetti,
+            sommario=TestDettagliInventati.SOMMARIO)
+        return risultato, prompt_visti, verifiche, richieste
+
+    def test_lo_script_corretto_esce_senza_riscrivere(self, monkeypatch):
+        import json as _json
+        risultato, prompt_visti, verifiche, richieste = self._genera(
+            monkeypatch, [self.BASE._risposta()],
+            [_json.dumps({"dettagli_inventati": ["un glitch"]}),
+             _json.dumps({"dettagli_inventati": []})],
+            self.PULITO)
+        assert len(prompt_visti) == 1
+        assert len(verifiche) == 2
+        assert richieste[0][1] == ["un glitch"]
+        assert richieste[0][2] == TestDettagliInventati.NOTIZIA["titolo"]
+        assert risultato["script"] == self.PULITO
+
+    def test_se_anche_la_correzione_inventa_si_riscrive(self, monkeypatch):
+        import json as _json
+        inventato = _json.dumps({"dettagli_inventati": ["un glitch"]})
+        risultato, prompt_visti, verifiche, _ = self._genera(
+            monkeypatch, [self.BASE._risposta(), self.BASE._risposta(self.PULITO)],
+            [inventato, inventato, _json.dumps({"dettagli_inventati": []})],
+            self.BASE.SCRIPT)
+        assert len(prompt_visti) == 2
+        assert "un glitch" in prompt_visti[1][1]
+        assert risultato["script"] == self.PULITO
+
+    def test_una_correzione_troppo_corta_non_passa(self, monkeypatch):
+        import json as _json
+        risultato, prompt_visti, verifiche, _ = self._genera(
+            monkeypatch, [self.BASE._risposta(), self.BASE._risposta(self.PULITO)],
+            [_json.dumps({"dettagli_inventati": ["un glitch"]}),
+             _json.dumps({"dettagli_inventati": []})],
+            "Some Xbox players got GTA 6.")
+        # La correzione corta non arriva nemmeno alla verifica.
+        assert len(prompt_visti) == 2
+        assert len(verifiche) == 2
+        assert risultato["script"] == self.PULITO
+
+
+class TestCorreggiScriptConGroq:
+    ORIGINALE = staticmethod(brain._correggi_script)
+
+    def test_legge_lo_script_dalla_risposta(self, monkeypatch):
+        viste = []
+        monkeypatch.setattr(brain, "client", TestConfrontoCorrezione._client(
+            '{"script": "  Lo script corretto.  "}', viste))
+        assert self.ORIGINALE("vecchio", ["un prezzo di 30 dollari"],
+                              "Black Clover arriva in Fortnite",
+                              "Le skin arrivano il 7 ottobre") == "Lo script corretto."
+        utente = viste[0]["messages"][1]["content"]
+        assert "un prezzo di 30 dollari" in utente
+        assert "SOMMARIO: Le skin arrivano il 7 ottobre" in utente
+        assert "SCRIPT: vecchio" in utente
+
+    def test_un_errore_di_groq_non_corregge_niente(self, monkeypatch):
+        monkeypatch.setattr(brain, "client", TestConfrontoCorrezione._client(
+            RuntimeError("500 boom"), []))
+        assert self.ORIGINALE("vecchio", ["x"], "titolo") == ""
+
+    def test_senza_dettagli_non_chiama_groq(self, monkeypatch):
+        viste = []
+        monkeypatch.setattr(brain, "client", TestConfrontoCorrezione._client(
+            '{"script": "x"}', viste))
+        assert self.ORIGINALE("vecchio", [], "titolo") == ""
+        assert viste == []
+
+
+class TestConfrontoCorrezione:
+    @staticmethod
+    def _client(esito, viste):
+        class Completions:
+            @staticmethod
+            def create(**kw):
+                viste.append(kw)
+                if isinstance(esito, Exception):
+                    raise esito
+
+                class Scelta:
+                    class message:
+                        content = esito
+
+                class Risposta:
+                    choices = [Scelta()]
+
+                return Risposta()
+
+        class Client:
+            class chat:
+                completions = Completions()
+
+        return Client()
+
+
 class TestTestataNellaVerifica:
     def test_la_testata_arriva_alla_verifica(self, monkeypatch):
         visti = []
