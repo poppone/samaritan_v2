@@ -25,26 +25,35 @@ await worker.fetch(req(42,"ciao"), env);
 assert.ok(JSON.parse(chiamate[2].opz.body).text.includes("/video argomento"));
 assert.equal((await worker.fetch(new Request("https://w.dev/registra?chiave=no"), env)).status, 403);
 // partenze puntuali dai Cron Trigger
-assert.equal(uscitaDaLanciare(Date.UTC(2026, 9, 1, 4, 0)), "1");
-assert.equal(uscitaDaLanciare(Date.UTC(2026, 9, 1, 4, 40)), "3");
-assert.equal(uscitaDaLanciare(Date.UTC(2026, 9, 1, 7, 0)), "4");
-assert.equal(uscitaDaLanciare(Date.UTC(2026, 9, 1, 5, 20)), null);
+assert.equal(uscitaDaLanciare(Date.UTC(2026, 9, 1, 9, 0)), "1");
+assert.equal(uscitaDaLanciare(Date.UTC(2026, 9, 1, 15, 0)), "3");
+assert.equal(uscitaDaLanciare(Date.UTC(2026, 9, 1, 17, 30)), "4");
+assert.equal(uscitaDaLanciare(Date.UTC(2026, 9, 1, 4, 0)), null);
+// Ogni partenza, primo giro e riprova, arriva prima della sua uscita anche
+// con l'ora legale (Roma = UTC+2): 14:00, 18:00, 20:00, 21:00 = 12, 16, 18, 19 UTC.
+const USCITA_UTC = { "1": 12 * 60, "2": 16 * 60, "3": 18 * 60, "4": 19 * 60 };
+for (const ora of ["09:00", "13:00", "15:00", "16:00", "10:30", "14:30", "16:30", "17:30"]) {
+  const [h, m] = ora.split(":").map(Number);
+  const slot = uscitaDaLanciare(Date.UTC(2026, 9, 1, h, m));
+  assert.ok(slot, ora);
+  assert.ok(h * 60 + m <= USCITA_UTC[slot] - 60, `${ora} parte troppo a ridosso dell'uscita ${slot}`);
+}
 const attese = [];
 const ctx = { waitUntil: (p) => attese.push(p) };
 chiamate.length = 0;
-await worker.scheduled({ scheduledTime: Date.UTC(2026, 9, 1, 6, 20) }, env, ctx);
+await worker.scheduled({ scheduledTime: Date.UTC(2026, 9, 1, 14, 30) }, env, ctx);
 await Promise.all(attese);
 assert.equal(chiamate.length, 1);
 assert.ok(chiamate[0].url.endsWith("/actions/workflows/samaritan.yml/dispatches"));
 assert.deepEqual(JSON.parse(chiamate[0].opz.body), {ref:"main", inputs:{slot:"2"}});
 // un cron che non e' una partenza non lancia niente
 chiamate.length = 0;
-await worker.scheduled({ scheduledTime: Date.UTC(2026, 9, 1, 5, 40) }, env, ctx);
+await worker.scheduled({ scheduledTime: Date.UTC(2026, 9, 1, 6, 20) }, env, ctx);
 await Promise.all(attese);
 assert.equal(chiamate.length, 0);
 // se GitHub rifiuta, arriva un avviso su Telegram
 globalThis.fetch = async (url, opz) => { chiamate.push({url, opz}); return url.includes("github") ? new Response("Bad credentials",{status:401}) : new Response("{}"); };
-await worker.scheduled({ scheduledTime: Date.UTC(2026, 9, 1, 5, 0) }, env, ctx);
+await worker.scheduled({ scheduledTime: Date.UTC(2026, 9, 1, 16, 0) }, env, ctx);
 await Promise.all(attese);
 assert.equal(chiamate.length, 2);
 assert.ok(JSON.parse(chiamate[1].opz.body).text.includes("uscita 4"));
