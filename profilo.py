@@ -209,12 +209,16 @@ PREDEFINITO = {
     "categoria_youtube": "20",
 
     # Le uscite della giornata: a che ora, ora locale del fuso qui sotto, e
-    # in che lingua. Per Poppone TV due Short italiani e, dal 27 settembre
-    # 2026, due inglesi (alle 20:00 prima usciva il video lungo, che resta
-    # lanciabile solo a mano). Da una a quattro, una per partenza notturna.
+    # in che lingua. Per Poppone TV dal 5 ottobre 2026 uno Short italiano e
+    # tre inglesi: il pubblico inglese e' molto piu' grande e il primo Short
+    # inglese su GTA 6 ha battuto qualunque italiano (deciso con popponetv,
+    # "dobbiamo accelerare la crescita"). Le 18:00 italiane sono le 12:00 a
+    # New York. Prima c'erano due italiani e, dal 27 settembre, due inglesi
+    # (alle 20:00 usciva il video lungo, che resta lanciabile solo a mano).
+    # Da una a quattro, una per partenza notturna.
     "uscite": [
         {"orario": "14:00", "lingua": "it"},
-        {"orario": "18:00", "lingua": "it"},
+        {"orario": "18:00", "lingua": "en"},
         {"orario": "20:00", "lingua": "en"},
         {"orario": "21:00", "lingua": "en"},
     ],
