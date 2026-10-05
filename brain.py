@@ -277,6 +277,10 @@ def _stesso_formato(voci):
 
 
 PUNTI_GIOCO_GROSSO = 4
+# Con 'solo_nomi_grossi' nel profilo le notizie sui giochi piccoli si
+# scartano solo se quelle sui nomi grossi sono almeno queste: con due il
+# modello ha ancora una scelta, con meno si tiene tutto (vedi profilo.py).
+MIN_NOTIZIE_GROSSE = 2
 PUNTI_PAROLA_CALDA = 1
 MAX_PAROLE_CALDE = 3      # oltre, e' un titolo acchiappaclic, non una notizia
 PUNTI_RIPETIZIONE = 2     # la stessa notizia trovata da piu' di una ricerca
@@ -528,6 +532,12 @@ def _notizia_di_una_voce(fonte):
     return _impronta_notizia(testo)
 
 
+def _nomina_un_grosso(titolo):
+    """Vero se il titolo nomina uno dei nomi grossi del profilo."""
+    testo = _senza_accenti(titolo or "").lower()
+    return any(g in testo for g in profilo.attivo().nomi_grossi)
+
+
 def _punteggio_notizia(titolo, apparizioni=1, cercate=frozenset()):
     """Quanto vale una notizia in entrata. Piu' alto = piu' gente la cerca.
 
@@ -542,7 +552,7 @@ def _punteggio_notizia(titolo, apparizioni=1, cercate=frozenset()):
     """
     testo = _senza_accenti(titolo or "").lower()
     punti = 0
-    if any(g in testo for g in profilo.attivo().nomi_grossi):
+    if _nomina_un_grosso(titolo):
         punti += PUNTI_GIOCO_GROSSO
     calde = sum(1 for parola in _lingua()["parole_calde"] if parola in testo)
     punti += min(calde, MAX_PAROLE_CALDE) * PUNTI_PAROLA_CALDA
@@ -845,6 +855,20 @@ def recupera_trend_gaming_online(max_notizie=8, tema=None, gioco_da_evitare=""):
             print(f"[Samaritan Search] Tolte {len(notizie) - len(altre)} "
                   f"notizie su {gioco_da_evitare}, il gioco del video precedente.")
             notizie = altre
+    # Dopo il gioco precedente e non prima: altrimenti dopo un video su GTA 6
+    # resterebbero solo notizie su GTA 6, e il filtro qui sopra le terrebbe
+    # tutte per non restare a mani vuote.
+    if profilo.attivo().solo_nomi_grossi:
+        grosse = [n for n in notizie
+                  if n["sul_tema"] or _nomina_un_grosso(n["titolo"])]
+        if len(grosse) >= MIN_NOTIZIE_GROSSE:
+            if len(grosse) < len(notizie):
+                print(f"[Samaritan Search] Tolte {len(notizie) - len(grosse)} "
+                      f"notizie che non nominano nessun nome grosso.")
+            notizie = grosse
+        elif notizie:
+            print(f"[Samaritan Search] Solo {len(grosse)} notizie sui nomi "
+                  f"grossi: tengo anche le altre per non saltare l'uscita.")
     notizie = notizie[:max_notizie]
 
     _aggiungi_sommari(notizie)
