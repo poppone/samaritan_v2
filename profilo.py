@@ -122,12 +122,14 @@ PREDEFINITO = {
             "videogiochi",
             "videogiochi quando esce aggiornamento",
             'GTA 6 OR Fortnite OR "Call of Duty" OR Minecraft OR Roblox',
+            'Pokemon OR Zelda OR Mario OR "Elden Ring" OR "EA FC" OR "Brawl Stars"',
             "videogioco annuncio OR uscita OR gratis OR leak",
         ],
         "en": [
             "video games",
             "video game release date OR free OR leak",
             'GTA 6 OR Fortnite OR "Call of Duty" OR Minecraft OR Roblox',
+            'Pokemon OR Zelda OR Mario OR "Elden Ring" OR "EA FC" OR "Brawl Stars"',
             "gaming news announcement OR update",
         ],
     },
@@ -146,9 +148,22 @@ PREDEFINITO = {
         "zelda", "mario", "pokemon", "the last of us", "god of war",
         "cyberpunk", "assassin", "red dead", "valorant", "league of legends",
         "counter-strike", "counter strike", "overwatch", "apex legends",
-        "battlefield", "silksong", "hollow knight", "steam", "playstation",
-        "xbox", "nintendo switch", "game pass",
+        "battlefield", "silksong", "hollow knight", "playstation",
+        "xbox", "nintendo switch", "game pass", "brawl stars",
+        "clash royale", "clash of clans", "genshin", "marvel rivals",
+        "resident evil", "skyrim", "elder scrolls", "sonic", "ea sports fc",
+        "nba 2k", "switch 2", "ps5", "ps6",
     ],
+
+    # Vero = si parla SOLO delle notizie che nominano uno dei nomi grossi qui
+    # sopra, e le altre si scartano invece di finire solo piu' in basso. Sui
+    # numeri di Poppone TV 10 video su 104 facevano l'85% delle
+    # visualizzazioni, ed erano tutti su giochi enormi (GTA 6, Fortnite): un
+    # video su un gioco piccolo e' un'uscita sprecata. Deciso con popponetv
+    # il 5 ottobre 2026. Se i nomi grossi trovano meno di
+    # brain.MIN_NOTIZIE_GROSSE notizie si tengono tutte: un video su un gioco
+    # piccolo costa meno di un'uscita saltata.
+    "solo_nomi_grossi": True,
 
     # Tag presenti su ogni video. Da soli pesano poco sul ranking, ma cinque
     # tag IDENTICI su ogni upload sono una delle impronte che fanno
@@ -314,6 +329,7 @@ _NEUTRO = {
     "telegiornale": False,
     "temi_esclusi": {},
     "autodefinisci": False,
+    "solo_nomi_grossi": False,
 }
 
 # Articoli e desinenze per i due generi. Servono perche' i prompt parlano
@@ -558,6 +574,9 @@ def _valida(dati, origine):
     if not isinstance(dati["autodefinisci"], bool):
         raise _errore(origine, f"'autodefinisci' e' true o false, non "
                                f"'{dati['autodefinisci']}'.")
+    if not isinstance(dati["solo_nomi_grossi"], bool):
+        raise _errore(origine, f"'solo_nomi_grossi' e' true o false, non "
+                               f"'{dati['solo_nomi_grossi']}'.")
     if not isinstance(dati["telegiornale"], bool):
         raise _errore(origine, f"'telegiornale' e' true o false, non "
                                f"'{dati['telegiornale']}'.")

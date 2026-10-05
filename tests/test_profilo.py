@@ -36,12 +36,14 @@ RICERCHE_DI_SEMPRE = {
         "videogiochi",
         "videogiochi quando esce aggiornamento",
         'GTA 6 OR Fortnite OR "Call of Duty" OR Minecraft OR Roblox',
+        'Pokemon OR Zelda OR Mario OR "Elden Ring" OR "EA FC" OR "Brawl Stars"',
         "videogioco annuncio OR uscita OR gratis OR leak",
     ),
     "en": (
         "video games",
         "video game release date OR free OR leak",
         'GTA 6 OR Fortnite OR "Call of Duty" OR Minecraft OR Roblox',
+        'Pokemon OR Zelda OR Mario OR "Elden Ring" OR "EA FC" OR "Brawl Stars"',
         "gaming news announcement OR update",
     ),
 }

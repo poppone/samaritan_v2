@@ -1261,6 +1261,67 @@ class TestNotiziaPiuGrossa:
 
         assert len(notizie) == 3
 
+    def test_i_giochi_piccoli_escono_se_ci_sono_quelli_grossi(self, monkeypatch):
+        """5 ottobre 2026, popponetv: solo giochi giganti. 10 video su 104
+        facevano l'85% delle visualizzazioni, tutti su giochi enormi."""
+        grosse = ["GTA 6 ha una nuova data di uscita",
+                  "Fortnite annuncia la nuova stagione"]
+        piccola = "Un gestionale indie riceve una patch di stabilita'"
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: [])
+        monkeypatch.setattr(
+            brain.requests, "get",
+            self._rss_per_ricerca({"videogiochi": [piccola] + grosse}, []),
+        )
+
+        notizie = brain.recupera_trend_gaming_online()
+
+        assert sorted(n["titolo"] for n in notizie) == sorted(grosse)
+
+    def test_con_una_sola_notizia_grossa_restano_anche_le_piccole(self, monkeypatch):
+        grossa = "GTA 6 ha una nuova data di uscita"
+        piccola = "Un gestionale indie riceve una patch di stabilita'"
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: [])
+        monkeypatch.setattr(
+            brain.requests, "get",
+            self._rss_per_ricerca({"videogiochi": [piccola, grossa]}, []),
+        )
+
+        notizie = brain.recupera_trend_gaming_online()
+
+        assert len(notizie) == 2
+
+    def test_il_gioco_precedente_lascia_spazio_agli_altri_grossi(self, monkeypatch):
+        gta = [f"GTA 6, novita' numero {i} sul trailer" for i in range(5)]
+        altre_grosse = ["Fortnite annuncia la nuova stagione",
+                        "Minecraft riceve un aggiornamento enorme"]
+        piccola = "Un gestionale indie riceve una patch di stabilita'"
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: [])
+        monkeypatch.setattr(
+            brain.requests, "get",
+            self._rss_per_ricerca(
+                {"videogiochi": gta + [piccola] + altre_grosse}, []),
+        )
+
+        notizie = brain.recupera_trend_gaming_online(
+            gioco_da_evitare="Grand Theft Auto VI")
+
+        assert sorted(n["titolo"] for n in notizie) == sorted(altre_grosse)
+
+    def test_senza_solo_nomi_grossi_restano_tutte(self, monkeypatch):
+        grosse = ["GTA 6 ha una nuova data di uscita",
+                  "Fortnite annuncia la nuova stagione"]
+        piccola = "Un gestionale indie riceve una patch di stabilita'"
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: [])
+        monkeypatch.setattr(brain.profilo.attivo(), "solo_nomi_grossi", False)
+        monkeypatch.setattr(
+            brain.requests, "get",
+            self._rss_per_ricerca({"videogiochi": [piccola] + grosse}, []),
+        )
+
+        notizie = brain.recupera_trend_gaming_online()
+
+        assert len(notizie) == 3
+
     def test_la_stessa_notizia_da_due_ricerche_non_si_sdoppia(self, monkeypatch):
         titolo = "Minecraft annuncia un nuovo aggiornamento"
         monkeypatch.setattr(brain, "carica_cronologia", lambda: [])
