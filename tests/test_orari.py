@@ -149,13 +149,13 @@ class TestWorkflowCollegato:
     Dalla tappa 3 il workflow non scrive piu' gli orari: dice solo quale
     delle quattro partenze notturne e' (USCITA_CRON), e orario, SLOT, lingua
     e voce li ricava config dal profilo del canale. Questi test controllano
-    tutti e due i pezzi, e che senza canale.json Poppone TV esca come prima:
-    14:00 e 18:00 in italiano, 20:00 e 21:00 in inglese.
+    tutti e due i pezzi, e che senza canale.json Poppone TV esca come deciso
+    il 5 ottobre 2026: 14:00 in italiano, 18:00, 20:00 e 21:00 in inglese.
     """
 
     # Le uscite di Poppone TV, partenza per partenza, com'erano scritte nel
     # workflow prima del profilo.
-    POPPONE = {1: ("14:00", "it"), 2: ("18:00", "it"),
+    POPPONE = {1: ("14:00", "it"), 2: ("18:00", "en"),
                3: ("20:00", "en"), 4: ("21:00", "en")}
     CRON = {1: "17 1 * * *", 2: "17 3 * * *", 3: "17 5 * * *", 4: "17 6 * * *"}
 
@@ -246,7 +246,7 @@ class TestWorkflowCollegato:
         della stessa informazione: se divergono, la riserva va a cercare
         un'uscita che non esiste, o non si accorge di quella che manca."""
         assert orari.slot_giornalieri() == (
-            ("14:00", "it", "short"), ("18:00", "it", "short"),
+            ("14:00", "it", "short"), ("18:00", "en", "short"),
             ("20:00", "en", "short"), ("21:00", "en", "short"))
         p = profilo.attivo()
         for numero, (orario, lingua) in self.POPPONE.items():
@@ -304,7 +304,7 @@ class TestWorkflowCollegato:
             c = self._risolvi(monkeypatch, USCITA_RICHIESTA=richiesta)
             assert (c.ORARIO_USCITA, c.SLOT) == ("20:00", "20:00"), richiesta
             assert (c.LINGUA, c.VOCE_TTS) == ("en", "voce-en"), richiesta
-        c = self._risolvi(monkeypatch, USCITA_RICHIESTA="18:00")
+        c = self._risolvi(monkeypatch, USCITA_RICHIESTA="14:00")
         assert (c.LINGUA, c.VOCE_TTS) == ("it", "voce-it")
         with pytest.raises(profilo.ProfiloNonValido, match="non c'e'"):
             self._risolvi(monkeypatch, USCITA_RICHIESTA="09:30")
@@ -456,7 +456,7 @@ class TestUscitaGiaCoperta:
         dopo = datetime(2026, 9, 29, 11, 0, tzinfo=ROMA)
         assert orari.gia_pubblicato("14:00", [voce], dopo) is True
         assert orari.slot_da_recuperare([voce], ADESSO.replace(day=29)) == (
-            "18:00", "it", "short")
+            "18:00", "en", "short")
 
     def test_la_riserva_scrive_l_uscita_passata(self):
         ora = datetime(2026, 9, 29, 0, 10, tzinfo=ROMA)
@@ -499,7 +499,7 @@ class TestQualeUscitaRecuperare:
             _voce("21:00", ADESSO.replace(hour=21, minute=30)),
         ]
         assert orari.slot_da_recuperare(cronologia, ADESSO) == (
-            "18:00", "it", "short")
+            "18:00", "en", "short")
 
     def test_le_20_si_recuperano_in_inglese(self):
         """Lingua e formato viaggiano insieme all'orario: la riserva rifa'

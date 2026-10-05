@@ -18,6 +18,8 @@ import html
 import unicodedata
 import xml.etree.ElementTree as ET
 from urllib.parse import quote
+from email.utils import parsedate_to_datetime
+from datetime import datetime, timezone
 
 import requests
 from groq import Groq
@@ -284,6 +286,14 @@ MIN_NOTIZIE_GROSSE = 2
 PUNTI_PAROLA_CALDA = 1
 MAX_PAROLE_CALDE = 3      # oltre, e' un titolo acchiappaclic, non una notizia
 PUNTI_RIPETIZIONE = 2     # la stessa notizia trovata da piu' di una ricerca
+# Quanto e' fresca la notizia, dalla data del feed. Una notizia grossa
+# raccontata nelle prime ore prende il picco delle ricerche; due giorni dopo
+# l'hanno gia' raccontata tutti. Deciso con popponetv il 5 ottobre 2026
+# ("dobbiamo accelerare la crescita"). Senza data il punteggio non cambia.
+ORE_FRESCA = 12
+PUNTI_FRESCA = 2
+ORE_VECCHIA = 48
+PUNTI_VECCHIA = -2
 
 # Le parole che il pubblico di QUESTO canale scrive davvero nella ricerca di
 # YouTube, prese da Analytics (analyst.parole_cercate). Pesano piu' di tutto il
@@ -538,7 +548,7 @@ def _nomina_un_grosso(titolo):
     return any(g in testo for g in profilo.attivo().nomi_grossi)
 
 
-def _punteggio_notizia(titolo, apparizioni=1, cercate=frozenset()):
+def _punteggio_notizia(titolo, apparizioni=1, cercate=frozenset(), ore=None):
     """Quanto vale una notizia in entrata. Piu' alto = piu' gente la cerca.
 
     Non giudica come e' scritta la notizia, giudica di cosa parla. Sui video
@@ -559,6 +569,11 @@ def _punteggio_notizia(titolo, apparizioni=1, cercate=frozenset()):
     # Trovata da piu' di una ricerca: non e' un giudizio nostro, e' il segno
     # che la notizia sta girando.
     punti += (apparizioni - 1) * PUNTI_RIPETIZIONE
+    if ore is not None:
+        if ore <= ORE_FRESCA:
+            punti += PUNTI_FRESCA
+        elif ore >= ORE_VECCHIA:
+            punti += PUNTI_VECCHIA
     # Le parole si confrontano intere: 'gta' non deve accendersi dentro
     # 'gtavicecity', e soprattutto una sigla di due lettere non deve
     # accendersi dentro mezzo vocabolario.
@@ -569,8 +584,25 @@ def _punteggio_notizia(titolo, apparizioni=1, cercate=frozenset()):
     return punti
 
 
+def _ore_da(data_rss, adesso=None):
+    """Quante ore fa e' uscita una voce del feed, o None se la data manca."""
+    try:
+        quando = parsedate_to_datetime(data_rss)
+    except (TypeError, ValueError):
+        return None
+    if quando is None:
+        return None
+    if quando.tzinfo is None:
+        quando = quando.replace(tzinfo=timezone.utc)
+    adesso = adesso or datetime.now(timezone.utc)
+    return max(0.0, (adesso - quando).total_seconds() / 3600)
+
+
 def _voci_rss(ricerca):
-    """Le voci grezze di una ricerca su Google News: (titolo, fonte, link)."""
+    """Le voci grezze di una ricerca su Google News: (titolo, fonte, link, ore).
+
+    'ore' e' quante ore fa e' uscita la notizia, o None se il feed non lo dice.
+    """
     url = ("https://news.google.com/rss/search?q="
            + quote(ricerca)
            + "&" + _lingua()["rss"])
@@ -590,8 +622,10 @@ def _voci_rss(ricerca):
         else:
             titolo, fonte = titolo_completo, "Google News"
         nodo_link = item.find("link")
+        nodo_data = item.find("pubDate")
         voci.append((titolo.strip(), fonte.strip(),
-                     nodo_link.text if nodo_link is not None else ""))
+                     nodo_link.text if nodo_link is not None else "",
+                     _ore_da(nodo_data.text if nodo_data is not None else None)))
     return voci
 
 
@@ -791,12 +825,17 @@ def recupera_trend_gaming_online(max_notizie=8, tema=None, gioco_da_evitare=""):
             print(f"[Warning Search] Ricerca '{ricerca}' non riuscita ({e}).")
             continue
 
-        for titolo, fonte, link in voci_rss:
+        for titolo, fonte, link, *resto in voci_rss:
+            ore = resto[0] if resto else None
             impronta = _impronta_notizia(titolo)
             if not impronta:
                 continue
             if impronta in trovate:
                 trovate[impronta]["apparizioni"] += 1
+                # La stessa notizia da un'altra ricerca: vale la data piu' fresca.
+                if ore is not None and (trovate[impronta]["ore"] is None
+                                        or ore < trovate[impronta]["ore"]):
+                    trovate[impronta]["ore"] = ore
                 continue
 
             # Questa notizia e' gia' diventata un video: saltala.
@@ -819,13 +858,13 @@ def recupera_trend_gaming_online(max_notizie=8, tema=None, gioco_da_evitare=""):
 
             trovate[impronta] = {
                 "titolo": titolo, "fonte": fonte, "link": link,
-                "apparizioni": 1,
+                "apparizioni": 1, "ore": ore,
                 "sul_tema": bool(tema) and ricerca == tema,
             }
 
     for voce in trovate.values():
         voce["punteggio"] = _punteggio_notizia(
-            voce["titolo"], voce["apparizioni"], cercate
+            voce["titolo"], voce["apparizioni"], cercate, voce["ore"]
         )
 
     # In ordine di importanza, non a caso: la piu' grossa arriva al modello

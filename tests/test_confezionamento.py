@@ -1261,6 +1261,49 @@ class TestNotiziaPiuGrossa:
 
         assert len(notizie) == 3
 
+    def test_una_notizia_fresca_vale_piu_di_una_vecchia(self):
+        titolo = "Minecraft annuncia un nuovo aggiornamento"
+        fresca = brain._punteggio_notizia(titolo, ore=2)
+        normale = brain._punteggio_notizia(titolo, ore=24)
+        vecchia = brain._punteggio_notizia(titolo, ore=72)
+        senza_data = brain._punteggio_notizia(titolo)
+        assert fresca > normale > vecchia
+        assert normale == senza_data
+
+    def test_le_ore_arrivano_dalla_data_del_feed(self):
+        from datetime import datetime, timezone
+        adesso = datetime(2026, 10, 5, 12, 0, tzinfo=timezone.utc)
+        assert brain._ore_da("Sun, 05 Oct 2026 09:00:00 GMT", adesso) == 3
+        assert brain._ore_da(None, adesso) is None
+        assert brain._ore_da("non e' una data", adesso) is None
+
+    def test_a_parita_di_gioco_passa_davanti_la_piu_fresca(self, monkeypatch):
+        from email.utils import format_datetime
+        from datetime import datetime, timedelta, timezone
+        adesso = datetime.now(timezone.utc)
+        vecchia = ("GTA 6, il trailer di due giorni fa", 60)
+        fresca = ("GTA 6, la notizia di stamattina", 1)
+
+        def get(url, **kw):
+            voci = "".join(
+                f"<item><title>{t} - Testata</title><link>https://x/{i}</link>"
+                f"<pubDate>{format_datetime(adesso - timedelta(hours=h))}</pubDate></item>"
+                for i, (t, h) in enumerate((vecchia, fresca)))
+
+            class Risposta:
+                content = f"<rss><channel>{voci}</channel></rss>".encode()
+
+                def raise_for_status(self):
+                    return None
+            return Risposta()
+
+        monkeypatch.setattr(brain, "carica_cronologia", lambda: [])
+        monkeypatch.setattr(brain.requests, "get", get)
+
+        notizie = brain.recupera_trend_gaming_online()
+
+        assert notizie[0]["titolo"] == fresca[0]
+
     def test_i_giochi_piccoli_escono_se_ci_sono_quelli_grossi(self, monkeypatch):
         """5 ottobre 2026, popponetv: solo giochi giganti. 10 video su 104
         facevano l'85% delle visualizzazioni, tutti su giochi enormi."""
