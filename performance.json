@@ -601,18 +601,18 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "JAkDQQ3OKEg": {
-      "views": 13,
-      "averageViewPercentage": 65.42,
-      "averageViewDuration": 5,
-      "likes": 0,
-      "comments": 0,
-      "subscribersGained": 0
-    },
     "KTH-MdKQ3cc": {
       "views": 13,
       "averageViewPercentage": 52.01,
       "averageViewDuration": 11,
+      "likes": 0,
+      "comments": 0,
+      "subscribersGained": 0
+    },
+    "JAkDQQ3OKEg": {
+      "views": 13,
+      "averageViewPercentage": 65.42,
+      "averageViewDuration": 5,
       "likes": 0,
       "comments": 0,
       "subscribersGained": 0
@@ -905,18 +905,18 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "Nrf7SF-eBEM": {
-      "views": 3,
-      "averageViewPercentage": 81.9,
-      "averageViewDuration": 4,
-      "likes": 0,
-      "comments": 0,
-      "subscribersGained": 0
-    },
     "dUxlQfpj3DY": {
       "views": 3,
       "averageViewPercentage": 181,
       "averageViewDuration": 9,
+      "likes": 0,
+      "comments": 0,
+      "subscribersGained": 0
+    },
+    "Nrf7SF-eBEM": {
+      "views": 3,
+      "averageViewPercentage": 81.9,
+      "averageViewDuration": 4,
       "likes": 0,
       "comments": 0,
       "subscribersGained": 0
@@ -937,6 +937,14 @@
       "comments": 0,
       "subscribersGained": 0
     },
+    "DcDQaP2uAck": {
+      "views": 2,
+      "averageViewPercentage": 99.44,
+      "averageViewDuration": 214,
+      "likes": 0,
+      "comments": 0,
+      "subscribersGained": 0
+    },
     "DOop5JUQmvg": {
       "views": 2,
       "averageViewPercentage": 20.37,
@@ -949,14 +957,6 @@
       "views": 2,
       "averageViewPercentage": 13.69,
       "averageViewDuration": 26,
-      "likes": 0,
-      "comments": 0,
-      "subscribersGained": 0
-    },
-    "DcDQaP2uAck": {
-      "views": 2,
-      "averageViewPercentage": 99.44,
-      "averageViewDuration": 214,
       "likes": 0,
       "comments": 0,
       "subscribersGained": 0
@@ -997,6 +997,14 @@
       "views": 2,
       "averageViewPercentage": 0,
       "averageViewDuration": 0,
+      "likes": 0,
+      "comments": 0,
+      "subscribersGained": 0
+    },
+    "BizLQyGnXsw": {
+      "views": 2,
+      "averageViewPercentage": 0.26,
+      "averageViewDuration": 7,
       "likes": 0,
       "comments": 0,
       "subscribersGained": 0
@@ -1081,14 +1089,6 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "2PaU82Te8yo": {
-      "views": 2,
-      "averageViewPercentage": 105.83,
-      "averageViewDuration": 12,
-      "likes": 0,
-      "comments": 0,
-      "subscribersGained": 0
-    },
     "Uci4mtiXaEU": {
       "views": 2,
       "averageViewPercentage": 37.81,
@@ -1105,10 +1105,10 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "BizLQyGnXsw": {
+    "2PaU82Te8yo": {
       "views": 2,
-      "averageViewPercentage": 0.26,
-      "averageViewDuration": 7,
+      "averageViewPercentage": 105.83,
+      "averageViewDuration": 12,
       "likes": 0,
       "comments": 0,
       "subscribersGained": 0
@@ -1169,10 +1169,10 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "JzzP43fpEHc": {
+    "6dmmB3HxFW4": {
       "views": 1,
-      "averageViewPercentage": 0.01,
-      "averageViewDuration": 0,
+      "averageViewPercentage": 26.55,
+      "averageViewDuration": 7,
       "likes": 0,
       "comments": 0,
       "subscribersGained": 0
@@ -1273,10 +1273,10 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "6dmmB3HxFW4": {
+    "JzzP43fpEHc": {
       "views": 1,
-      "averageViewPercentage": 26.55,
-      "averageViewDuration": 7,
+      "averageViewPercentage": 0.01,
+      "averageViewDuration": 0,
       "likes": 0,
       "comments": 0,
       "subscribersGained": 0
@@ -1395,11 +1395,11 @@
   "sorgenti": [
     {
       "sorgente": "SHORTS",
-      "views": 34623
+      "views": 34618
     },
     {
       "sorgente": "YT_SEARCH",
-      "views": 1657
+      "views": 1656
     },
     {
       "sorgente": "YT_CHANNEL",
