@@ -954,6 +954,13 @@ class TestEsclusiveConsoleNelVideo:
     """Sui trenta Short prima del 6 ottobre 2026, sei sono usciti con clip
     Pexels perche' il gioco su Steam non c'era."""
 
+    def _finto_maker(self, monkeypatch, scarica):
+        # maker importa numpy, che nei test non c'e': si mette al suo posto
+        # un modulo finto, come fa TestClipMieNelMontaggio.
+        finto = types.ModuleType("maker")
+        finto.scarica_clip_sfondo = scarica
+        monkeypatch.setitem(sys.modules, "maker", finto)
+
     def test_un_gioco_fuori_da_steam_monta_il_materiale_del_suo_negozio(
             self, monkeypatch, tmp_path):
         monkeypatch.setattr(config, "USA_STEAM", True)
@@ -979,7 +986,7 @@ class TestEsclusiveConsoleNelVideo:
 
         def pexels_vietato(*a, **k):
             raise AssertionError("col materiale del negozio Pexels non serve")
-        monkeypatch.setattr("maker.scarica_clip_sfondo", pexels_vietato)
+        self._finto_maker(monkeypatch, pexels_vietato)
 
         sorgenti, nome = gameplay.procura_materiale("Ghost of Yōtei", minimo=3)
         assert nome == "Ghost of Yotei"
@@ -995,8 +1002,8 @@ class TestEsclusiveConsoleNelVideo:
         monkeypatch.setattr(gameplay, "cerca_gioco_steam", lambda n: (None, None))
         monkeypatch.setattr(gameplay, "clip_mie", lambda c, s: [])
         monkeypatch.setattr(gameplay, "materiale_dai_negozi", lambda n, v=3, i=4: None)
-        monkeypatch.setattr("maker.scarica_clip_sfondo",
-                            lambda query, quante=3: ["stock.mp4"] * quante)
+        self._finto_maker(monkeypatch,
+                          lambda query, quante=3: ["stock.mp4"] * quante)
         sorgenti, nome = gameplay.procura_materiale("Gioco Inventato", minimo=3)
         assert nome is None
         assert all(s["gioco"] is None for s in sorgenti)
@@ -1013,8 +1020,8 @@ class TestEsclusiveConsoleNelVideo:
         def vietato(*a, **k):
             raise AssertionError("interruttore spento")
         monkeypatch.setattr(gameplay, "materiale_dai_negozi", vietato)
-        monkeypatch.setattr("maker.scarica_clip_sfondo",
-                            lambda query, quante=3: ["stock.mp4"] * quante)
+        self._finto_maker(monkeypatch,
+                          lambda query, quante=3: ["stock.mp4"] * quante)
         assert gameplay.procura_materiale("Qualsiasi", minimo=3)[1] is None
 
     def test_un_gioco_su_steam_non_passa_dai_negozi(self, monkeypatch, tmp_path):
