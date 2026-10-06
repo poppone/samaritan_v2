@@ -1468,5 +1468,21 @@
     "video_id": "1xWLLwGABpk",
     "voce": "Alex",
     "veste": "pulito"
+  },
+  {
+    "timestamp": 1791293172,
+    "data": "2026-10-06",
+    "titolo": "EA FC 27: Instant Pro Tips? ⚽",
+    "lingua": "en",
+    "slot": "21:00",
+    "uscita": 1791313200,
+    "formato": "short",
+    "estratto_script": "Think you’ve mastered EA FC 27? Think again. A few simple tweaks could instantly turn you ",
+    "stile": "DONT_DO_THIS",
+    "gioco": "EA FC 27",
+    "query_video": "EA FC 27 gameplay",
+    "fonte": "These EA FC 27 changes could instantly make you a better player (Red Bull)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMiY0FVX3lxTE1NMERZN1h6YmFoaW9tTXh3WjhwNlliRFRkejlrWlF0SlZOQWVFMFEzY3BCdDBEUU5xQ1gwZ096bGM3S1dZOS03Yy1YeEtfQXI4TEE5Z1JRQVdnUVhyazJmSDVROA?oc=5",
+    "video_id": null
   }
 ]
