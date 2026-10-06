@@ -58,3 +58,4 @@ def _niente_correzione_dalla_rete(monkeypatch):
     import brain
     monkeypatch.setattr(brain, "_correggi_script",
                         lambda script, dettagli, titolo_notizia, sommario="": "")
+    monkeypatch.setattr(brain, "_cambia_attacco", lambda script, schema: "")

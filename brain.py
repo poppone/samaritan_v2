@@ -2166,6 +2166,62 @@ def _correggi_script(script, dettagli, titolo_notizia, sommario=""):
         return ""
 
 
+def _cambia_attacco(script, schema):
+    """Lo script con la sola prima frase riscritta in un'altra forma.
+
+    Il prompt dice gia' di non aprire con la forma dei video recenti, ma il
+    modello lo ignora quasi sempre: fra il 5 e il 6 ottobre 2026 tre
+    lavorazioni su quattro hanno buttato un tentativo con "SCARTATO: apre con
+    una domanda, come i video recenti", e ogni tentativo bruciato e' un passo
+    verso un'uscita saltata. Rifare lo script da capo per una frase sola
+    rimette in gioco tutto il resto, verifica dei fatti compresa.
+
+    Dal modello si prende solo la prima frase: il resto dello script resta
+    quello di prima, parola per parola. Stringa vuota se Groq non risponde o
+    se la frase nuova ha ancora la forma vietata.
+    """
+    prima = _prima_frase(script)
+    if not prima or not schema:
+        return ""
+    resto = script.strip()[len(prima):].strip()
+    if not resto:
+        return ""
+    istruzioni = (
+        "Riscrivi SOLO la prima frase di uno Short. Gli ultimi video hanno "
+        f"aperto con {schema}: questa frase NON deve essere una domanda e NON "
+        "deve parlare a chi guarda (niente tu, ti, voi). Deve essere "
+        "un'affermazione secca che incuriosisce: un numero che stona, una "
+        "scena a meta', una contraddizione. Stesso contenuto della frase "
+        "originale, NESSUN fatto nuovo. Massimo 20 parole. Scrivi in "
+        f"{_lingua()['nome']}. Rispondi in JSON con la chiave 'script', che "
+        "contiene solo la frase nuova."
+    )
+    modello = config.GROQ_MODELLI[0]
+    try:
+        risposta = _chiedi_a_groq(
+            model=modello,
+            messages=[
+                {"role": "system", "content": istruzioni},
+                {"role": "user", "content": (
+                    f"PRIMA FRASE: {prima}\n\nRESTO DELLO SCRIPT, da non "
+                    f"toccare: {resto}")},
+            ],
+            temperature=0.5,
+            max_tokens=1500,
+            response_format={"type": "json_schema",
+                             "json_schema": _SCHEMA_CORREZIONE},
+            **({"reasoning_effort": "low"} if "gpt-oss" in modello else {}),
+        )
+        nuova = _estrai_json(risposta.choices[0].message.content).get("script", "")
+    except Exception as e:
+        print(f"[Samaritan Brain] Cambio dell'attacco non riuscito: {e}")
+        return ""
+    nuova = _prima_frase(str(nuova).strip()) if isinstance(nuova, str) else ""
+    if not nuova or _schema_apertura(nuova):
+        return ""
+    return f"{nuova} {resto}"
+
+
 def _estrai_json(testo):
     """Ritaglia il primo oggetto JSON da una risposta in testo libero.
 
@@ -2384,7 +2440,17 @@ def genera_script_samaritan(tema=None):
                 )
                 if not ok and motivo.startswith("apre con ") \
                         and motivo.endswith(", come i video recenti"):
-                    scarti_per_schema += 1
+                    nuovo_attacco = _cambia_attacco(script, _schema_apertura(script))
+                    if nuovo_attacco and valida_script(
+                            titolo, nuovo_attacco, impronte_aperture,
+                            schemi_recenti)[0]:
+                        print("[Samaritan Brain] Cambiata la prima frase: "
+                              "apriva con " + _schema_apertura(script)
+                              + " come i video recenti.")
+                        script = nuovo_attacco
+                        ok, motivo = True, ""
+                    else:
+                        scarti_per_schema += 1
                 if ok:
                     ok, motivo = valida_titolo(titolo, gioco)
                 if ok and fonte and idx in notizie_vietate:

@@ -1633,3 +1633,66 @@ class TestTemaChiestoAMano:
         _, prompt_visti, _ = self._genera(monkeypatch, None)
         assert len(prompt_visti) > 1
         assert "come il video precedente" in prompt_visti[1]
+
+
+class TestCambioAttacco:
+    """Fra il 5 e il 6 ottobre 2026 tre lavorazioni su quattro hanno buttato
+    un tentativo perche' lo script apriva con una domanda come i video
+    recenti. Ora si riscrive solo la prima frase invece di tutto lo script."""
+
+    BASE = TestUltimaSpiaggia()
+    NUOVA = "Il segreto di Portal non e' mai finito davvero."
+
+    def _genera(self, monkeypatch, cambio):
+        prompt_visti, richieste = [], []
+        finto = TestRigenerazioneInformata()._finto_client(
+            [self.BASE._risposta()] * 6, prompt_visti)
+        monkeypatch.setattr(brain, "client", finto)
+        monkeypatch.setattr(brain, "recupera_trend_gaming_online", lambda **k: [])
+        monkeypatch.setattr(brain, "carica_cronologia", self.BASE._cronologia)
+        monkeypatch.setattr(brain, "salva_in_cronologia", lambda r: None)
+
+        def finto_cambio(script, schema):
+            richieste.append((script, schema))
+            return cambio(script)
+
+        monkeypatch.setattr(brain, "_cambia_attacco", finto_cambio)
+        return brain.genera_script_samaritan(), prompt_visti, richieste
+
+    def test_la_prima_frase_cambiata_evita_la_riscrittura(self, monkeypatch):
+        coda = TestAperturaRipetutaDalVivo._CODA
+        risultato, prompt_visti, richieste = self._genera(
+            monkeypatch, lambda s: f"{self.NUOVA} {coda}")
+        assert len(prompt_visti) == 1
+        assert richieste[0][1] == brain.SCHEMA_DOMANDA
+        assert risultato["script"] == f"{self.NUOVA} {coda}"
+
+    def test_se_il_cambio_fallisce_si_riscrive_come_prima(self, monkeypatch):
+        risultato, prompt_visti, _ = self._genera(monkeypatch, lambda s: "")
+        assert len(prompt_visti) == brain.SCARTI_SCHEMA_MAX + 1
+        assert risultato["script"] == self.BASE._SCRIPT
+
+
+class TestCambiaAttaccoConGroq:
+    from tests.test_brain import TestConfrontoCorrezione as _C
+    ORIGINALE = staticmethod(brain._cambia_attacco)
+    SCRIPT = "Pensavi fosse finita? Rockstar ha appena mostrato Vice City. Il resto arriva dopo."
+
+    def test_tiene_il_resto_parola_per_parola(self, monkeypatch):
+        viste = []
+        monkeypatch.setattr(brain, "client", self._C._client(
+            '{"script": "Rockstar non ha finito. E questa frase in piu\' sparisce."}',
+            viste))
+        assert self.ORIGINALE(self.SCRIPT, brain.SCHEMA_DOMANDA) == (
+            "Rockstar non ha finito. Rockstar ha appena mostrato Vice City. "
+            "Il resto arriva dopo.")
+        assert "PRIMA FRASE: Pensavi fosse finita?" in viste[0]["messages"][1]["content"]
+
+    def test_una_frase_che_e_ancora_una_domanda_non_vale(self, monkeypatch):
+        monkeypatch.setattr(brain, "client", self._C._client(
+            '{"script": "Ci credevi davvero?"}', []))
+        assert self.ORIGINALE(self.SCRIPT, brain.SCHEMA_DOMANDA) == ""
+
+    def test_un_errore_di_groq_non_cambia_niente(self, monkeypatch):
+        monkeypatch.setattr(brain, "client", self._C._client(RuntimeError("500"), []))
+        assert self.ORIGINALE(self.SCRIPT, brain.SCHEMA_DOMANDA) == ""
