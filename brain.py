@@ -218,8 +218,34 @@ def _lingua():
     regole = dict(LINGUE[codice])
     regole["ricerche"] = p.ricerche_per(codice)
     regole["parole_calde"] = p.parole_calde_per(codice) or regole["parole_calde"]
-    regole["temi_esclusi"] = p.temi_esclusi_per(codice)
+    regole["temi_esclusi"] = (p.temi_esclusi_per(codice)
+                              + tuple(TEMI_A_RISCHIO.get(codice, ())))
     return regole
+
+
+# Notizie che nessun canale racconta, telegiornale o no: pirateria, porting
+# non ufficiali, crack e "soldi gratis" nei giochi. Non e' pudore: YouTube
+# toglie la pubblicita' o da' un avvertimento ai video che sembrano
+# indicare dove prendere un gioco senza pagarlo, e un canale nuovo non se
+# lo puo' permettere. L'8 ottobre 2026 e' uscito uno Short "GTA 5: gratis
+# nel browser?" su un porting non ufficiale (Tom's Hardware), e il 27
+# settembre "Xbox players got GTA 6 for free" l'ha dovuto rendere privato
+# popponetv dopo un commento sulla pirateria. Lasciate fuori apposta parole
+# con un senso innocuo nei giochi: "pirata" (Sea of Thieves), "hack" (hack
+# and slash), "cheat" (i trucchi ufficiali di GTA), "leak".
+TEMI_A_RISCHIO = {
+    "it": (
+        "non ufficiale", "non ufficiali", "pirateria", "piratato",
+        "piratata", "piratati", "crack", "craccato", "craccata", "torrent",
+        "rom", "scarica gratis", "download gratis", "mod menu",
+        "robux gratis", "v bucks gratis", "dmca",
+    ),
+    "en": (
+        "unofficial port", "unofficial pc port", "fan port", "piracy",
+        "pirated", "crack", "cracked", "torrent", "torrents", "roms",
+        "free download", "mod menu", "free robux", "free v bucks", "dmca",
+    ),
+}
 
 
 def _tema_escluso(testo, temi=None):
