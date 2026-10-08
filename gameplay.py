@@ -439,6 +439,73 @@ def dettagli_gioco(appid):
 # ===========================================================================
 # DOWNLOAD DEI TRAILER (HLS -> mp4)
 # ===========================================================================
+def _ffprobe():
+    """ffprobe sta accanto a ffmpeg: il workflow li installa insieme con apt."""
+    return shutil.which("ffprobe") or "ffprobe"
+
+
+def _durata_video(url):
+    """Quanti secondi dura il filmato, o None se non si riesce a sapere.
+
+    Legge solo l'intestazione, non scarica il video. Se ffprobe non c'e' o il
+    filmato non risponde si torna None e chi chiama si arrangia: sapere la
+    durata e' un vantaggio, non una condizione per pubblicare.
+    """
+    comando = [_ffprobe(), "-v", "error", "-show_entries", "format=duration",
+               "-of", "default=noprint_wrappers=1:nokey=1", url]
+    try:
+        esito = subprocess.run(comando, check=True, timeout=60,
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.DEVNULL)
+        durata = float(esito.stdout.decode().strip())
+        return durata if durata > 0 else None
+    except Exception:
+        return None
+
+
+# Di quanto si sposta il punto di taglio fra uno Short e il successivo sullo
+# stesso gioco.
+PASSO_TAGLIO_SEC = 15
+
+
+def punti_di_taglio(url, salto, durata_clip=None):
+    """Da che secondo tagliare lo spezzone, coi ripieghi in coda.
+
+    `salto` e' quanti Short sono gia' usciti su quel gioco. Prima il punto si
+    spostava di venti secondi per passaggio e dopo quattro tornava al
+    principio: su GTA VI, che ha tre soli trailer, il 7 ottobre 2026 sono
+    usciti lo Short numero 28 e il 29 nello stesso giorno e montavano quasi
+    gli stessi fotogrammi.
+    Misurando la durata vera si usa tutto il filmato: 'An Extended Look' dura
+    minuti e ne vengono fuori decine di finestre diverse invece di quattro.
+    """
+    durata_clip = config.SECONDI_TRAILER if durata_clip is None else durata_clip
+    ripieghi = [SALTA_INTRO_SEC, 0]
+    durata = _durata_video(url)
+    if not durata:
+        # Senza la durata si torna al criterio di prima: meglio un punto
+        # probabile con due ripieghi che nessuno spezzone.
+        return _senza_doppioni([SALTA_INTRO_SEC + (salto % 4) * 20] + ripieghi)
+
+    ultimo = durata - durata_clip
+    if ultimo <= SALTA_INTRO_SEC:
+        # Filmato corto: ci sta un solo spezzone e comincia dove capita.
+        return _senza_doppioni(ripieghi)
+
+    finestre = int((ultimo - SALTA_INTRO_SEC) // PASSO_TAGLIO_SEC) + 1
+    inizio = SALTA_INTRO_SEC + (salto % finestre) * PASSO_TAGLIO_SEC
+    return _senza_doppioni([min(inizio, ultimo)] + ripieghi)
+
+
+def _senza_doppioni(secondi):
+    visti, elenco = set(), []
+    for s in secondi:
+        if s not in visti:
+            visti.add(s)
+            elenco.append(s)
+    return elenco
+
+
 def _scegli_variante_hls(url_master):
     """Legge il manifest HLS e ritorna l'URL della variante di qualita'
     piu' vicina a 1080p senza superarla."""
@@ -537,15 +604,6 @@ def scarica_trailer_steam(appid, dati, quanti=3, salto=0):
     altri = [m for m in filmati if not m.get("highlight", False)]
     filmati = ruota(principali, salto) + ruota(altri, salto)
 
-    # Un trailer dura in genere un paio di minuti: spostarsi di venti secondi
-    # per ogni passaggio da' quattro inquadrature d'apertura diverse prima di
-    # tornare al punto di partenza.
-    inizio = SALTA_INTRO_SEC + (salto % 4) * 20
-    tentativi = [inizio]
-    if inizio != SALTA_INTRO_SEC:
-        tentativi.append(SALTA_INTRO_SEC)   # trailer troppo corto per il salto
-    tentativi.append(0)                     # piu' corto anche dell'intro
-
     percorsi = []
     for filmato in filmati:
         if len(percorsi) >= quanti:
@@ -566,7 +624,9 @@ def scarica_trailer_steam(appid, dati, quanti=3, salto=0):
         nome_breve = filmato.get("name", "")[:48]
         print(f"[Gameplay] Scarico trailer ufficiale: {nome_breve}")
 
-        for salta in tentativi:
+        # Il punto di taglio si misura su QUESTO filmato: i trailer di un
+        # gioco hanno durate diverse e il piu' lungo ne regala di piu'.
+        for salta in punti_di_taglio(url_stream, salto):
             if _estrai_mp4(url_stream, destinazione, salta=salta):
                 percorsi.append(destinazione)
                 break
@@ -642,11 +702,6 @@ def scarica_mp4_ufficiali(elenco, chiave, quanti=3, salto=0):
     tutti 'output.mp4' e senza l'indice il secondo sovrascriverebbe il primo.
     """
     elenco = ruota(elenco, salto)
-    # Stesso criterio di Steam per variare il punto di taglio fra un video e
-    # il successivo sullo stesso gioco.
-    inizio = SALTA_INTRO_SEC + (salto % 4) * 20
-    tentativi = [inizio] + ([SALTA_INTRO_SEC] if inizio != SALTA_INTRO_SEC else []) + [0]
-
     percorsi = []
     for indice, url in enumerate(elenco):
         if len(percorsi) >= quanti:
@@ -655,7 +710,8 @@ def scarica_mp4_ufficiali(elenco, chiave, quanti=3, salto=0):
         destinazione = os.path.join(
             config.DIR_TEMP, f"ufficiale_{chiave}_{indice}_{nome_file}")
         print(f"[Gameplay] Scarico trailer ufficiale dall'editore: {nome_file}")
-        for salta in tentativi:
+        # Stesso criterio di Steam: il punto di taglio si misura sul filmato.
+        for salta in punti_di_taglio(url, salto):
             if _estrai_mp4(url, destinazione, salta=salta, a_1080=True):
                 percorsi.append(destinazione)
                 break

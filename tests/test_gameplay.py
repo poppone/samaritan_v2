@@ -200,6 +200,9 @@ class TestTrailerDiversiAOgniGiro:
 
         monkeypatch.setattr(gameplay, "_estrai_mp4", finto)
         monkeypatch.setattr(config, "DIR_TEMP", "/tmp")
+        # Niente ffprobe sulla rete nei test: la durata non si sa, quindi
+        # vale il criterio di ripiego.
+        monkeypatch.setattr(gameplay, "_durata_video", lambda url: None)
         return chiamate
 
     def test_il_primo_video_prende_i_trailer_principali(self, monkeypatch):
@@ -279,6 +282,72 @@ class TestScreenshotDiversiAOgniGiro:
                                                      quanti=4, salto=1)
         assert len(percorsi) == 4
         assert len(set(scaricati)) == len(scaricati)
+
+
+class TestPuntoDiTaglio:
+    """Il 7 ottobre 2026 lo Short 28 e il 29 su GTA VI sono usciti nello stesso
+    giorno coi tre soli trailer di Rockstar, e montavano quasi gli stessi
+    fotogrammi: il punto di taglio si spostava di venti secondi per quattro
+    posizioni e poi ricominciava."""
+
+    def _durata(self, monkeypatch, secondi):
+        monkeypatch.setattr(gameplay, "_durata_video", lambda url: secondi)
+
+    def test_un_filmato_lungo_da_molte_finestre_diverse(self, monkeypatch):
+        # 'An Extended Look' dura sei minuti: con spezzoni da 45 secondi ci
+        # stanno venti finestre e piu'.
+        self._durata(monkeypatch, 360)
+        inizi = {gameplay.punti_di_taglio("http://x", s, durata_clip=45)[0]
+                 for s in range(20)}
+        assert len(inizi) == 20
+
+    def test_le_finestre_non_escono_dal_filmato(self, monkeypatch):
+        self._durata(monkeypatch, 360)
+        for salto in range(40):
+            inizio = gameplay.punti_di_taglio("http://x", salto, durata_clip=45)[0]
+            assert inizio + 45 <= 360
+
+    def test_un_trailer_corto_non_chiede_secondi_che_non_ha(self, monkeypatch):
+        # Novanta secondi, spezzone da 45: si puo' partire al massimo dal 45.
+        self._durata(monkeypatch, 90)
+        inizi = [gameplay.punti_di_taglio("http://x", s, durata_clip=45)[0]
+                 for s in range(6)]
+        assert max(inizi) <= 45
+        assert len(set(inizi)) > 1, "anche un trailer corto deve variare"
+
+    def test_un_filmato_piu_corto_dello_spezzone_parte_dal_principio(self, monkeypatch):
+        self._durata(monkeypatch, 30)
+        assert gameplay.punti_di_taglio("http://x", 7, durata_clip=45) == \
+            [gameplay.SALTA_INTRO_SEC, 0]
+
+    def test_senza_la_durata_vale_il_criterio_di_prima(self, monkeypatch):
+        self._durata(monkeypatch, None)
+        assert gameplay.punti_di_taglio("http://x", 1, durata_clip=45)[0] == \
+            gameplay.SALTA_INTRO_SEC + 20
+
+    def test_i_ripieghi_restano_in_coda(self, monkeypatch):
+        self._durata(monkeypatch, 360)
+        tentativi = gameplay.punti_di_taglio("http://x", 3, durata_clip=45)
+        assert tentativi[-2:] == [gameplay.SALTA_INTRO_SEC, 0]
+
+    def test_la_durata_si_legge_senza_scaricare_il_video(self, monkeypatch):
+        comandi = []
+
+        class Esito:
+            stdout = b"123.45\n"
+
+        def finto_run(comando, **kwargs):
+            comandi.append(comando)
+            return Esito()
+        monkeypatch.setattr(gameplay.subprocess, "run", finto_run)
+        assert gameplay._durata_video("http://x") == 123.45
+        assert "format=duration" in comandi[0]
+
+    def test_ffprobe_che_non_risponde_non_ferma_niente(self, monkeypatch):
+        def rotto(*a, **k):
+            raise OSError("ffprobe non c'e'")
+        monkeypatch.setattr(gameplay.subprocess, "run", rotto)
+        assert gameplay._durata_video("http://x") is None
 
 
 class TestQualeFfmpeg:
