@@ -263,6 +263,18 @@ def ruota(elementi, salto):
 # puo' essere un genere ('guida') o un gioco solo ('fortnite').
 GENERI_CLIP_MIE = {"racing": "guida"}
 
+# I generi su Steam li dichiara l'editore, e i giochi-servizio con tante
+# modalita' ci mettono dentro tutto: Marvel Rivals ne dichiara otto, "Racing"
+# compreso, ed e' un gioco di supereroi. Il 7 ottobre 2026 lo Short su Marvel
+# Rivals e' uscito con dentro le clip del volante di Poppone, che in un gioco
+# di supereroi non c'entrano niente.
+# Una lista corta e' una scelta, una lista lunga e' un elenco: da sei generi
+# in su serve una conferma, e un gioco di guida vero e' dichiarato anche
+# Sports o Simulation. Forza Horizon 5: Racing, Simulation, Sports. F1 25:
+# Racing, Sports. Marvel Rivals: ne' l'uno ne' l'altro.
+MAX_GENERI_CHE_DICONO_QUALCOSA = 5
+GENERI_CHE_CONFERMANO = {"sports", "simulation"}
+
 PAROLE_CLIP_MIE = {
     "fortnite": ("fortnite",),
     "guida": (
@@ -277,6 +289,19 @@ PAROLE_CLIP_MIE = {
 ESTENSIONI_CLIP = (".mp4", ".mov", ".webm")
 
 
+def _generi_attendibili(generi):
+    """La lista dei generi Steam sta dicendo qualcosa, o sta elencando tutto?
+
+    Vedi il commento su MAX_GENERI_CHE_DICONO_QUALCOSA: una lista lunga vale
+    solo se c'e' un genere che conferma quello che ci interessa.
+    """
+    if not generi:
+        return False
+    if len(generi) <= MAX_GENERI_CHE_DICONO_QUALCOSA:
+        return True
+    return bool(set(generi) & GENERI_CHE_CONFERMANO)
+
+
 def categoria_clip_mie(gioco, dati=None):
     """A quale cartella di clip mie appartiene questo gioco, o None.
 
@@ -284,10 +309,12 @@ def categoria_clip_mie(gioco, dati=None):
     poi il nome, perche' un gioco appena annunciato spesso su Steam non c'e'
     ancora ed e' proprio quello di cui parlano le notizie.
     """
-    for genere in (dati or {}).get("genres") or []:
-        etichetta = (genere.get("description") or "").strip().lower()
-        if etichetta in GENERI_CLIP_MIE:
-            return GENERI_CLIP_MIE[etichetta]
+    generi = [(genere.get("description") or "").strip().lower()
+              for genere in (dati or {}).get("genres") or []]
+    if _generi_attendibili(generi):
+        for etichetta in generi:
+            if etichetta in GENERI_CLIP_MIE:
+                return GENERI_CLIP_MIE[etichetta]
 
     nome = _normalizza(gioco or "")
     if not nome:
