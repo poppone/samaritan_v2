@@ -235,6 +235,10 @@ WHISPER_MODEL = _get("WHISPER_MODEL", "base")   # 'tiny' sbaglia troppe parole i
 # Conta solo se il profilo del canale ha materiale 'steam': un canale che non
 # parla di videogiochi su Steam non ci va mai (vedi gameplay._usa_steam).
 USA_STEAM = _get("USA_STEAM", "1") not in ("0", "false", "False")
+# Le esclusive console su Steam non ci sono: PlayStation, Epic, Nintendo e
+# Xbox pubblicano il loro materiale ufficiale, e si prende da li'. Interruttore
+# separato per poterli spegnere se un negozio cambia forma, senza perdere Steam.
+USA_ALTRI_NEGOZI = _get("USA_ALTRI_NEGOZI", "1") not in ("0", "false", "False")
 STEAM_MAX_TRAILER = STEAM_MAX_SCREENSHOT = SECONDI_TRAILER = 0
 # I trailer Steam sono 16:9: dentro uno Short vengono inseriti in un 9:16 con
 # sfondo sfocato, e questo valore ingrandisce il riquadro di gameplay

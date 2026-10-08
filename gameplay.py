@@ -17,10 +17,12 @@ Catena delle fonti:
      non ci sono (GTA VI, vedi PAGINE_UFFICIALI)
   1. Trailer ufficiali Steam del gioco esatto  (gameplay vero)
   2. Screenshot ufficiali Steam animati in Ken Burns  (gioco esatto, statico)
-  3. Pexels  (stock generico, solo se il gioco non e' identificabile)
+  3. Gli altri negozi ufficiali - PlayStation, Epic, Nintendo, Xbox - per le
+     esclusive console, che su Steam non ci sono (vedi materiale_dai_negozi)
+  4. Pexels  (stock generico, solo se il gioco non e' identificabile)
 
 Un canale che non parla di videogiochi (profilo con materiale 'stock', vedi
-profilo.py) salta i passi 0-2: su Steam ci sono solo giochi, e cercarci una
+profilo.py) salta i passi 0-3: su Steam ci sono solo giochi, e cercarci una
 ricetta darebbe un gioco a caso. Resta Pexels, piu' le clip girate in casa.
 
 Sullo stesso gioco non esce due volte lo stesso materiale: quanti Short sono
@@ -35,6 +37,8 @@ import os
 import re
 import shutil
 import subprocess
+import time
+import unicodedata
 from difflib import SequenceMatcher
 from urllib.parse import quote, urljoin
 
@@ -44,6 +48,8 @@ import config
 import profilo
 
 STEAM_SEARCH = "https://steamcommunity.com/actions/SearchApps/{}"
+# Senza un browser dichiarato diversi negozi rispondono 403 o 404.
+_UA = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"}
 STEAM_DETAILS = "https://store.steampowered.com/api/appdetails"
 
 # Steam ha migrato tutti i trailer a HLS: non esistono piu' link mp4 diretti.
@@ -133,7 +139,20 @@ def _varianti_nome(nome):
 
 
 def _normalizza(testo):
-    testo = testo.lower().replace("&", "and")
+    """Minuscole, senza punteggiatura e senza accenti.
+
+    Gli accenti vanno via perche' il modello scrive 'Pokemon' e 'Ghost of
+    Yotei' mentre i negozi scrivono 'Pokemon' con la e accentata e 'Yotei'
+    con la o lunga: lasciandoli, i due nomi risultavano due giochi diversi e
+    il video finiva su clip generiche.
+    """
+    # NFD e non NFKD: la seconda trasformerebbe il simbolo del marchio in
+    # 'TM', e 'The Last of Us(TM) Part I' diventerebbe un gioco diverso da
+    # 'The Last of Us Part I'. Cosi' il simbolo resta e lo togliera' la
+    # riga sulla punteggiatura, com'e' sempre stato.
+    testo = unicodedata.normalize("NFD", testo.lower())
+    testo = "".join(c for c in testo if not unicodedata.combining(c))
+    testo = testo.replace("&", "and")
     testo = re.sub(r"[^\w\s]", " ", testo)
     return re.sub(r"\s+", " ", testo).strip()
 
@@ -576,8 +595,7 @@ def trailer_dalla_pagina_ufficiale(chiave):
     voce = PAGINE_UFFICIALI[chiave]
     trovati = []
     try:
-        r = requests.get(voce["pagina"], timeout=20,
-                         headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"})
+        r = requests.get(voce["pagina"], timeout=20, headers=_UA)
         r.raise_for_status()
         trovati = re.findall(voce["schema"], r.text)
     except Exception as e:
@@ -590,20 +608,25 @@ def trailer_dalla_pagina_ufficiale(chiave):
     return elenco
 
 
-def scarica_trailer_ufficiali(chiave, quanti=3, salto=0):
-    """Come scarica_trailer_steam, ma dagli mp4 della pagina dell'editore."""
-    elenco = ruota(trailer_dalla_pagina_ufficiale(chiave), salto)
+def scarica_mp4_ufficiali(elenco, chiave, quanti=3, salto=0):
+    """Scarica i primi mp4 dell'elenco, come scarica_trailer_steam.
+
+    L'indice nel nome del file e' indispensabile: gli mp4 di Epic si chiamano
+    tutti 'output.mp4' e senza l'indice il secondo sovrascriverebbe il primo.
+    """
+    elenco = ruota(elenco, salto)
     # Stesso criterio di Steam per variare il punto di taglio fra un video e
     # il successivo sullo stesso gioco.
     inizio = SALTA_INTRO_SEC + (salto % 4) * 20
     tentativi = [inizio] + ([SALTA_INTRO_SEC] if inizio != SALTA_INTRO_SEC else []) + [0]
 
     percorsi = []
-    for url in elenco:
+    for indice, url in enumerate(elenco):
         if len(percorsi) >= quanti:
             break
-        nome_file = os.path.basename(url.split("?")[0])
-        destinazione = os.path.join(config.DIR_TEMP, f"ufficiale_{chiave}_{nome_file}")
+        nome_file = os.path.basename(url.split("?")[0]) or "trailer.mp4"
+        destinazione = os.path.join(
+            config.DIR_TEMP, f"ufficiale_{chiave}_{indice}_{nome_file}")
         print(f"[Gameplay] Scarico trailer ufficiale dall'editore: {nome_file}")
         for salta in tentativi:
             if _estrai_mp4(url, destinazione, salta=salta, a_1080=True):
@@ -612,6 +635,27 @@ def scarica_trailer_ufficiali(chiave, quanti=3, salto=0):
 
     print(f"[Gameplay] {len(percorsi)} trailer ufficiali pronti.")
     return percorsi
+
+
+def scarica_trailer_ufficiali(chiave, quanti=3, salto=0):
+    """Come scarica_trailer_steam, ma dagli mp4 della pagina dell'editore."""
+    return scarica_mp4_ufficiali(trailer_dalla_pagina_ufficiale(chiave),
+                                 chiave, quanti, salto)
+
+
+def _scarica_immagine(url, destinazione, minimo=20_000):
+    """Salva l'immagine. Un file minuscolo e' un segnaposto, non una
+    schermata: si scarta."""
+    try:
+        contenuto = requests.get(url, timeout=30, headers=_UA).content
+        if len(contenuto) < minimo:
+            return False
+        with open(destinazione, "wb") as f:
+            f.write(contenuto)
+        return True
+    except Exception as e:
+        print(f"[Gameplay] Screenshot non scaricato: {e}")
+        return False
 
 
 def scarica_screenshot_steam(appid, dati, quanti=4, salto=0):
@@ -630,17 +674,365 @@ def scarica_screenshot_steam(appid, dati, quanti=4, salto=0):
         if not url:
             continue
         destinazione = os.path.join(config.DIR_TEMP, f"shot_{appid}_{shot['id']}.jpg")
-        try:
-            contenuto = requests.get(url, timeout=30).content
-            if len(contenuto) < 20_000:
-                continue
-            with open(destinazione, "wb") as f:
-                f.write(contenuto)
+        if _scarica_immagine(url, destinazione):
             percorsi.append(destinazione)
-        except Exception as e:
-            print(f"[Gameplay] Screenshot non scaricato: {e}")
 
     if percorsi or screenshot:
+        print(f"[Gameplay] {len(percorsi)} screenshot ufficiali pronti.")
+    return percorsi
+
+
+# ===========================================================================
+# GLI ALTRI NEGOZI UFFICIALI: PLAYSTATION, EPIC, NINTENDO, XBOX
+# ===========================================================================
+# Steam ha solo i giochi per PC. Le esclusive console non ci sono affatto, e
+# sui trenta Short precedenti al 6 ottobre 2026 sei sono usciti con clip
+# Pexels generiche per questo motivo: 'Ghost of Yotei' (PlayStation), Pokemon
+# (Nintendo), 'Gears of War: E-Day' (Xbox), Fortnite (Epic). Ogni negozio
+# pubblica il proprio materiale promozionale, esattamente come Steam, quindi
+# si prende da li' con le stesse regole: niente audio, solo roba dell'editore.
+#
+# Cosa offre ciascuno, verificato dai server di GitHub il 6 ottobre 2026:
+#   PlayStation  mp4 veri (2 su Ghost of Yotei, 3 su Spider-Man 2)
+#   Epic         mp4 veri (5 su Fortnite)
+#   Nintendo     solo immagini, nessun mp4 nelle pagine dei giochi
+#   Xbox         solo immagini, la lista 'Videos' del catalogo e' sempre vuota
+#
+# I negozi si interrogano in quest'ordine e il materiale si somma: prima
+# quelli coi filmati, poi quelli con le immagini.
+# Quanto si aspetta prima di richiedere la stessa pagina a un negozio che ha
+# risposto 'troppe richieste'.
+PAUSA_NEGOZIO_SEC = 5
+
+
+def _scarica_pagina(url, timeout=20, **extra):
+    """La pagina, con un secondo tentativo se il negozio ci sta frenando.
+
+    Il 403 e il 429 non vogliono dire 'non esiste' come il 404: vogliono dire
+    'troppe richieste'. Il 6 ottobre 2026 la prova ha chiesto venti pagine di
+    fila a PlayStation e dalla ventesima ha preso 403 anche sui giochi che un
+    minuto prima aveva trovato. In produzione le richieste sono due o tre per
+    video, ma una pausa e un secondo tentativo costano poco.
+    """
+    for tentativo in (1, 2):
+        r = requests.get(url, timeout=timeout, headers=_UA, **extra)
+        if tentativo == 1 and r.status_code in (403, 429):
+            print(f"[Gameplay] Il negozio frena ({r.status_code}), "
+                  f"riprovo fra {PAUSA_NEGOZIO_SEC} secondi.")
+            time.sleep(PAUSA_NEGOZIO_SEC)
+            continue
+        r.raise_for_status()
+        return r
+
+
+def _elenco_unico(urls):
+    elenco = []
+    for url in urls:
+        if url not in elenco:
+            elenco.append(url)
+    return elenco
+
+
+def _indirizzo_nome(nome):
+    """'Marvel's Spider-Man 2' -> 'marvels-spider-man-2'.
+
+    E' il pezzo di indirizzo che PlayStation ed Epic usano per le schede dei
+    giochi. Le lettere accentate vanno ridotte alla lettera semplice: il
+    titolo vero di Ghost of Yotei ha la o lunga, e un trattino al posto di
+    quella lettera darebbe una pagina inesistente.
+    """
+    testo = unicodedata.normalize("NFD", (nome or "").lower())
+    testo = testo.encode("ascii", "ignore").decode("ascii")
+    testo = testo.replace("&", "and").replace("'", "")
+    return re.sub(r"[^a-z0-9]+", "-", testo).strip("-")
+
+
+# --------------------------------------------------------------- PlayStation
+PLAYSTATION_SCHEDA = "https://www.playstation.com/en-us/games/{}/"
+# Due CDN diversi, visti entrambi in produzione: Ghost of Yotei sta su
+# gmedia, Ghost of Tsushima su vulcan. Il taglio e' esattamente su '.mp4'
+# perche' negli attributi della pagina l'indirizzo continua con altro testo.
+_PLAYSTATION_MP4 = re.compile(
+    r"https://(?:gmedia\.playstation\.com|vulcan\.dl\.playstation\.net)"
+    r"/[^\"'\s<>\\]+?\.mp4")
+# In fondo a OGNI scheda c'e' lo stesso spot della console, che non e'
+# gameplay del gioco.
+_PLAYSTATION_SPOT = ("/hardware/", "ps5-pro", "channel-specific-content")
+
+
+def materiale_playstation(nome):
+    """Gli mp4 della scheda PlayStation del gioco, o None."""
+    for variante in _varianti_nome(nome):
+        indirizzo = _indirizzo_nome(variante)
+        if not indirizzo:
+            continue
+        try:
+            pagina = _scarica_pagina(PLAYSTATION_SCHEDA.format(indirizzo)).text
+        except Exception as e:
+            print(f"[Gameplay] PlayStation non ha '{indirizzo}': {e}")
+            continue
+        video = [u for u in _elenco_unico(_PLAYSTATION_MP4.findall(pagina))
+                 if not any(p in u.lower() for p in _PLAYSTATION_SPOT)]
+        # La scheda di Spider-Man 2 elenca diciannove filmati, perche' in
+        # fondo ci sono anche quelli dei giochi consigliati. Quelli del gioco
+        # giusto hanno il suo nome nell'indirizzo: vanno davanti.
+        video.sort(key=lambda u: indirizzo not in u.lower())
+        if video:
+            return {"nome": variante, "video": video, "immagini": []}
+    return None
+
+
+# ---------------------------------------------------------------------- Epic
+# La pagina del negozio e' tutta JavaScript, ma l'API che la riempie risponde
+# in chiaro e senza chiave.
+EPIC_SCHEDA = "https://store-content.ak.epicgames.com/api/en-US/content/products/{}"
+_EPIC_MP4 = re.compile(r"https://[\w.-]+\.on\.epicgames\.com/[^\"'\s<>\\]+?\.mp4")
+
+
+def materiale_epic(nome):
+    """Gli mp4 della scheda Epic Games Store del gioco, o None."""
+    for variante in _varianti_nome(nome):
+        indirizzo = _indirizzo_nome(variante)
+        if not indirizzo:
+            continue
+        try:
+            scheda = _scarica_pagina(EPIC_SCHEDA.format(indirizzo)).text
+        except Exception as e:
+            print(f"[Gameplay] Epic non ha '{indirizzo}': {e}")
+            continue
+        video = _elenco_unico(_EPIC_MP4.findall(scheda))
+        if video:
+            return {"nome": variante, "video": video, "immagini": []}
+    return None
+
+
+# Fra le immagini di una scheda ci sono anche le fasce decorative e gli
+# sfondi del sito: non sono schermate del gioco e in uno Short verticale si
+# vedono per quello che sono, grafica di contorno.
+_NON_SCHERMATA = ("banner", "background", "logo", "keyart", "boxart",
+                  "packshot", "icon")
+
+
+def _solo_schermate(urls):
+    scelte = [u for u in urls if not any(p in u.lower() for p in _NON_SCHERMATA)]
+    # Se il filtro svuota tutto, meglio le immagini dubbie che lo stock.
+    return scelte or urls
+
+
+# ------------------------------------------------------------------ Nintendo
+NINTENDO_RICERCA = ("https://search.nintendo-europe.com/en/select"
+                    "?q={}&fq=type:GAME&wt=json&rows=3")
+NINTENDO_SITO = "https://www.nintendo.com"
+# Nella pagina di un gioco ci sono fra cento e trecento immagini, e la gran
+# parte e' l'arredamento del sito: icone, loghi, bandierine.
+_NINTENDO_IMMAGINE = re.compile(
+    r"https://[^\"'\s<>\\]+/media/images/[^\"'\s<>\\]+?\.(?:jpg|jpeg|png)")
+_NINTENDO_ARREDAMENTO = ("01_website_elements", "02_logos", "/icons/",
+                         "favicon", "_logo", "flag")
+
+
+_LARGHEZZA_NEL_NOME = re.compile(r"_image(\d+)w(?=\.)")
+
+
+def _senza_doppioni_di_misura(urls):
+    """Lo stesso disegno a misure diverse conta per uno.
+
+    Nelle pagine Nintendo la stessa immagine compare come
+    '..._image1280w.jpg', '..._image1600w.jpg' e senza suffisso: sono la
+    stessa cosa e si prenderebbero tre dei quattro posti disponibili. Si
+    tiene la piu' grande, cioe' quella senza suffisso quando c'e'.
+    """
+    migliore = {}
+    for url in urls:
+        misura = _LARGHEZZA_NEL_NOME.search(url)
+        base = _LARGHEZZA_NEL_NOME.sub("", url)
+        larghezza = int(misura.group(1)) if misura else 10_000
+        if base not in migliore or larghezza > migliore[base][0]:
+            migliore[base] = (larghezza, url)
+
+    # L'ordine della pagina si conserva: le prime immagini sono le migliori.
+    viste, elenco = set(), []
+    for url in urls:
+        base = _LARGHEZZA_NEL_NOME.sub("", url)
+        if base in viste:
+            continue
+        viste.add(base)
+        elenco.append(migliore[base][1])
+    return elenco
+
+
+def _immagini_nintendo(pagina):
+    """Le immagini del gioco, le piu' promettenti davanti.
+
+    Le schermate che Nintendo pubblica per la stampa stanno sotto
+    '08_content_images', ed e' da li' che si pesca quando la scheda le ha.
+    Le pagine nuove di Switch 2 quella cartella non la hanno affatto: Mario
+    Kart World ha 323 immagini e nessuna li' dentro, quindi restano le altre
+    immagini del gioco, che sono comunque materiale ufficiale. Le icone le
+    scarta il controllo sulla dimensione in _scarica_immagine.
+    """
+    trovate = [u for u in _elenco_unico(_NINTENDO_IMMAGINE.findall(pagina))
+               if not any(p in u.lower() for p in _NINTENDO_ARREDAMENTO)]
+    trovate.sort(key=lambda u: "08_content_images" not in u)
+    return _solo_schermate(_senza_doppioni_di_misura(trovate))
+
+
+def materiale_nintendo(nome):
+    """Le schermate ufficiali della scheda Nintendo del gioco, o None."""
+    for variante in _varianti_nome(nome):
+        try:
+            risposta = _scarica_pagina(
+                NINTENDO_RICERCA.format(quote(variante))).json()
+        except Exception as e:
+            print(f"[Gameplay] Ricerca Nintendo '{variante}' fallita: {e}")
+            continue
+
+        schede = ((risposta or {}).get("response") or {}).get("docs") or []
+        for scheda in schede:
+            titolo = scheda.get("title") or ""
+            # La ricerca Nintendo risponde sempre qualcosa, come quella di
+            # Steam: senza questo controllo uno Short su un gioco Sony
+            # finirebbe con le schermate di un gioco Nintendo qualunque.
+            if _somiglianza(variante, titolo) < SOGLIA_CORRISPONDENZA:
+                continue
+            percorso = scheda.get("url") or ""
+            if not percorso:
+                continue
+            try:
+                pagina = _scarica_pagina(urljoin(NINTENDO_SITO, percorso)).text
+            except Exception as e:
+                print(f"[Gameplay] Scheda Nintendo di '{titolo}' non letta: {e}")
+                continue
+            immagini = _immagini_nintendo(pagina)
+            if immagini:
+                return {"nome": titolo, "video": [], "immagini": immagini}
+    return None
+
+
+# ---------------------------------------------------------------------- Xbox
+# www.xbox.com risponde 404 a chi non e' un browser; queste due API no.
+XBOX_SUGGERIMENTI = ("https://www.microsoft.com/msstoreapiprod/api/autosuggest"
+                     "?market=en-us&sources=DCatAll-Products&query={}")
+XBOX_CATALOGO = ("https://displaycatalog.mp.microsoft.com/v7.0/products"
+                 "?bigIds={}&market=US&languages=en-us&MS-CV=samaritan")
+XBOX_LARGHEZZA_MINIMA = 1280
+
+
+def _xbox_suggerimenti(risposta):
+    """Le voci suggerite, da entrambe le forme di risposta possibili."""
+    voci = list((risposta or {}).get("Suggests") or [])
+    for gruppo in (risposta or {}).get("ResultSets") or []:
+        voci += list(gruppo.get("Suggests") or [])
+    return voci
+
+
+def materiale_xbox(nome):
+    """Le schermate ufficiali del catalogo Microsoft Store, o None."""
+    for variante in _varianti_nome(nome):
+        try:
+            risposta = _scarica_pagina(
+                XBOX_SUGGERIMENTI.format(quote(variante))).json()
+        except Exception as e:
+            print(f"[Gameplay] Ricerca Xbox '{variante}' fallita: {e}")
+            continue
+
+        for voce in _xbox_suggerimenti(risposta):
+            titolo = voce.get("Title") or ""
+            if _somiglianza(variante, titolo) < SOGLIA_CORRISPONDENZA:
+                continue
+            codice = next((m.get("Value") for m in voce.get("Metas") or []
+                           if m.get("Key") == "BigCatalogId"), None)
+            if not codice:
+                continue
+            try:
+                catalogo = _scarica_pagina(XBOX_CATALOGO.format(codice)).json()
+            except Exception as e:
+                print(f"[Gameplay] Catalogo Xbox di '{titolo}' non letto: {e}")
+                continue
+            immagini = _solo_schermate(_elenco_unico(_immagini_xbox(catalogo)))
+            if immagini:
+                return {"nome": titolo, "video": [], "immagini": immagini}
+    return None
+
+
+def _immagini_xbox(catalogo):
+    for prodotto in (catalogo or {}).get("Products") or []:
+        for proprieta in prodotto.get("LocalizedProperties") or []:
+            for immagine in proprieta.get("Images") or []:
+                if immagine.get("ImagePurpose") != "Screenshot":
+                    continue
+                if (immagine.get("Width") or 0) < XBOX_LARGHEZZA_MINIMA:
+                    continue
+                indirizzo = immagine.get("Uri") or ""
+                # Microsoft scrive gli indirizzi senza 'https:' davanti.
+                if indirizzo.startswith("//"):
+                    indirizzo = "https:" + indirizzo
+                if indirizzo.startswith("https://"):
+                    yield indirizzo
+
+
+def _cercatori_negozi():
+    """I negozi nell'ordine in cui si interrogano: prima quelli coi filmati."""
+    return (
+        ("PlayStation", materiale_playstation),
+        ("Epic Games Store", materiale_epic),
+        ("Nintendo", materiale_nintendo),
+        ("Xbox", materiale_xbox),
+    )
+
+
+def materiale_dai_negozi(nome, quanti_video=3, quante_immagini=4):
+    """Cerca il gioco nei negozi ufficiali diversi da Steam.
+
+    Il materiale dei negozi si somma, perche' nessuno dei quattro ha sempre
+    tutto: PlayStation ed Epic danno i filmati, Nintendo e Xbox soltanto
+    schermate. Si smette appena ce n'e' abbastanza di entrambi. Un negozio
+    che non risponde non ferma gli altri e non ferma il video.
+    """
+    nome = ALIAS_GIOCHI.get(_normalizza(nome or ""), nome)
+    video, immagini, nome_ufficiale = [], [], None
+
+    for etichetta, cercatore in _cercatori_negozi():
+        if len(video) >= quanti_video and len(immagini) >= quante_immagini:
+            break
+        try:
+            trovato = cercatore(nome)
+        except Exception as e:
+            print(f"[Gameplay] {etichetta} non raggiungibile: {e}")
+            continue
+        if not trovato:
+            continue
+
+        nuovi_video = [u for u in trovato.get("video") or [] if u not in video]
+        nuove_immagini = [u for u in trovato.get("immagini") or []
+                          if u not in immagini]
+        if not nuovi_video and not nuove_immagini:
+            continue
+        nome_ufficiale = nome_ufficiale or trovato.get("nome")
+        video += nuovi_video
+        immagini += nuove_immagini
+        print(f"[Gameplay] '{nome}' -> {etichetta}: {len(nuovi_video)} filmati "
+              f"e {len(nuove_immagini)} schermate ufficiali.")
+
+    if not video and not immagini:
+        print(f"[Gameplay] '{nome}' non trovato in nessun negozio ufficiale.")
+        return None
+    return {"nome": nome_ufficiale or nome, "video": video,
+            "immagini": immagini}
+
+
+def scarica_immagini_dai_negozi(elenco, chiave, quante=4, salto=0):
+    """Le schermate dei negozi, scelte come quelle di Steam."""
+    elenco = ruota(elenco, salto * quante)
+    percorsi = []
+    for indice, url in enumerate(elenco[:quante * 3]):
+        if len(percorsi) >= quante:
+            break
+        destinazione = os.path.join(
+            config.DIR_TEMP, f"shot_{chiave}_{indice}.jpg")
+        if _scarica_immagine(url, destinazione):
+            percorsi.append(destinazione)
+    if percorsi or elenco:
         print(f"[Gameplay] {len(percorsi)} screenshot ufficiali pronti.")
     return percorsi
 
@@ -681,8 +1073,9 @@ def procura_materiale(gioco=None, query_pexels="gameplay", minimo=3):
             sorgenti.append({"tipo": "video", "path": percorso,
                              "gioco": nome_ufficiale})
     elif gioco and usa_steam:
-        appid, nome_ufficiale = cerca_gioco_steam(gioco)
+        appid, nome_steam = cerca_gioco_steam(gioco)
         if appid:
+            nome_ufficiale = nome_steam
             dati = dettagli_gioco(appid)
             dati_gioco = dati
             if dati:
@@ -698,6 +1091,28 @@ def procura_materiale(gioco=None, query_pexels="gameplay", minimo=3):
                                      "gioco": nome_ufficiale})
                 for percorso in scarica_screenshot_steam(
                         appid, dati, config.STEAM_MAX_SCREENSHOT, salto):
+                    sorgenti.append({"tipo": "immagine", "path": percorso,
+                                     "gioco": nome_ufficiale})
+
+        # Le esclusive console su Steam non ci sono: si va a chiederle al
+        # negozio del loro editore invece di ripiegare sullo stock.
+        if not sorgenti and config.USA_ALTRI_NEGOZI:
+            trovato = materiale_dai_negozi(
+                gioco, config.STEAM_MAX_TRAILER, config.STEAM_MAX_SCREENSHOT)
+            if trovato:
+                nome_ufficiale = trovato["nome"]
+                chiave = _indirizzo_nome(nome_ufficiale) or "negozio"
+                if salto:
+                    print(f"[Gameplay] Short numero {salto + 1} su "
+                          f"'{nome_ufficiale}': cambio materiale.")
+                for percorso in scarica_mp4_ufficiali(
+                        trovato["video"], chiave,
+                        config.STEAM_MAX_TRAILER, salto):
+                    sorgenti.append({"tipo": "video", "path": percorso,
+                                     "gioco": nome_ufficiale})
+                for percorso in scarica_immagini_dai_negozi(
+                        trovato["immagini"], chiave,
+                        config.STEAM_MAX_SCREENSHOT, salto):
                     sorgenti.append({"tipo": "immagine", "path": percorso,
                                      "gioco": nome_ufficiale})
 

@@ -77,6 +77,20 @@ class TestSomiglianza:
         ]:
             assert gameplay._somiglianza(cercato, ufficiale) >= gameplay.SOGLIA_CORRISPONDENZA, ufficiale
 
+    def test_gli_accenti_non_fanno_due_giochi_diversi(self):
+        # Il modello scrive 'Pokemon' e 'Ghost of Yotei', i negozi li scrivono
+        # con l'accento: senza appianarli il video usciva con clip generiche.
+        for cercato, ufficiale in [
+            ("Pokemon Legends Z-A", "Pokémon Legends: Z-A"),
+            ("Ghost of Yotei", "Ghost of Yōtei"),
+        ]:
+            assert gameplay._somiglianza(cercato, ufficiale) >= \
+                gameplay.SOGLIA_CORRISPONDENZA, ufficiale
+
+    def test_il_simbolo_del_marchio_non_diventa_le_lettere_tm(self):
+        assert gameplay._normalizza("The Last of Us™ Part I") == \
+            "the last of us part i"
+
     def test_the_last_of_us_cerca_la_parte_uno(self):
         nome = gameplay.ALIAS_GIOCHI[gameplay._normalizza("The Last of Us")]
         assert gameplay._somiglianza(nome, "The Last of Us™ Part I") >= gameplay.SOGLIA_CORRISPONDENZA
@@ -245,7 +259,7 @@ class TestScreenshotDiversiAOgniGiro:
         class Risposta:
             content = b"x" * 30_000
 
-        def finta_get(url, timeout=None):
+        def finta_get(url, timeout=None, headers=None):
             scaricati.append(url)
             return Risposta()
 
@@ -527,3 +541,507 @@ class TestGtaViDalSitoRockstar:
         assert len(scaricati) == 2
         assert all(s["gioco"] == "Grand Theft Auto VI" for s in sorgenti)
         assert all("akamaized.net/VI/downloads/videos/" in u for u in scaricati)
+
+
+class TestIndirizzoDelNome:
+    """PlayStation ed Epic cercano i giochi per pezzo di indirizzo."""
+
+    def test_apostrofo_e_numero(self):
+        assert gameplay._indirizzo_nome("Marvel's Spider-Man 2") == \
+            "marvels-spider-man-2"
+
+    def test_le_lettere_accentate_diventano_semplici(self):
+        # Con un trattino al posto della o lunga la pagina non esiste.
+        assert gameplay._indirizzo_nome("Ghost of Yōtei") == "ghost-of-yotei"
+
+    def test_niente_nome_niente_indirizzo(self):
+        assert gameplay._indirizzo_nome(None) == ""
+        assert gameplay._indirizzo_nome("   ") == ""
+
+
+class _RispostaFinta:
+    """Risposta HTTP finta: testo o json, con errore opzionale."""
+
+    def __init__(self, testo="", dati=None, errore=None, status_code=200):
+        self.text = testo
+        self.status_code = status_code
+        self._dati = dati
+        self._errore = errore
+
+    def raise_for_status(self):
+        if self._errore:
+            raise self._errore
+
+    def json(self):
+        if self._dati is None:
+            raise ValueError("non e' json")
+        return self._dati
+
+
+def _finta_rete(monkeypatch, risposte, chiamate=None):
+    """`risposte` e' una lista di (pezzo_di_url, risposta): vince il primo
+    pezzo contenuto nell'indirizzo chiesto. Nessun pezzo: errore 404."""
+    chiamate = chiamate if chiamate is not None else []
+
+    def finto_get(url, timeout=None, headers=None, **extra):
+        chiamate.append(url)
+        for pezzo, risposta in risposte:
+            if pezzo in url:
+                return risposta
+        return _RispostaFinta(errore=gameplay.requests.HTTPError("404"))
+
+    monkeypatch.setattr(gameplay.requests, "get", finto_get)
+    return chiamate
+
+
+class TestPlayStation:
+    """'Ghost of Yotei' su Steam non c'e': il 5 ottobre 2026 lo Short e'
+    uscito con clip Pexels. Sony i filmati li pubblica nella scheda."""
+
+    SCHEDA = (
+        '<video src="https://gmedia.playstation.com/is/content/SIEPDC/global_pdc'
+        '/en/games/pdps/g/gh/ghost-of-yotei/videos/annuncio.mp4&#34;,&#34;asset">'
+        '"https://vulcan.dl.playstation.net/img/rnd/202108/1922/IXaqDecMqWm5.mp4"'
+        '"https://gmedia.playstation.com/is/content/SIEPDC/hardware/ps5-pro'
+        '/channel-specific-content/PS5-Pro-All-Features.mp4"'
+    )
+
+    def test_prende_i_filmati_dai_due_cdn_e_lascia_fuori_lo_spot(self, monkeypatch):
+        _finta_rete(monkeypatch, [("playstation.com/en-us/games",
+                                   _RispostaFinta(self.SCHEDA))])
+        trovato = gameplay.materiale_playstation("Ghost of Yotei")
+        assert trovato["video"] == [
+            "https://gmedia.playstation.com/is/content/SIEPDC/global_pdc/en/games"
+            "/pdps/g/gh/ghost-of-yotei/videos/annuncio.mp4",
+            "https://vulcan.dl.playstation.net/img/rnd/202108/1922/IXaqDecMqWm5.mp4",
+        ]
+
+    def test_l_indirizzo_finisce_esattamente_su_mp4(self, monkeypatch):
+        # Nella pagina l'indirizzo continua con altro testo: ffmpeg con la
+        # coda attaccata non scaricherebbe niente.
+        _finta_rete(monkeypatch, [("playstation.com", _RispostaFinta(self.SCHEDA))])
+        trovato = gameplay.materiale_playstation("Ghost of Yotei")
+        assert all(u.endswith(".mp4") for u in trovato["video"])
+
+    def test_se_la_scheda_non_esiste_si_prova_senza_sottotitolo(self, monkeypatch):
+        chiamate = _finta_rete(monkeypatch, [
+            ("ghost-of-tsushima/", _RispostaFinta(self.SCHEDA)),
+        ])
+        trovato = gameplay.materiale_playstation(
+            "Ghost of Tsushima: Director's Cut")
+        assert trovato and trovato["video"]
+        assert "ghost-of-tsushima-directors-cut" in chiamate[0]
+        assert chiamate[1].endswith("/ghost-of-tsushima/")
+
+    def test_gioco_che_su_playstation_non_c_e(self, monkeypatch):
+        _finta_rete(monkeypatch, [])
+        assert gameplay.materiale_playstation("Gears of War") is None
+
+    def test_una_scheda_senza_filmati_non_vale(self, monkeypatch):
+        _finta_rete(monkeypatch, [("playstation.com",
+                                   _RispostaFinta("<p>niente video</p>"))])
+        assert gameplay.materiale_playstation("Astro Bot") is None
+
+
+    def test_i_filmati_del_gioco_giusto_vanno_davanti(self, monkeypatch):
+        # In fondo alla scheda di Spider-Man 2 ci sono i filmati dei giochi
+        # consigliati: diciannove in tutto, e i primi tre vanno montati.
+        pagina = (
+            '"https://vulcan.dl.playstation.net/img/rnd/202310/consigliato.mp4"'
+            '"https://gmedia.playstation.com/is/content/SIEPDC/global_pdc/en'
+            '/games/pdps/s/sp/spider-man-2/hero/video/trailer.mp4"'
+        )
+        _finta_rete(monkeypatch, [("playstation.com", _RispostaFinta(pagina))])
+        trovato = gameplay.materiale_playstation("Spider-Man 2")
+        assert trovato["video"][0].endswith("/spider-man-2/hero/video/trailer.mp4")
+
+
+class TestIlNegozioCheFrena:
+    """Un 403 non vuol dire 'non esiste' come il 404: vuol dire 'troppe
+    richieste'. Il 6 ottobre 2026 PlayStation ha cominciato a rispondere 403
+    anche sui giochi che un minuto prima aveva trovato."""
+
+    def test_dopo_una_pausa_si_riprova_una_volta(self, monkeypatch):
+        risposte = [_RispostaFinta(status_code=403),
+                    _RispostaFinta("eccomi")]
+        monkeypatch.setattr(gameplay.time, "sleep", lambda s: None)
+        monkeypatch.setattr(gameplay.requests, "get",
+                            lambda *a, **k: risposte.pop(0))
+        assert gameplay._scarica_pagina("http://x").text == "eccomi"
+
+    def test_due_volte_di_fila_e_si_lascia_perdere(self, monkeypatch):
+        chiamate = []
+
+        def finto(*a, **k):
+            chiamate.append(1)
+            return _RispostaFinta(
+                status_code=403,
+                errore=gameplay.requests.HTTPError("403"))
+        monkeypatch.setattr(gameplay.time, "sleep", lambda s: None)
+        monkeypatch.setattr(gameplay.requests, "get", finto)
+        try:
+            gameplay._scarica_pagina("http://x")
+            assert False, "doveva alzare l'errore"
+        except gameplay.requests.HTTPError:
+            pass
+        assert len(chiamate) == 2
+
+    def test_un_404_non_si_riprova(self, monkeypatch):
+        chiamate = []
+
+        def finto(*a, **k):
+            chiamate.append(1)
+            return _RispostaFinta(status_code=404,
+                                  errore=gameplay.requests.HTTPError("404"))
+        monkeypatch.setattr(gameplay.requests, "get", finto)
+        try:
+            gameplay._scarica_pagina("http://x")
+        except gameplay.requests.HTTPError:
+            pass
+        assert len(chiamate) == 1
+
+
+class TestDoppioniDiMisura:
+    """Nelle pagine Nintendo lo stesso disegno c'e' a tre misure: senza
+    accorparli si prenderebbero tre dei quattro posti disponibili."""
+
+    def test_si_tiene_la_misura_piu_grande(self):
+        elenco = ["http://x/foto_image1280w.jpg", "http://x/foto_image1600w.jpg"]
+        assert gameplay._senza_doppioni_di_misura(elenco) == \
+            ["http://x/foto_image1600w.jpg"]
+
+    def test_quella_senza_suffisso_vince(self):
+        elenco = ["http://x/foto_image1280w.jpg", "http://x/foto.jpg"]
+        assert gameplay._senza_doppioni_di_misura(elenco) == ["http://x/foto.jpg"]
+
+    def test_due_disegni_diversi_restano_due(self):
+        elenco = ["http://x/uno.jpg", "http://x/due_image950w.jpg"]
+        assert len(gameplay._senza_doppioni_di_misura(elenco)) == 2
+
+
+class TestSoloSchermate:
+    """Nelle schede ci sono anche fasce e sfondi del sito: in uno Short
+    verticale si vedono per quello che sono, grafica di contorno."""
+
+    def test_fasce_e_sfondi_restano_fuori(self):
+        elenco = ["http://x/CI_Gioco_Banner_EN.jpg",
+                  "http://x/CI_Gioco_Background.jpg",
+                  "http://x/CI_Gioco_Scena_1.jpg"]
+        assert gameplay._solo_schermate(elenco) == ["http://x/CI_Gioco_Scena_1.jpg"]
+
+    def test_se_il_filtro_svuota_tutto_meglio_il_dubbio_che_lo_stock(self):
+        elenco = ["http://x/CI_Gioco_Banner_EN.jpg"]
+        assert gameplay._solo_schermate(elenco) == elenco
+
+
+class TestEpic:
+    """Fortnite e' uno degli argomenti che portano piu' pubblico e su Steam
+    non c'e'. La pagina del negozio e' JavaScript, l'API che la riempie no."""
+
+    SCHEDA = (
+        '{"videoUrl":"https://epic-games-store-cdn.qstv.on.epicgames.com/output'
+        '/aaaa-1111/output.mp4","altro":"https://epic-games-store-cdn.qstv.on'
+        '.epicgames.com/output/bbbb-2222/output.mp4"}'
+    )
+
+    def test_prende_i_filmati_della_scheda(self, monkeypatch):
+        _finta_rete(monkeypatch, [("store-content.ak.epicgames.com",
+                                   _RispostaFinta(self.SCHEDA))])
+        trovato = gameplay.materiale_epic("Fortnite")
+        assert len(trovato["video"]) == 2
+        assert trovato["video"][0].endswith("/aaaa-1111/output.mp4")
+
+    def test_gioco_che_su_epic_non_c_e(self, monkeypatch):
+        _finta_rete(monkeypatch, [])
+        assert gameplay.materiale_epic("Pokemon Legends Z-A") is None
+
+
+class TestNintendo:
+    """Nintendo non pubblica mp4 nelle schede, ma pubblica le schermate
+    ufficiali: valgono come gli screenshot Steam, animati in Ken Burns."""
+
+    RICERCA = {"response": {"docs": [
+        {"title": "Pokémon Legends: Z-A",
+         "url": "/en-gb/Games/Nintendo-Switch-2-games/Pokemon-Legends-Z-A-2533423.html"},
+    ]}}
+    PAGINA = (
+        '<img src="https://www.nintendo.com/eu/media/images/01_website_elements'
+        '/icons/favicon.png">'
+        '<img src="https://www.nintendo.com/eu/media/images/09_switch2_games'
+        '/pokemon-legends-za/scena-nuova.jpg">'
+        '<img src="https://www.nintendo.com/eu/media/images/08_content_images'
+        '/nswitch_1/CI_NSwitch_1.jpg">'
+        '<img src="https://www.nintendo.com/eu/media/images/08_content_images'
+        '/nswitch_1/CI_NSwitch_2.jpg">'
+        '<img src="https://www.nintendo.com/eu/media/images/02_logos'
+        '/logo-nintendo.png">'
+    )
+
+    def test_prende_solo_le_schermate_del_gioco(self, monkeypatch):
+        _finta_rete(monkeypatch, [
+            ("search.nintendo-europe.com", _RispostaFinta(dati=self.RICERCA)),
+            ("nintendo.com/en-gb/Games", _RispostaFinta(self.PAGINA)),
+        ])
+        trovato = gameplay.materiale_nintendo("Pokemon Legends Z-A")
+        assert trovato["video"] == []
+        # Le icone e i loghi del sito restano fuori; le schermate per la
+        # stampa vanno davanti alle altre immagini del gioco.
+        assert len(trovato["immagini"]) == 3
+        assert all("08_content_images" in u for u in trovato["immagini"][:2])
+        assert trovato["immagini"][2].endswith("/scena-nuova.jpg")
+        assert trovato["nome"] == "Pokémon Legends: Z-A"
+
+    def test_un_gioco_diverso_viene_scartato(self, monkeypatch):
+        # La ricerca Nintendo risponde sempre qualcosa, come quella di Steam.
+        ricerca = {"response": {"docs": [
+            {"title": "Minecraft Dungeons", "url": "/en-gb/x.html"}]}}
+        chiamate = _finta_rete(monkeypatch, [
+            ("search.nintendo-europe.com", _RispostaFinta(dati=ricerca)),
+            ("nintendo.com/en-gb", _RispostaFinta(self.PAGINA)),
+        ])
+        assert gameplay.materiale_nintendo("Minecraft") is None
+        assert not any("/en-gb/x.html" in u for u in chiamate), \
+            "la scheda sbagliata non va nemmeno aperta"
+
+    def test_ricerca_rotta_non_ferma_niente(self, monkeypatch):
+        _finta_rete(monkeypatch, [
+            ("search.nintendo-europe.com",
+             _RispostaFinta(errore=gameplay.requests.ConnectionError("giu'"))),
+        ])
+        assert gameplay.materiale_nintendo("Pokemon Legends Z-A") is None
+
+
+class TestXbox:
+    """Il catalogo Microsoft da' le schermate ufficiali; la lista dei video
+    e' sempre vuota, quindi da Xbox arrivano solo immagini."""
+
+    SUGGERIMENTI = {"ResultSets": [{"Suggests": [
+        {"Title": "Gears of War: E-Day",
+         "Metas": [{"Key": "BigCatalogId", "Value": "9N4PT8HGCDHQ"}]},
+    ]}]}
+    CATALOGO = {"Products": [{"LocalizedProperties": [{"Images": [
+        {"ImagePurpose": "Screenshot", "Width": 3840, "Height": 2160,
+         "Uri": "//store-images.s-microsoft.com/image/apps.1.jpg"},
+        {"ImagePurpose": "Screenshot", "Width": 1920, "Height": 1080,
+         "Uri": "//store-images.s-microsoft.com/image/apps.2.jpg"},
+        {"ImagePurpose": "Screenshot", "Width": 200, "Height": 112,
+         "Uri": "//store-images.s-microsoft.com/image/apps.piccola.jpg"},
+        {"ImagePurpose": "Poster", "Width": 1440, "Height": 2160,
+         "Uri": "//store-images.s-microsoft.com/image/apps.poster.jpg"},
+    ]}]}]}
+
+    def test_prende_le_schermate_grandi_con_indirizzo_completo(self, monkeypatch):
+        _finta_rete(monkeypatch, [
+            ("msstoreapiprod", _RispostaFinta(dati=self.SUGGERIMENTI)),
+            ("displaycatalog", _RispostaFinta(dati=self.CATALOGO)),
+        ])
+        trovato = gameplay.materiale_xbox("Gears of War E-Day")
+        assert trovato["immagini"] == [
+            "https://store-images.s-microsoft.com/image/apps.1.jpg",
+            "https://store-images.s-microsoft.com/image/apps.2.jpg",
+        ]
+        assert trovato["video"] == []
+
+    def test_i_suggerimenti_senza_gruppi_funzionano_uguale(self, monkeypatch):
+        piatti = {"Suggests": self.SUGGERIMENTI["ResultSets"][0]["Suggests"]}
+        _finta_rete(monkeypatch, [
+            ("msstoreapiprod", _RispostaFinta(dati=piatti)),
+            ("displaycatalog", _RispostaFinta(dati=self.CATALOGO)),
+        ])
+        assert gameplay.materiale_xbox("Gears of War E-Day")["immagini"]
+
+    def test_un_gioco_diverso_viene_scartato(self, monkeypatch):
+        suggerimenti = {"Suggests": [
+            {"Title": "Halo Infinite",
+             "Metas": [{"Key": "BigCatalogId", "Value": "X"}]}]}
+        chiamate = _finta_rete(monkeypatch, [
+            ("msstoreapiprod", _RispostaFinta(dati=suggerimenti)),
+            ("displaycatalog", _RispostaFinta(dati=self.CATALOGO)),
+        ])
+        assert gameplay.materiale_xbox("Halo 3") is None
+        assert not any("displaycatalog" in u for u in chiamate)
+
+
+class TestMaterialeDaiNegozi:
+    """Nessuno dei quattro negozi ha sempre tutto: i filmati li danno
+    PlayStation ed Epic, le schermate Nintendo e Xbox."""
+
+    def test_somma_i_filmati_di_uno_e_le_schermate_dell_altro(self, monkeypatch):
+        monkeypatch.setattr(gameplay, "materiale_playstation",
+                            lambda n: {"nome": "Il Gioco", "video": ["v1"],
+                                       "immagini": []})
+        monkeypatch.setattr(gameplay, "materiale_epic", lambda n: None)
+        monkeypatch.setattr(gameplay, "materiale_nintendo",
+                            lambda n: {"nome": "Altro nome", "video": [],
+                                       "immagini": ["i1", "i2"]})
+        monkeypatch.setattr(gameplay, "materiale_xbox", lambda n: None)
+        trovato = gameplay.materiale_dai_negozi("Il Gioco", 3, 4)
+        assert trovato == {"nome": "Il Gioco", "video": ["v1"],
+                           "immagini": ["i1", "i2"]}
+
+    def test_un_negozio_rotto_non_ferma_gli_altri(self, monkeypatch):
+        def rotto(nome):
+            raise ConnectionError("giu'")
+        monkeypatch.setattr(gameplay, "materiale_playstation", rotto)
+        monkeypatch.setattr(gameplay, "materiale_epic",
+                            lambda n: {"nome": "Fortnite", "video": ["v1"],
+                                       "immagini": []})
+        monkeypatch.setattr(gameplay, "materiale_nintendo", lambda n: None)
+        monkeypatch.setattr(gameplay, "materiale_xbox", lambda n: None)
+        assert gameplay.materiale_dai_negozi("Fortnite", 3, 4)["video"] == ["v1"]
+
+    def test_quando_c_e_abbastanza_non_si_chiede_agli_altri(self, monkeypatch):
+        interrogati = []
+
+        def finto(etichetta, risultato):
+            def cerca(nome):
+                interrogati.append(etichetta)
+                return risultato
+            return cerca
+
+        monkeypatch.setattr(gameplay, "materiale_playstation", finto(
+            "ps", {"nome": "X", "video": ["v1", "v2"], "immagini": ["i1"]}))
+        monkeypatch.setattr(gameplay, "materiale_epic", finto("epic", None))
+        monkeypatch.setattr(gameplay, "materiale_nintendo", finto("nintendo", None))
+        monkeypatch.setattr(gameplay, "materiale_xbox", finto("xbox", None))
+        gameplay.materiale_dai_negozi("X", quanti_video=2, quante_immagini=1)
+        assert interrogati == ["ps"]
+
+    def test_in_nessun_negozio_vuol_dire_niente(self, monkeypatch):
+        for nome in ("materiale_playstation", "materiale_epic",
+                     "materiale_nintendo", "materiale_xbox"):
+            monkeypatch.setattr(gameplay, nome, lambda n: None)
+        assert gameplay.materiale_dai_negozi("Gioco Inventato") is None
+
+
+class TestScaricoDaiNegozi:
+    def test_i_filmati_epic_si_chiamano_tutti_uguale_e_non_si_sovrascrivono(
+            self, monkeypatch, tmp_path):
+        monkeypatch.setattr(config, "DIR_TEMP", str(tmp_path))
+        monkeypatch.setattr(config, "SECONDI_TRAILER", 45)
+        scaricati = []
+
+        def finto(url, destinazione, salta=0, durata=None, a_1080=False):
+            scaricati.append(destinazione)
+            open(destinazione, "wb").close()
+            return True
+        monkeypatch.setattr(gameplay, "_estrai_mp4", finto)
+
+        percorsi = gameplay.scarica_mp4_ufficiali(
+            ["https://cdn/output/a/output.mp4", "https://cdn/output/b/output.mp4"],
+            "fortnite", quanti=2)
+        assert len(set(percorsi)) == 2
+        assert len(percorsi) == 2
+
+    def test_le_schermate_girano_come_quelle_steam(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(config, "DIR_TEMP", str(tmp_path))
+        chiesti = []
+
+        def finta(url, destinazione, minimo=20_000):
+            chiesti.append(url)
+            open(destinazione, "wb").close()
+            return True
+        monkeypatch.setattr(gameplay, "_scarica_immagine", finta)
+
+        elenco = [f"http://s/{i}" for i in range(12)]
+        percorsi = gameplay.scarica_immagini_dai_negozi(
+            elenco, "gioco", quante=4, salto=1)
+        assert len(percorsi) == 4
+        assert chiesti[0] == "http://s/4"
+
+
+class TestEsclusiveConsoleNelVideo:
+    """Sui trenta Short prima del 6 ottobre 2026, sei sono usciti con clip
+    Pexels perche' il gioco su Steam non c'era."""
+
+    def _finto_maker(self, monkeypatch, scarica):
+        # maker importa numpy, che nei test non c'e': si mette al suo posto
+        # un modulo finto, come fa TestClipMieNelMontaggio.
+        finto = types.ModuleType("maker")
+        finto.scarica_clip_sfondo = scarica
+        monkeypatch.setitem(sys.modules, "maker", finto)
+
+    def test_un_gioco_fuori_da_steam_monta_il_materiale_del_suo_negozio(
+            self, monkeypatch, tmp_path):
+        monkeypatch.setattr(config, "USA_STEAM", True)
+        monkeypatch.setattr(config, "USA_ALTRI_NEGOZI", True)
+        monkeypatch.setattr(config, "DIR_TEMP", str(tmp_path))
+        monkeypatch.setattr(config, "STEAM_MAX_TRAILER", 3)
+        monkeypatch.setattr(config, "STEAM_MAX_SCREENSHOT", 4)
+        monkeypatch.setattr(config, "FILE_CRONOLOGIA", str(tmp_path / "niente.json"))
+        monkeypatch.setattr(gameplay, "cerca_gioco_steam", lambda n: (None, None))
+        monkeypatch.setattr(gameplay, "clip_mie", lambda c, s: [])
+        monkeypatch.setattr(gameplay, "materiale_dai_negozi",
+                            lambda n, v=3, i=4: {
+                                "nome": "Ghost of Yotei",
+                                "video": ["https://gmedia/annuncio.mp4"],
+                                "immagini": ["https://img/1.jpg", "https://img/2.jpg"]})
+
+        def finto_mp4(url, destinazione, salta=0, durata=None, a_1080=False):
+            open(destinazione, "wb").close()
+            return True
+        monkeypatch.setattr(gameplay, "_estrai_mp4", finto_mp4)
+        monkeypatch.setattr(gameplay, "_scarica_immagine",
+                            lambda u, d, minimo=20_000: (open(d, "wb").close() or True))
+
+        def pexels_vietato(*a, **k):
+            raise AssertionError("col materiale del negozio Pexels non serve")
+        self._finto_maker(monkeypatch, pexels_vietato)
+
+        sorgenti, nome = gameplay.procura_materiale("Ghost of Yōtei", minimo=3)
+        assert nome == "Ghost of Yotei"
+        assert [s["tipo"] for s in sorgenti] == ["video", "immagine", "immagine"]
+        assert all(s["gioco"] == "Ghost of Yotei" for s in sorgenti)
+
+    def test_senza_materiale_nei_negozi_si_ripiega_su_pexels(
+            self, monkeypatch, tmp_path):
+        monkeypatch.setattr(config, "USA_STEAM", True)
+        monkeypatch.setattr(config, "USA_ALTRI_NEGOZI", True)
+        monkeypatch.setattr(config, "DIR_TEMP", str(tmp_path))
+        monkeypatch.setattr(config, "FILE_CRONOLOGIA", str(tmp_path / "niente.json"))
+        monkeypatch.setattr(gameplay, "cerca_gioco_steam", lambda n: (None, None))
+        monkeypatch.setattr(gameplay, "clip_mie", lambda c, s: [])
+        monkeypatch.setattr(gameplay, "materiale_dai_negozi", lambda n, v=3, i=4: None)
+        self._finto_maker(monkeypatch,
+                          lambda query, quante=3: ["stock.mp4"] * quante)
+        sorgenti, nome = gameplay.procura_materiale("Gioco Inventato", minimo=3)
+        assert nome is None
+        assert all(s["gioco"] is None for s in sorgenti)
+
+    def test_con_l_interruttore_spento_i_negozi_non_si_toccano(
+            self, monkeypatch, tmp_path):
+        monkeypatch.setattr(config, "USA_STEAM", True)
+        monkeypatch.setattr(config, "USA_ALTRI_NEGOZI", False)
+        monkeypatch.setattr(config, "DIR_TEMP", str(tmp_path))
+        monkeypatch.setattr(config, "FILE_CRONOLOGIA", str(tmp_path / "niente.json"))
+        monkeypatch.setattr(gameplay, "cerca_gioco_steam", lambda n: (None, None))
+        monkeypatch.setattr(gameplay, "clip_mie", lambda c, s: [])
+
+        def vietato(*a, **k):
+            raise AssertionError("interruttore spento")
+        monkeypatch.setattr(gameplay, "materiale_dai_negozi", vietato)
+        self._finto_maker(monkeypatch,
+                          lambda query, quante=3: ["stock.mp4"] * quante)
+        assert gameplay.procura_materiale("Qualsiasi", minimo=3)[1] is None
+
+    def test_un_gioco_su_steam_non_passa_dai_negozi(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(config, "USA_STEAM", True)
+        monkeypatch.setattr(config, "USA_ALTRI_NEGOZI", True)
+        monkeypatch.setattr(config, "DIR_TEMP", str(tmp_path))
+        monkeypatch.setattr(config, "STEAM_MAX_TRAILER", 3)
+        monkeypatch.setattr(config, "STEAM_MAX_SCREENSHOT", 4)
+        monkeypatch.setattr(config, "FILE_CRONOLOGIA", str(tmp_path / "niente.json"))
+        monkeypatch.setattr(gameplay, "cerca_gioco_steam",
+                            lambda n: (42, "Cyberpunk 2077"))
+        monkeypatch.setattr(gameplay, "dettagli_gioco", lambda a: {"movies": [{"id": 1}]})
+        monkeypatch.setattr(gameplay, "scarica_trailer_steam",
+                            lambda *a, **k: ["t1.mp4", "t2.mp4", "t3.mp4"])
+        monkeypatch.setattr(gameplay, "scarica_screenshot_steam", lambda *a, **k: [])
+        monkeypatch.setattr(gameplay, "clip_mie", lambda c, s: [])
+
+        def vietato(*a, **k):
+            raise AssertionError("il gioco e' su Steam: i negozi non servono")
+        monkeypatch.setattr(gameplay, "materiale_dai_negozi", vietato)
+        sorgenti, nome = gameplay.procura_materiale("Cyberpunk 2077", minimo=3)
+        assert nome == "Cyberpunk 2077"
+        assert len(sorgenti) == 3
