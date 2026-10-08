@@ -290,3 +290,36 @@ class TestPoliticaNeutra:
             ricerche = json.load(f)["ricerche"]
         assert any("governo" in r.lower() for r in ricerche["it"])
         assert any("politics" in r.lower() for r in ricerche["en"])
+
+
+class TestTemiARischio:
+    """Valgono per ogni canale, anche per Poppone TV che non ha temi esclusi:
+    l'8 ottobre 2026 e' uscito uno Short su un porting non ufficiale di GTA 5
+    giocabile gratis nel browser."""
+
+    @pytest.mark.parametrize("testo", [
+        "Un porting non ufficiale di GTA 5 gira nel browser",
+        "GTA 6 craccato prima dell'uscita? Ecco cosa sappiamo",
+        "Robux gratis: l'ultima truffa su Roblox",
+        "Take-Two manda un DMCA al progetto",
+    ])
+    def test_scarta_in_italiano(self, testo):
+        assert brain._tema_escluso(testo)
+
+    @pytest.mark.parametrize("testo", [
+        "An unofficial port of GTA 5 now runs in your browser",
+        "Free V-Bucks scams are back on TikTok",
+        "Denuvo cracked in record time",
+    ])
+    def test_scarta_in_inglese(self, testo):
+        assert brain._tema_escluso(testo, brain.TEMI_A_RISCHIO["en"])
+
+    @pytest.mark.parametrize("testo", [
+        "Sea of Thieves: la nuova stagione dei pirati",
+        "GTA 5: tutti i trucchi ufficiali per PS5",
+        "Diablo 4, il miglior hack and slash dell'anno",
+        "GTA 6, il trailer ufficiale batte ogni record",
+        "Crackdown 4 non e' in sviluppo",
+    ])
+    def test_lascia_passare_le_notizie_buone(self, testo):
+        assert brain._tema_escluso(testo) == ""
