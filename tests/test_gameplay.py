@@ -318,6 +318,34 @@ class TestCategoriaDelleClipMie:
         dati = {"genres": [{"description": "racing"}]}
         assert gameplay.categoria_clip_mie("Un Gioco Qualunque", dati) == "guida"
 
+    def test_marvel_rivals_dichiara_otto_generi_e_non_e_un_gioco_di_guida(self):
+        # Il 7 ottobre 2026 lo Short su Marvel Rivals e' uscito con dentro le
+        # clip del volante: Steam gli fa dichiarare anche "Racing".
+        dati = {"genres": [{"description": d} for d in (
+            "Action", "Adventure", "Casual", "Massively Multiplayer",
+            "Racing", "RPG", "Strategy", "Free To Play")]}
+        assert gameplay.categoria_clip_mie("Marvel Rivals", dati) is None
+
+    def test_i_giochi_di_guida_veri_restano_riconosciuti(self):
+        # Liste vere, lette da Steam il 8 ottobre 2026.
+        forza = {"genres": [{"description": d} for d in (
+            "Action", "Adventure", "Racing", "Simulation", "Sports")]}
+        f1 = {"genres": [{"description": d} for d in ("Racing", "Sports")]}
+        assert gameplay.categoria_clip_mie("Un Gioco Qualunque", forza) == "guida"
+        assert gameplay.categoria_clip_mie("Un Gioco Qualunque", f1) == "guida"
+
+    def test_una_lista_lunga_vale_se_un_genere_conferma(self):
+        # Sei generi, ma Sports e Simulation dicono che si guida davvero.
+        crew = {"genres": [{"description": d} for d in (
+            "Action", "Adventure", "Massively Multiplayer", "Racing",
+            "Simulation", "Sports")]}
+        assert gameplay.categoria_clip_mie("Un Gioco Qualunque", crew) == "guida"
+
+    def test_senza_generi_non_si_decide_dal_nulla(self):
+        assert gameplay.categoria_clip_mie("Un Gioco Qualunque", {}) is None
+        assert gameplay.categoria_clip_mie("Un Gioco Qualunque",
+                                           {"genres": []}) is None
+
     def test_senza_steam_decide_il_nome(self):
         # I giochi appena annunciati su Steam spesso non ci sono ancora, ed e'
         # proprio di quelli che parlano le notizie.
