@@ -1558,5 +1558,21 @@
     "video_id": "cjbUlNJOPSU",
     "voce": "Alex",
     "veste": "pulito"
+  },
+  {
+    "timestamp": 1791444447,
+    "data": "2026-10-08",
+    "titolo": "GTA 5: gratis nel browser? 🚀",
+    "lingua": "it",
+    "slot": "14:00",
+    "uscita": 1791460800,
+    "formato": "short",
+    "estratto_script": "700 MB di GTA 5 caricati direttamente nel browser: un porting non ufficiale è esploso onli",
+    "stile": "SEAMLESS_LOOP_FACTS",
+    "gioco": "GTA 5",
+    "query_video": "gta 5 gameplay",
+    "fonte": "GTA 5 diventa giocabile gratis nel browser, ma scoppia il caos (Tom's Hardware)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMiogFBVV95cUxOSXJRaXBLS1FiRXBnY21OdlVObjF4Ul9oTDVsSVREUS1kS19hWjNBSGVlNnZ3Z2NSTjJvY256Yjc1YXRiNEFGYTRyY21RVm02Y2N0eS1yRUFNd2hzOVVpZnJhSERlMWRWTGhFU09WUmJlREpHZVhfc3BXSWZYWWtpYXRFVTFBSXNMcFAzMmhDZkdNUXVWZDdkRjA4aTdOYWNnZkE?oc=5",
+    "video_id": null
   }
 ]
