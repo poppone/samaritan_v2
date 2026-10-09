@@ -209,6 +209,9 @@ jobs:
           # Vuoto = il nome scritto in canale.json, o Poppone TV senza file.
           # Niente ripiego scritto qui: vincerebbe sul profilo di chi installa.
           NOME_CANALE: ${{ vars.NOME_CANALE }}
+          # Righe di link in fondo alla descrizione, JSON per lingua: {"it": ["..."]}.
+          # Vuoto = i link predefiniti del profilo (Instant Gaming e sito per il gaming).
+          LINK_DESCRIZIONE: ${{ vars.LINK_DESCRIZIONE }}
           # La voce di questa run la sceglie config fra le due qui sotto, in
           # base alla lingua. La riserva sceglie la lingua solo a lavorazione
           # iniziata, quindi le servono tutt'e due gia' pronte.

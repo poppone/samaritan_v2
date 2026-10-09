@@ -94,14 +94,13 @@ HANDLE_CANALE = _get("HANDLE_CANALE", PROFILO.handle)
 # Sito del canale (senza https://), nella descrizione di ogni video.
 SITO_CANALE = _get("SITO_CANALE", PROFILO.sito)
 
-# Righe con link in fondo alla descrizione YouTube, per lingua: affiliazioni e
-# sito. La variabile LINK_DESCRIZIONE (JSON, es. {"it": ["riga", ...]}) vince;
+# Righe con link in fondo alla descrizione YouTube, per lingua (affiliazioni;
+# il sito ha gia' la sua riga, SITO_CANALE, dove esiste). La variabile LINK_DESCRIZIONE (JSON, es. {"it": ["riga", ...]}) vince;
 # senza, un canale gaming usa LINK_GAMING e gli altri nessun link.
 LINK_GAMING = {
     "it": [
         "Giochi scontati su Instant Gaming (link affiliato): "
         "https://www.instant-gaming.com/it/?igr=poppone",
-        "Le notizie gaming ogni giorno, con le fonti: https://www.davidedurazzi.it",
     ],
     "en": [
         "Cheaper game keys on Instant Gaming (affiliate link): "
