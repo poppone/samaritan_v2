@@ -1536,6 +1536,9 @@ def costruisci_descrizione(dati, materiale=None, capitoli=""):
         f"{config.NOME_CANALE}: "
         f"youtube.com/{config.HANDLE_CANALE}"
     )
+    link = config.link_descrizione(config.LINGUA)
+    if link:
+        parti.append("\n" + "\n".join(link))
     parti.append("\n" + " ".join(costruisci_hashtag(dati)))
     return "\n".join(parti)
 

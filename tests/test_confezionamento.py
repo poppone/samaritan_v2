@@ -164,6 +164,23 @@ class TestDescrizione:
         assert "#Shorts" not in descrizione
         assert descrizione.rstrip().endswith("#gamingita")
 
+    def test_aggiunge_i_link_della_lingua(self, monkeypatch):
+        monkeypatch.setenv("LINK_DESCRIZIONE", '{"it": ["Offerte: https://esempio.it"]}')
+        monkeypatch.setattr(brain.config, "LINGUA", "it")
+        descrizione = brain.costruisci_descrizione(DATI_GTA)
+        assert "Offerte: https://esempio.it" in descrizione
+        assert descrizione.rstrip().endswith("#gamingita")
+
+    def test_senza_link_per_la_lingua_non_aggiunge_niente(self, monkeypatch):
+        monkeypatch.setenv("LINK_DESCRIZIONE", '{"it": ["Offerte: https://esempio.it"]}')
+        monkeypatch.setattr(brain.config, "LINGUA", "en")
+        assert "esempio.it" not in brain.costruisci_descrizione(DATI_GTA)
+
+    def test_canale_gaming_porta_instant_gaming(self, monkeypatch):
+        monkeypatch.delenv("LINK_DESCRIZIONE", raising=False)
+        monkeypatch.setattr(brain.config, "LINGUA", "it")
+        assert "igr=poppone" in brain.costruisci_descrizione(DATI_GTA)
+
     def test_porta_al_canale(self):
         assert "@davidedurazzi" in brain.costruisci_descrizione(DATI_GTA)
 
