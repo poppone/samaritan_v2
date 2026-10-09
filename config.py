@@ -90,6 +90,8 @@ except profilo.ProfiloNonValido as e:
 NOME_CANALE = _get("NOME_CANALE", PROFILO.nome_canale)
 # Handle YouTube: finisce nella descrizione di ogni video come link al canale.
 HANDLE_CANALE = _get("HANDLE_CANALE", PROFILO.handle)
+# Sito del canale (senza https://), nella descrizione di ogni video.
+SITO_CANALE = _get("SITO_CANALE", PROFILO.sito)
 
 # Lingua, uscita coperta, orario di pubblicazione e voce di questa run: li
 # decide risolvi_uscita() qui sotto, a partire dal profilo del canale.

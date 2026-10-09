@@ -89,8 +89,14 @@ ARGOMENTO_GAMING = "gaming"
 # IL PROFILO DI POPPONE TV (= il comportamento di sempre)
 # ===========================================================================
 PREDEFINITO = {
-    "nome_canale": "Poppone TV",
+    # Il 9 ottobre 2026 popponetv ha rinominato il canale "Davide Durazzi" e
+    # ha chiesto di mandare chi guarda anche sul suo sito. L'handle resta
+    # quello vecchio finche' non lo cambia su YouTube.
+    "nome_canale": "Davide Durazzi",
     "handle": "@PopponeTV",
+    # Sito del canale: finisce nella descrizione di ogni video, subito sotto
+    # le prime righe. Vuoto = nessuna riga.
+    "sito": "davidedurazzi.it",
 
     # Come si dice l'argomento DOPO un nome: "notizie gaming", "Altri
     # Shorts gaming ogni giorno". Per la cucina sarebbe "di cucina".
@@ -334,6 +340,7 @@ _NEUTRO = {
     "temi_esclusi": {},
     "autodefinisci": False,
     "solo_nomi_grossi": False,
+    "sito": "",
 }
 
 # Articoli e desinenze per i due generi. Servono perche' i prompt parlano
@@ -782,6 +789,8 @@ def da_dizionario(dal_file, origine="canale.json"):
 
     if argomento.strip().lower() == ARGOMENTO_GAMING:
         dati = json.loads(json.dumps(PREDEFINITO))     # copia profonda
+        # Il sito di popponetv non va a un altro canale di videogiochi.
+        dati["sito"] = ""
         for chiave, valore in dal_file.items():
             # Gli oggetti si fondono: chi cambia solo le ricerche italiane
             # tiene quelle inglesi, chi cambia un hashtag tiene gli altri.

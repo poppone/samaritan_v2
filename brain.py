@@ -1502,6 +1502,13 @@ def costruisci_descrizione(dati, materiale=None, capitoli=""):
     """
     parti = [dati.get("descrizione") or dati.get("titolo", "")]
 
+    # Il sito sta subito sotto le prime righe, le uniche che si leggono prima
+    # di "altro": chiesto da popponetv il 9 ottobre 2026.
+    sito = (config.SITO_CANALE or "").strip()
+    if sito:
+        invito = "More on" if (config.LINGUA or "it").lower() == "en" else "Approfondimenti su"
+        parti.append(f"\n{invito} https://{sito.removeprefix('https://')}")
+
     # I capitoli vanno IN ALTO, subito sotto le prime righe: YouTube li legge
     # ovunque siano nella descrizione, ma chi guarda li cerca li'. Li ha solo
     # il video lungo, dove sono la ragione principale per cui uno spettatore
@@ -1962,7 +1969,7 @@ def _chiedi_a_groq(**parametri):
 # dettagli superavano la meta' delle frasi, lo script non si poteva ripulire
 # e l'uscita delle 21:00 e' saltata due volte.
 _PAROLE_INVITO = re.compile(
-    r"\b(viewers?|audience|spettator\w*|poppone|subscrib\w*|iscriv\w*|"
+    r"\b(viewers?|audience|spettator\w*|poppone|durazzi|subscrib\w*|iscriv\w*|"
     r"like the video|comment\w*)\b")
 
 

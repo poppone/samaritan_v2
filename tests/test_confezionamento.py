@@ -7,6 +7,7 @@ il gioco e la descrizione e' identica a quella di ieri, il video non lo trova
 nessuno e il canale sembra automatico anche a chi ci capita per caso.
 """
 import brain
+import config
 
 
 DATI_GTA = {
@@ -165,6 +166,18 @@ class TestDescrizione:
 
     def test_porta_al_canale(self):
         assert "@PopponeTV" in brain.costruisci_descrizione(DATI_GTA)
+
+    def test_porta_al_sito_subito_sotto_le_prime_righe(self, monkeypatch):
+        monkeypatch.setattr(config, "SITO_CANALE", "davidedurazzi.it")
+        monkeypatch.setattr(config, "LINGUA", "it")
+        righe = brain.costruisci_descrizione(DATI_GTA).split("\n")
+        assert "Approfondimenti su https://davidedurazzi.it" in righe[:4]
+        monkeypatch.setattr(config, "LINGUA", "en")
+        assert "More on https://davidedurazzi.it" in brain.costruisci_descrizione(DATI_GTA)
+
+    def test_senza_sito_nessuna_riga(self, monkeypatch):
+        monkeypatch.setattr(config, "SITO_CANALE", "")
+        assert "https://davidedurazzi" not in brain.costruisci_descrizione(DATI_GTA)
 
     def test_cambia_da_un_video_all_altro(self):
         a = brain.costruisci_descrizione(DATI_GTA)
