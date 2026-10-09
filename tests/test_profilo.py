@@ -73,6 +73,14 @@ def _minimo_cucina(**altro):
     return dati
 
 
+class TestSito:
+    def test_un_altro_canale_gaming_non_eredita_il_sito(self):
+        assert profilo.da_dizionario({"nome_canale": "Altro"}).sito == ""
+
+    def test_un_canale_puo_scrivere_il_suo(self):
+        assert profilo.da_dizionario({"sito": "esempio.it"}).sito == "esempio.it"
+
+
 class TestSenzaCanaleJson:
     """Il canale di popponetv non ha canale.json e non deve accorgersene."""
 
@@ -81,8 +89,9 @@ class TestSenzaCanaleJson:
         monkeypatch.setattr(profilo, "FILE_PREDEFINITO", str(tmp_path / "canale.json"))
         p = profilo.carica()
         assert p.origine == "predefinito"
-        assert p.nome_canale == "Poppone TV"
-        assert p.handle == "@PopponeTV"
+        assert p.nome_canale == "Davide Durazzi"
+        assert p.sito == "davidedurazzi.it"
+        assert p.handle == "@davidedurazzi"
         assert p.videogiochi and p.usa_steam
         assert p.categoria_youtube == "20"
 

@@ -7,6 +7,7 @@ il gioco e la descrizione e' identica a quella di ieri, il video non lo trova
 nessuno e il canale sembra automatico anche a chi ci capita per caso.
 """
 import brain
+import config
 
 
 DATI_GTA = {
@@ -164,7 +165,19 @@ class TestDescrizione:
         assert descrizione.rstrip().endswith("#gamingita")
 
     def test_porta_al_canale(self):
-        assert "@PopponeTV" in brain.costruisci_descrizione(DATI_GTA)
+        assert "@davidedurazzi" in brain.costruisci_descrizione(DATI_GTA)
+
+    def test_porta_al_sito_subito_sotto_le_prime_righe(self, monkeypatch):
+        monkeypatch.setattr(config, "SITO_CANALE", "davidedurazzi.it")
+        monkeypatch.setattr(config, "LINGUA", "it")
+        righe = brain.costruisci_descrizione(DATI_GTA).split("\n")
+        assert "Approfondimenti su https://davidedurazzi.it" in righe[:4]
+        monkeypatch.setattr(config, "LINGUA", "en")
+        assert "More on https://davidedurazzi.it" in brain.costruisci_descrizione(DATI_GTA)
+
+    def test_senza_sito_nessuna_riga(self, monkeypatch):
+        monkeypatch.setattr(config, "SITO_CANALE", "")
+        assert "https://davidedurazzi" not in brain.costruisci_descrizione(DATI_GTA)
 
     def test_cambia_da_un_video_all_altro(self):
         a = brain.costruisci_descrizione(DATI_GTA)
@@ -1532,7 +1545,7 @@ class TestDidascaliaTikTok:
     def test_non_porta_dentro_la_roba_di_youtube(self):
         didascalia = brain.costruisci_didascalia_tiktok(DATI_GTA)
         assert "youtube.com" not in didascalia
-        assert "@PopponeTV" not in didascalia
+        assert "@davidedurazzi" not in didascalia
         assert DATI_GTA["fonte_url"] not in didascalia
 
     def test_finisce_con_gli_hashtag(self):
@@ -1563,7 +1576,7 @@ class TestDidascaliaTikTok:
         # Il senso di questa modifica e' aggiungere TikTok senza toccare
         # niente di quello che finisce su YouTube.
         descrizione = brain.costruisci_descrizione(DATI_GTA)
-        assert "@PopponeTV" in descrizione
+        assert "@davidedurazzi" in descrizione
         assert DATI_GTA["fonte_url"] in descrizione
         assert "#perte" not in descrizione
 
