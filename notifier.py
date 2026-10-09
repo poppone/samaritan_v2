@@ -149,3 +149,21 @@ def notifica_salto(motivo):
     silenzio in tutti e due i casi.
     """
     invia_messaggio(f"<b>Samaritan - NIENTE DA FARE</b>\n\n{html.escape(motivo, quote=False)}")
+
+
+def notifica_token_scaduto():
+    """Il token YouTube e' scaduto: cosa fare, scritto per il telefono."""
+    invia_messaggio(
+        "<b>Samaritan - TOKEN YOUTUBE SCADUTO</b>\n\n"
+        "Nessun video puo' uscire finche' non lo rinnovi. Dal PC, nella "
+        "cartella di Samaritan:\n"
+        "1. cancella token.pickle\n"
+        "2. in PowerShell: <code>$env:PEXELS_API_KEY=\"x\"; "
+        "$env:GROQ_API_KEY=\"x\"; python -c \"from uploader import "
+        "ottieni_credenziali; ottieni_credenziali()\"</code>\n"
+        "3. <code>python setup_secrets.py</code> e incolla YOUTUBE_TOKEN_B64 "
+        "nel secret di GitHub con lo stesso nome.\n\n"
+        "Il token e' una password: non mandarlo in chat. Se scade di nuovo "
+        "dopo 7 giorni, l'app su Google Cloud e' ancora in Test: "
+        "Schermata consenso OAuth, Pubblica app."
+    )

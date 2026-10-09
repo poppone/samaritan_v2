@@ -28,7 +28,7 @@ from brain import (
     costruisci_tag,
 )
 from maker import assembla_video_finale
-from uploader import carica_short
+from uploader import carica_short, token_youtube_scaduto
 import autoprofilo
 import notifier
 import orari
@@ -177,6 +177,14 @@ def esegui_pipeline_samaritan(tema=None):
         aggiorna_performance()
     except Exception as e:
         print(f"[Analyst] Salto l'analisi ({e}).")
+
+    # Senza un token valido il video non puo' uscire: meglio saperlo adesso
+    # che dopo aver scritto, prenotato la notizia e montato (vedi
+    # uploader.token_youtube_scaduto).
+    if token_youtube_scaduto():
+        print("\n[Errore Pipeline] Token YouTube scaduto (invalid_grant): mi fermo.")
+        notifier.notifica_token_scaduto()
+        sys.exit(1)
 
     # -------------------------------------- FASE 1 e 2: scrittura e montaggio
     dati, video_path, materiale, capitoli = _scrivi_e_monta(tema)

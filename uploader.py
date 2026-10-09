@@ -96,6 +96,22 @@ def ottieni_credenziali():
     return credenziali
 
 
+def token_youtube_scaduto():
+    """True solo se Google risponde che il token non vale piu' (invalid_grant).
+
+    Si chiede prima di scrivere e montare il video: il 4 ottobre 2026 il
+    token era scaduto e nove lavorazioni hanno scritto lo script, prenotato
+    la notizia e montato il video per poi cadere al caricamento, mandando
+    su Telegram solo una traccia d'errore. Ogni altro problema (rete, Google
+    lento, file mancante) non ferma niente: ci riprova il caricamento.
+    """
+    try:
+        ottieni_credenziali()
+    except Exception as e:
+        return "invalid_grant" in str(e)
+    return False
+
+
 def ha_scope_analytics(credenziali):
     """True se il token include il permesso di lettura delle statistiche."""
     scopes = set(getattr(credenziali, "scopes", None) or [])
