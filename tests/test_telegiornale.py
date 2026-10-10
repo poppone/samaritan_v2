@@ -302,6 +302,8 @@ class TestTemiARischio:
         "GTA 6 craccato prima dell'uscita? Ecco cosa sappiamo",
         "Robux gratis: l'ultima truffa su Roblox",
         "Take-Two manda un DMCA al progetto",
+        "GTA VI: leak da 24 minuti di gameplay e nudi integrali",
+        "Nudità integrale per Jason e Lucia",
     ])
     def test_scarta_in_italiano(self, testo):
         assert brain._tema_escluso(testo)
@@ -310,6 +312,8 @@ class TestTemiARischio:
         "An unofficial port of GTA 5 now runs in your browser",
         "Free V-Bucks scams are back on TikTok",
         "Denuvo cracked in record time",
+        "Grand Theft Auto VI: Leaked NSFW detail shocks fans",
+        "Baldur's Gate 3 sex scenes explained",
     ])
     def test_scarta_in_inglese(self, testo):
         assert brain._tema_escluso(testo, brain.TEMI_A_RISCHIO["en"])
@@ -320,6 +324,7 @@ class TestTemiARischio:
         "Diablo 4, il miglior hack and slash dell'anno",
         "GTA 6, il trailer ufficiale batte ogni record",
         "Crackdown 4 non e' in sviluppo",
+        "Metal Gear Solid Delta: Naked Snake torna su PS5",
     ])
     def test_lascia_passare_le_notizie_buone(self, testo):
         assert brain._tema_escluso(testo) == ""
