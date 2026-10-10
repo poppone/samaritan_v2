@@ -233,17 +233,25 @@ def _lingua():
 # popponetv dopo un commento sulla pirateria. Lasciate fuori apposta parole
 # con un senso innocuo nei giochi: "pirata" (Sea of Thieves), "hack" (hack
 # and slash), "cheat" (i trucchi ufficiali di GTA), "leak".
+# Dal 10 ottobre anche il sesso e la nudita': il 9 e il 10 ottobre sono
+# finiti in programma "GTA VI: Leaked NSFW detail" e "GTA VI: leak da 24
+# minuti di gameplay e nudi integrali", che YouTube non monetizza. Fuori
+# "naked" (Naked Snake di Metal Gear).
 TEMI_A_RISCHIO = {
     "it": (
         "non ufficiale", "non ufficiali", "pirateria", "piratato",
         "piratata", "piratati", "crack", "craccato", "craccata", "torrent",
         "rom", "scarica gratis", "download gratis", "mod menu",
         "robux gratis", "v bucks gratis", "dmca",
+        "nsfw", "nudo", "nuda", "nudi", "nude", "nudita", "porno", "sesso",
+        "sessuale", "sessuali", "scena di sesso", "scene di sesso",
     ),
     "en": (
         "unofficial port", "unofficial pc port", "fan port", "piracy",
         "pirated", "crack", "cracked", "torrent", "torrents", "roms",
         "free download", "mod menu", "free robux", "free v bucks", "dmca",
+        "nsfw", "nude", "nudes", "nudity", "porn", "sex", "sexual",
+        "sex scene", "sex scenes",
     ),
 }
 
