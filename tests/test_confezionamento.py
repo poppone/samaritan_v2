@@ -182,7 +182,7 @@ class TestDescrizione:
         assert "igr=poppone" in brain.costruisci_descrizione(DATI_GTA)
 
     def test_porta_al_canale(self):
-        assert "@davidedurazzi" in brain.costruisci_descrizione(DATI_GTA)
+        assert "@davidedurazzioff" in brain.costruisci_descrizione(DATI_GTA)
 
     def test_porta_al_sito_subito_sotto_le_prime_righe(self, monkeypatch):
         monkeypatch.setattr(config, "SITO_CANALE", "davidedurazzi.it")
@@ -1562,7 +1562,7 @@ class TestDidascaliaTikTok:
     def test_non_porta_dentro_la_roba_di_youtube(self):
         didascalia = brain.costruisci_didascalia_tiktok(DATI_GTA)
         assert "youtube.com" not in didascalia
-        assert "@davidedurazzi" not in didascalia
+        assert "@davidedurazzioff" not in didascalia
         assert DATI_GTA["fonte_url"] not in didascalia
 
     def test_finisce_con_gli_hashtag(self):
@@ -1593,7 +1593,7 @@ class TestDidascaliaTikTok:
         # Il senso di questa modifica e' aggiungere TikTok senza toccare
         # niente di quello che finisce su YouTube.
         descrizione = brain.costruisci_descrizione(DATI_GTA)
-        assert "@davidedurazzi" in descrizione
+        assert "@davidedurazzioff" in descrizione
         assert DATI_GTA["fonte_url"] in descrizione
         assert "#perte" not in descrizione
 

@@ -91,9 +91,10 @@ ARGOMENTO_GAMING = "gaming"
 PREDEFINITO = {
     # Il 9 ottobre 2026 popponetv ha rinominato il canale "Davide Durazzi" e
     # ha chiesto di mandare chi guarda anche sul suo sito. Lo stesso giorno
-    # ha cambiato anche l'handle.
+    # ha cambiato anche l'handle. Quello vero e' @davidedurazzioff (verificato il
+    # 10 ottobre): @davidedurazzi e' un altro canale, vuoto.
     "nome_canale": "Davide Durazzi",
-    "handle": "@davidedurazzi",
+    "handle": "@davidedurazzioff",
     # Sito del canale: finisce nella descrizione di ogni video, subito sotto
     # le prime righe. Vuoto = nessuna riga.
     "sito": "davidedurazzi.it",

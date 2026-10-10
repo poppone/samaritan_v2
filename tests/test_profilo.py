@@ -91,7 +91,7 @@ class TestSenzaCanaleJson:
         assert p.origine == "predefinito"
         assert p.nome_canale == "Davide Durazzi"
         assert p.sito == "davidedurazzi.it"
-        assert p.handle == "@davidedurazzi"
+        assert p.handle == "@davidedurazzioff"
         assert p.videogiochi and p.usa_steam
         assert p.categoria_youtube == "20"
 
