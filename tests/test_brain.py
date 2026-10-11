@@ -77,6 +77,25 @@ class TestPulisciNomeGioco:
         assert brain._pulisci_nome_gioco("x" * 80) == ""
 
 
+class TestGiocoDalTitolo:
+    """Il 10 ottobre 2026 "Pokémon: ..." e' uscito senza gioco e su Pexels."""
+
+    def test_prende_il_gioco_prima_dei_due_punti(self):
+        assert brain._gioco_dal_titolo(
+            "Pokémon: Kyle Juszczyk's Viral Football Lineup 🤯") == "Pokémon"
+        assert brain._gioco_dal_titolo("Mafia III: Free PS5 upgrade") == "Mafia III"
+
+    def test_senza_due_punti_niente(self):
+        assert brain._gioco_dal_titolo("Il gioco piu' atteso dell'anno") == ""
+
+    def test_un_prefisso_lungo_non_e_un_gioco(self):
+        assert brain._gioco_dal_titolo(
+            "Ecco cosa nessuno ti ha detto oggi: GTA 6") == ""
+
+    def test_i_generici_restano_fuori(self):
+        assert brain._gioco_dal_titolo("Gaming: la settimana") == ""
+
+
 class TestMemoria:
     def test_normalizza_le_voci_vecchie_a_stringa(self):
         # La cronologia storica contiene voci salvate come semplici stringhe.

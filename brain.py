@@ -1248,6 +1248,23 @@ def _pulisci_nome_gioco(gioco):
     return g
 
 
+def _gioco_dal_titolo(titolo):
+    """Il gioco scritto prima dei due punti, quando il modello non lo dice.
+
+    I titoli hanno la forma "Gioco: aggancio", ma a volte il campo 'gioco'
+    torna vuoto lo stesso: il 10 ottobre 2026 "Pokémon: Kyle Juszczyk's
+    Viral Football Lineup" e' uscito senza gioco, senza cercare nei negozi e
+    con tre clip Pexels di "pokemon football lineup meme". Solo per i canali
+    che vanno nei negozi dei giochi: altrove il prefisso non e' un gioco.
+    """
+    if not profilo.attivo().usa_steam or ":" not in (titolo or ""):
+        return ""
+    prefisso = titolo.split(":", 1)[0].strip()
+    if not prefisso or len(prefisso.split()) > 5:
+        return ""
+    return _pulisci_nome_gioco(prefisso)
+
+
 def _nome_formato_in_chiaro(testo):
     """Ritorna il nome interno del formato se e' finito nel testo.
 
@@ -2461,6 +2478,10 @@ def genera_script_samaritan(tema=None):
                 query_video = str(data.get("query_video", "gameplay")).strip()
                 descrizione = str(data.get("descrizione", "")).strip()
                 gioco = _pulisci_nome_gioco(str(data.get("gioco", "")))
+                if not gioco:
+                    gioco = _gioco_dal_titolo(titolo)
+                    if gioco:
+                        print(f"[Samaritan Brain] Gioco preso dal titolo: {gioco}")
 
                 # La fonte serve gia' in validazione: uno script che parla di
                 # leak e conferme senza una notizia dietro va scartato prima di
