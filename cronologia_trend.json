@@ -1774,5 +1774,21 @@
     "video_id": "f_FRNwDJlu4",
     "voce": "Alex",
     "veste": "notte"
+  },
+  {
+    "timestamp": 1791702936,
+    "data": "2026-10-11",
+    "titolo": "Nuovo PS5 gratis: il combattimento tra vicini 🎮",
+    "lingua": "it",
+    "slot": "14:00",
+    "uscita": 1791720000,
+    "formato": "short",
+    "estratto_script": "La pazienza svanisce quando un gioco gratis costringe a scontrarsi col vicino di casa. Il ",
+    "stile": "DONT_DO_THIS",
+    "gioco": "PS5",
+    "query_video": "ps5 free game gameplay",
+    "fonte": "Scarica subito il nuovo gioco gratis per PS5 che sta spopolando tra i giocatori (Everyeye.it)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMikwFBVV95cUxNU3BCTk0tUzhscTIxMXdRaXE4dXJXdmdnd2lsc2tYODJacFZzWU1Nb01rLTR0MEduT01fYy1kTDJJRW9rNlN0RVVPUG5ndUZVX1NWUm5iY25DNWdyUUdKRkxXTFpFbHl2NTRiU09XMkFENXE5WUU3X0xsVW9fQzlWZkFKNmx3WHlFX0x4QnI3SW9LSlk?oc=5",
+    "video_id": null
   }
 ]
