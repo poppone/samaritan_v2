@@ -137,14 +137,6 @@
       "comments": 0,
       "subscribersGained": 1
     },
-    "6t8DS1UDAPY": {
-      "views": 976,
-      "averageViewPercentage": 50.21,
-      "averageViewDuration": 12,
-      "likes": 15,
-      "comments": 0,
-      "subscribersGained": 2
-    },
     "SmE3oRuEo3M": {
       "views": 976,
       "averageViewPercentage": 46.25,
@@ -152,6 +144,14 @@
       "likes": 11,
       "comments": 0,
       "subscribersGained": 1
+    },
+    "6t8DS1UDAPY": {
+      "views": 976,
+      "averageViewPercentage": 50.21,
+      "averageViewDuration": 12,
+      "likes": 15,
+      "comments": 0,
+      "subscribersGained": 2
     },
     "dT4jY5XLc7U": {
       "views": 975,
@@ -161,14 +161,6 @@
       "comments": 0,
       "subscribersGained": 1
     },
-    "8p52QJPpCwE": {
-      "views": 968,
-      "averageViewPercentage": 70.61,
-      "averageViewDuration": 12,
-      "likes": 19,
-      "comments": 0,
-      "subscribersGained": 5
-    },
     "GDgk5-0BOS0": {
       "views": 968,
       "averageViewPercentage": 48.53,
@@ -176,6 +168,14 @@
       "likes": 20,
       "comments": 0,
       "subscribersGained": 0
+    },
+    "8p52QJPpCwE": {
+      "views": 968,
+      "averageViewPercentage": 70.61,
+      "averageViewDuration": 12,
+      "likes": 19,
+      "comments": 0,
+      "subscribersGained": 5
     },
     "sWWW15Pc2G0": {
       "views": 950,
@@ -1313,10 +1313,10 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "0b_kqnCtl0o": {
+    "FeLBp0m8IIY": {
       "views": 1,
-      "averageViewPercentage": 0,
-      "averageViewDuration": 0,
+      "averageViewPercentage": 27.37,
+      "averageViewDuration": 5,
       "likes": 0,
       "comments": 0,
       "subscribersGained": 0
@@ -1329,10 +1329,10 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "FeLBp0m8IIY": {
+    "0b_kqnCtl0o": {
       "views": 1,
-      "averageViewPercentage": 27.37,
-      "averageViewDuration": 5,
+      "averageViewPercentage": 0,
+      "averageViewDuration": 0,
       "likes": 0,
       "comments": 0,
       "subscribersGained": 0
