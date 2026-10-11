@@ -314,6 +314,9 @@ class TestCanaleDiCucina:
             assert brain._pulisci_nome_gioco(generico) == ""
         assert brain._pulisci_nome_gioco("Carbonara") == "Carbonara"
 
+    def test_il_titolo_non_da_un_gioco_fuori_dal_gaming(self, cucina):
+        assert brain._gioco_dal_titolo("Carbonara: il segreto") == ""
+
     def test_i_nomi_grossi_sono_quelli_del_profilo(self, cucina):
         assert brain._punteggio_notizia("Cannavacciuolo apre un ristorante") > \
             brain._punteggio_notizia("GTA 6 apre un ristorante")
