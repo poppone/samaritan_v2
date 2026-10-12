@@ -85,6 +85,14 @@ ALIAS_GIOCHI = {
     "the last of us 2": "The Last of Us Part II Remastered",
     "the last of us part 2": "The Last of Us Part II Remastered",
     "the last of us part ii": "The Last of Us Part II Remastered",
+    # Nomi di serie: nessun negozio ha un gioco chiamato solo "Pokemon" o
+    # "The Legend of Zelda". L'11 ottobre 2026 "Pokemon: Prime Day steals"
+    # e "The Legend of Zelda: Nintendo chief..." sono usciti su clip Pexels:
+    # meglio il capitolo piu' recente della serie che lo stock.
+    "pokemon": "Pokémon Legends: Z-A",
+    "zelda": "The Legend of Zelda: Tears of the Kingdom",
+    "legend of zelda": "The Legend of Zelda: Tears of the Kingdom",
+    "the legend of zelda": "The Legend of Zelda: Tears of the Kingdom",
 }
 
 # Parole che Steam aggiunge al nome dello stesso gioco: edizioni e ristampe.

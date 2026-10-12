@@ -73,6 +73,10 @@ class TestPulisciNomeGioco:
         for generico in ("videogiochi", "gaming", "Gioco", "N/A", "vari", ""):
             assert brain._pulisci_nome_gioco(generico) == ""
 
+    def test_le_console_non_sono_giochi(self):
+        for console in ("PS5", "Nintendo Switch 2", "Xbox", "Game Pass"):
+            assert brain._pulisci_nome_gioco(console) == ""
+
     def test_scarta_i_nomi_assurdamente_lunghi(self):
         assert brain._pulisci_nome_gioco("x" * 80) == ""
 
