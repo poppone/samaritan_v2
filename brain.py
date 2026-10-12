@@ -1240,7 +1240,14 @@ def _pulisci_nome_gioco(gioco):
         return ""
     p = profilo.attivo()
     generici = {"videogiochi", "gaming", "gioco", "videogioco",
-                "games", "game", "nessuno", "n/a", "none", "vari"}
+                "games", "game", "nessuno", "n/a", "none", "vari",
+                # Console e piattaforme non sono giochi: l'11 ottobre 2026
+                # "PS5" e' finito come gioco e nei negozi non ha trovato niente.
+                "ps5", "ps4", "playstation", "playstation 5", "playstation 4",
+                "ps plus", "playstation plus", "xbox", "xbox series x",
+                "xbox series s", "xbox game pass", "game pass", "switch",
+                "nintendo switch", "switch 2", "nintendo switch 2", "nintendo",
+                "sony", "microsoft", "pc", "steam", "steam deck"}
     generici |= {v.strip().lower() for v in (
         p.argomento, p.descrizione_argomento, p.soggetto, p.soggetto_plurale)}
     if g.lower() in generici:

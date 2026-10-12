@@ -114,6 +114,14 @@ class TestAlias:
         assert gameplay.ALIAS_GIOCHI[gameplay._normalizza("CS:GO")] == \
             "Counter-Strike 2"
 
+    def test_i_nomi_di_serie_diventano_un_gioco_vero(self):
+        # L'11 ottobre 2026 "Pokémon" e "The Legend of Zelda" non hanno
+        # trovato niente nei negozi e sono finiti su clip Pexels.
+        assert gameplay.ALIAS_GIOCHI[gameplay._normalizza("Pokémon")] == \
+            "Pokémon Legends: Z-A"
+        assert gameplay.ALIAS_GIOCHI[gameplay._normalizza(
+            "The Legend of Zelda")].startswith("The Legend of Zelda: ")
+
 
 # ===========================================================================
 # MATERIALE CHE NON SI RIPETE
