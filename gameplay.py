@@ -1141,6 +1141,34 @@ def _usa_steam():
     return bool(config.USA_STEAM) and profilo.attivo().usa_steam
 
 
+# Due giochi in un nome: "Super Mario in Elden Ring", "Fortnite x Sonic",
+# "Mario vs Sonic". Nessun negozio ha un gioco chiamato cosi'.
+_SEPARATORI_NOME = re.compile(r"\s+(?:in|x|vs\.?|versus|meets)\s+", re.IGNORECASE)
+
+
+def scegli_parte_trovabile(gioco):
+    """Per un nome che unisce due giochi, quello che i negozi conoscono.
+
+    Il 12 ottobre 2026 "Super Mario in Elden Ring: il mashup AI" ha cercato
+    "Super Mario in Elden Ring", non l'ha trovato da nessuna parte ed e'
+    uscito su clip Pexels, mentre Elden Ring su Steam ha trailer e schermate.
+    Prima si prova il nome intero; poi le parti, cominciando da quella dopo
+    "in", che e' il gioco dove succede la cosa.
+    """
+    parti = [p.strip() for p in _SEPARATORI_NOME.split(gioco or "") if p.strip()]
+    if len(parti) < 2:
+        return gioco
+    if gioco_con_pagina_ufficiale(gioco) or cerca_gioco_steam(gioco)[0]:
+        return gioco
+    if re.search(r"\s+in\s+", gioco, re.IGNORECASE):
+        parti.reverse()
+    for parte in parti:
+        if gioco_con_pagina_ufficiale(parte) or cerca_gioco_steam(parte)[0]:
+            print(f"[Gameplay] '{gioco}' unisce due giochi: uso '{parte}'.")
+            return parte
+    return gioco
+
+
 def procura_materiale(gioco=None, query_pexels="gameplay", minimo=3):
     """Ritorna una lista di sorgenti [{tipo, path, gioco}] per il montaggio.
 
@@ -1150,8 +1178,10 @@ def procura_materiale(gioco=None, query_pexels="gameplay", minimo=3):
     sorgenti = []
     nome_ufficiale = None
     dati_gioco = None
-    salto = video_gia_fatti(gioco)
     usa_steam = _usa_steam()
+    if gioco and usa_steam:
+        gioco = scegli_parte_trovabile(gioco)
+    salto = video_gia_fatti(gioco)
 
     pagina_ufficiale = gioco_con_pagina_ufficiale(gioco) if usa_steam else None
     if pagina_ufficiale:
