@@ -2119,6 +2119,79 @@ def _dettagli_inventati(titolo_notizia, script, sommario="", testata=""):
     return []
 
 
+# Il revisore di qualita' della stanza degli agenti (davidedurazzi-sito,
+# stanza/): un secondo paio d'occhi che non controlla i fatti, gia' coperti da
+# _dettagli_inventati, ma se il video vale la pena di essere guardato.
+VOTO_MINIMO_REVISORE = 6
+BOCCIATURE_REVISORE_MAX = 2   # poi passa: meglio un video discreto che un buco
+
+_SCHEMA_REVISIONE = {
+    "name": "revisione_qualita",
+    "strict": True,
+    "schema": {
+        "type": "object",
+        "properties": {
+            "voto": {"type": "integer"},
+            "punto_debole": {"type": "string"},
+            "consiglio": {"type": "string"},
+        },
+        "required": ["voto", "punto_debole", "consiglio"],
+        "additionalProperties": False,
+    },
+}
+
+
+def _revisione_qualita(titolo, script, titolo_notizia="", gioco=""):
+    """Voto da 1 a 10 dato da un revisore che non ha scritto lo script.
+
+    Giudica argomento, titolo e testo: interesse della notizia per chi guarda
+    Short {argomento}, forza dei primi due secondi, chiarezza, ritmo, finale.
+    None se la revisione non riesce: un errore qui non deve costare il video.
+    """
+    if not titolo or not script:
+        return None
+    p = profilo.attivo()
+    istruzioni = (
+        f"Sei il revisore di qualita' di un canale di Short {p.argomento}. "
+        "Ricevi TITOLO e SCRIPT di uno Short da circa 40 secondi e, se c'e', "
+        "la NOTIZIA da cui nasce. Dai un voto da 1 a 10 a quanto il video "
+        "funzionera' con chi scorre: 1) l'argomento interessa davvero oggi "
+        "a chi segue questo canale? 2) le prime due frasi fermano il pollice? "
+        "3) il titolo e' chiaro, specifico e onesto, senza clickbait falso? "
+        "4) il testo e' scorrevole da ascoltare, senza frasi vuote o ripetute? "
+        "5) il finale chiude o rilancia bene? 6 vuol dire pubblicabile. "
+        "Non giudicare i fatti: sono gia' verificati. Rispondi in JSON con "
+        "'voto' (intero), 'punto_debole' (una frase) e 'consiglio' (una frase "
+        "concreta per migliorarlo)."
+    )
+    testo = f"TITOLO: {titolo}\nSCRIPT: {script}"
+    if titolo_notizia:
+        testo = f"NOTIZIA: {titolo_notizia}\n" + testo
+    if gioco:
+        testo += f"\nGIOCO: {gioco}"
+    modello = config.GROQ_MODELLI[-1]
+    try:
+        risposta = _chiedi_a_groq(
+            model=modello,
+            messages=[{"role": "system", "content": istruzioni},
+                      {"role": "user", "content": testo}],
+            temperature=0,
+            max_tokens=1500,
+            response_format={"type": "json_schema", "json_schema": _SCHEMA_REVISIONE},
+            **({"reasoning_effort": "low"} if "gpt-oss" in modello else {}),
+        )
+        dati = _estrai_json(risposta.choices[0].message.content)
+        voto = int(dati.get("voto"))
+        if not 1 <= voto <= 10:
+            return None
+        return {"voto": voto,
+                "punto_debole": str(dati.get("punto_debole", "")).strip(),
+                "consiglio": str(dati.get("consiglio", "")).strip()}
+    except Exception as e:
+        print(f"[Samaritan Brain] Revisione di qualita' non riuscita: {e}")
+        return None
+
+
 def _togli_frasi_inventate(script, dettagli, notizia=""):
     """Lo script senza le frasi che contengono i dettagli inventati.
 
@@ -2406,6 +2479,8 @@ def genera_script_samaritan(tema=None):
     # tentativi e l'uscita e' saltata: su una notizia cosi' il modello non
     # smette di riempire, conviene cambiarla.
     invenzioni_per_notizia = {}
+    bocciature_revisore = 0
+    revisione = None
     notizie_vietate = set()
 
     modelli = config.GROQ_MODELLI
@@ -2501,6 +2576,7 @@ def genera_script_samaritan(tema=None):
                 # leak e conferme senza una notizia dietro va scartato prima di
                 # diventare un video.
                 fonte, fonte_url = "", ""
+                idx = -1
                 try:
                     idx = int(data.get("indice_notizia", -1))
                     if 0 <= idx < len(notizie):
@@ -2612,6 +2688,20 @@ def genera_script_samaritan(tema=None):
                         motivo = ("aggiunge alla notizia dettagli che il titolo "
                                   "non dice (" + "; ".join(inventati) + "). "
                                   "Racconta solo quello che dice il titolo")
+                revisione = None
+                if ok and not ultima_spiaggia \
+                        and bocciature_revisore < BOCCIATURE_REVISORE_MAX:
+                    revisione = _revisione_qualita(
+                        titolo, script,
+                        notizie[idx]["titolo"] if 0 <= idx < len(notizie) else "",
+                        gioco)
+                    if revisione and revisione["voto"] < VOTO_MINIMO_REVISORE:
+                        ok = False
+                        bocciature_revisore += 1
+                        motivo = (f"il revisore di qualita' gli da' "
+                                  f"{revisione['voto']}/10: "
+                                  f"{revisione['punto_debole']} "
+                                  f"Consiglio: {revisione['consiglio']}")
                 if ok:
                     doppione = _doppione_recente(
                         gioco, fonte, gioco_precedente, fonti_recenti
@@ -2638,6 +2728,8 @@ def genera_script_samaritan(tema=None):
                     "fonte_url": fonte_url,
                     "stile": formato,
                 }
+                if revisione:
+                    risultato["voto_revisore"] = revisione["voto"]
                 salva_in_cronologia(risultato)
                 prenotazione.prenota(titolo)
                 print(f"[Samaritan Brain] OK - '{titolo}' "

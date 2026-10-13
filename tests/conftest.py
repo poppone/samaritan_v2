@@ -59,3 +59,14 @@ def _niente_correzione_dalla_rete(monkeypatch):
     monkeypatch.setattr(brain, "_correggi_script",
                         lambda script, dettagli, titolo_notizia, sommario="": "")
     monkeypatch.setattr(brain, "_cambia_attacco", lambda script, schema: "")
+
+
+@pytest.fixture(autouse=True)
+def _niente_revisore_dalla_rete(monkeypatch, request):
+    """Il revisore di qualita' chiede a Groq: nei test niente rete. I test
+    sul revisore (test_revisore.py) usano quello vero con un client finto."""
+    if request.module.__name__.endswith("test_revisore"):
+        return
+    import brain
+    monkeypatch.setattr(brain, "_revisione_qualita",
+                        lambda titolo, script, titolo_notizia="", gioco="": None)
