@@ -147,5 +147,8 @@ jobs:
         with:
           name: samaritan-reel
           path: output_videos/samaritan_reel.mp4
-          retention-days: 7
+          # Un giorno solo: il repository e' privato e GitHub gratis tiene
+          # 500 MB fra tutti gli artifact. Con quattro video al giorno per
+          # sette giorni lo spazio si riempiva. Il video vero sta su YouTube.
+          retention-days: 1
           if-no-files-found: ignore
