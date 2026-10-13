@@ -256,6 +256,63 @@ TEMI_A_RISCHIO = {
 }
 
 
+# Sesso, nudita' e leak espliciti: fuori in qualunque lingua e su qualunque
+# canale. TEMI_A_RISCHIO non bastava: il 12 ottobre 2026 lo Short inglese
+# delle 20:00 (p3V5VCPA-iA) e' nato da "Latest Leaked GTA 6 Video Shows
+# Lucia Fully Naked" (IGN), perche' "naked" era stato lasciato fuori per
+# Naked Snake, e lo script diceva "Lucia completely naked". Qui le due
+# lingue si controllano INSIEME, perche' le ricerche italiane pescano anche
+# titoli inglesi e viceversa; le eccezioni innocue (Naked Snake) si tolgono
+# dal testo prima del confronto invece di lasciare fuori la parola.
+# Si controlla tre volte: sulle notizie prima che arrivino al modello
+# (titolo e sommario), sul titolo e sullo script generati (valida_titolo e
+# valida_script) e in main.py un'ultima volta prima del caricamento.
+CONTENUTI_ESPLICITI = (
+    # italiano
+    "nudo", "nuda", "nudi", "nude", "nudita", "nudo integrale",
+    "nudi integrali", "nudita integrale", "completamente nudo",
+    "completamente nuda", "svestito", "svestita", "svestiti", "svestite",
+    "senza veli", "seno nudo", "a seno nudo", "topless", "porno",
+    "pornografico", "pornografica", "pornografici", "pornografia",
+    "sesso", "sessuale", "sessuali", "scena di sesso", "scene di sesso",
+    "erotico", "erotica", "erotici", "erotiche", "a luci rosse",
+    "contenuti per adulti", "spogliarello", "spogliarellista",
+    "genitali", "masturbazione", "orgia", "hentai", "onlyfans", "nsfw",
+    # inglese
+    "naked", "fully naked", "completely naked", "nude", "nudes", "nudity",
+    "full frontal", "topless", "undressed", "porn", "porno", "pornographic",
+    "pornography", "sex", "sexual", "sexually", "sexy", "sex scene",
+    "sex scenes", "erotic", "explicit scene", "explicit scenes",
+    "adult content", "x rated", "xxx", "strip club", "stripper",
+    "striptease", "genitals", "genitalia", "penis", "nipple", "nipples",
+    "boobs", "lewd", "rule 34", "hentai", "onlyfans", "nsfw",
+)
+# Nomi propri innocui che contengono una delle parole qui sopra.
+ECCEZIONI_ESPLICITI = (
+    "naked snake", "the naked gun", "naked gun",
+)
+
+
+def _normalizza_parole(testo):
+    """' parole intere senza accenti in minuscolo ', con gli spazi ai bordi."""
+    return " " + " ".join(re.split(r"[^\w]+", _senza_accenti(testo or "").lower())) + " "
+
+
+def contenuto_esplicito(testo):
+    """La prima parola a sfondo sessuale o di nudita' nel testo, o ''.
+
+    Vale in italiano e in inglese insieme. Le eccezioni (Naked Snake) si
+    tolgono prima del confronto.
+    """
+    if not testo:
+        return ""
+    pulito = _normalizza_parole(testo)
+    for eccezione in ECCEZIONI_ESPLICITI:
+        chiave = _normalizza_parole(eccezione).strip()
+        pulito = pulito.replace(f" {chiave} ", " ")
+    return _tema_escluso(pulito, CONTENUTI_ESPLICITI)
+
+
 def _tema_escluso(testo, temi=None):
     """La prima parola del profilo ('temi_esclusi') che compare nel testo, o ''.
 
@@ -886,7 +943,7 @@ def recupera_trend_gaming_online(max_notizie=8, tema=None, gioco_da_evitare=""):
             # Un tema che il canale non tratta (per un telegiornale: morti,
             # crimini, tragedie). Si scarta qui e non dopo: la notizia non
             # arriva nemmeno al modello.
-            escluso = _tema_escluso(titolo)
+            escluso = _tema_escluso(titolo) or contenuto_esplicito(titolo)
             if escluso:
                 scartate_per_tema += 1
                 continue
@@ -955,7 +1012,9 @@ def recupera_trend_gaming_online(max_notizie=8, tema=None, gioco_da_evitare=""):
     # Il titolo puo' tacere quello che il sommario dice ("Lutto nel mondo
     # della musica" -> "e' morto a 80 anni"): si guarda anche quello.
     prima = len(notizie)
-    notizie = [n for n in notizie if not _tema_escluso(n.get("sommario", ""))]
+    notizie = [n for n in notizie
+               if not _tema_escluso(n.get("sommario", ""))
+               and not contenuto_esplicito(n.get("sommario", ""))]
     scartate_per_tema += prima - len(notizie)
     # Un telegiornale senza sommario ha solo il titolo per riempire un minuto,
     # e il modello lo riempie inventando: il 30 settembre 2026 statistiche su
@@ -1229,6 +1288,11 @@ def valida_titolo(titolo, gioco=""):
     if formato:
         return False, f"il titolo contiene il nome interno del formato ({formato})"
 
+    esplicito = contenuto_esplicito(titolo)
+    if esplicito:
+        return False, (f"il titolo contiene '{esplicito}': niente sesso o "
+                       "nudita', YouTube non lo monetizza")
+
     return True, ""
 
 
@@ -1419,6 +1483,11 @@ def valida_script(titolo, script, aperture_recenti=(), schemi_recenti=()):
     formato = _nome_formato_in_chiaro(script)
     if formato:
         return False, f"lo script contiene il nome interno del formato ({formato})"
+
+    esplicito = contenuto_esplicito(titolo + " " + script)
+    if esplicito:
+        return False, (f"parla di '{esplicito}': niente sesso o nudita', "
+                       "scegli un'altra notizia")
 
     n_parole = len(script.split())
     if n_parole < MIN_PAROLE_SCRIPT:

@@ -27,6 +27,7 @@ from brain import (
     carica_cronologia,
     costruisci_descrizione,
     costruisci_tag,
+    contenuto_esplicito,
 )
 from maker import assembla_video_finale
 from uploader import carica_short, token_youtube_scaduto
@@ -197,6 +198,24 @@ def esegui_pipeline_samaritan(tema=None):
         return None
 
     # ----------------------------------------------------- FASE 3: Upload
+    # Ultimo controllo sul titolo che va davvero su YouTube (e su script,
+    # fonte e descrizione scritta dal modello): brain filtra gia' notizie,
+    # titolo e script, ma il 12 ottobre 2026 e' uscito uno Short nato da
+    # "Lucia Fully Naked" e un controllo in piu' qui costa niente. Meglio
+    # un'uscita saltata, che la riserva recupera, di un video che YouTube non
+    # monetizza. Niente URL nel controllo: i link di Google News sono
+    # stringhe casuali che potrebbero contenere "sex" fra due trattini.
+    esplicito = contenuto_esplicito(" ".join((
+        dati.get("titolo", ""), dati.get("script", ""),
+        dati.get("fonte", ""), dati.get("descrizione", ""))))
+    if esplicito:
+        print(f"\n[Errore Pipeline] Contenuto esplicito ('{esplicito}') nel "
+              f"video '{dati.get('titolo', '')}': non lo carico.")
+        notifier.notifica_errore(
+            f"Video non caricato: contiene '{esplicito}' (sesso o nudita'). "
+            f"Titolo: {dati.get('titolo', '')}")
+        return None
+
     print("\n[FASE 3/3] Caricamento su YouTube...")
     # La miniatura la produce il maker insieme al video. Se manca (font
     # assente, rendering parziale) si carica lo stesso: YouTube ripiega su un
