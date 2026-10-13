@@ -1150,3 +1150,41 @@ class TestEsclusiveConsoleNelVideo:
         sorgenti, nome = gameplay.procura_materiale("Cyberpunk 2077", minimo=3)
         assert nome == "Cyberpunk 2077"
         assert len(sorgenti) == 3
+
+
+class TestNomiComposti:
+    """Il 12 ottobre 2026 "Super Mario in Elden Ring" e' finito su Pexels."""
+
+    @staticmethod
+    def _steam(conosciuti):
+        return lambda nome: (1, nome) if nome in conosciuti else (None, None)
+
+    def test_prende_il_gioco_dopo_in(self, monkeypatch):
+        monkeypatch.setattr(gameplay, "gioco_con_pagina_ufficiale", lambda g: None)
+        monkeypatch.setattr(gameplay, "cerca_gioco_steam",
+                            self._steam({"Elden Ring", "Super Mario"}))
+        assert gameplay.scegli_parte_trovabile(
+            "Super Mario in Elden Ring") == "Elden Ring"
+
+    def test_il_nome_intero_trovato_resta(self, monkeypatch):
+        monkeypatch.setattr(gameplay, "gioco_con_pagina_ufficiale", lambda g: None)
+        monkeypatch.setattr(gameplay, "cerca_gioco_steam",
+                            self._steam({"Alone in the Dark"}))
+        assert gameplay.scegli_parte_trovabile(
+            "Alone in the Dark") == "Alone in the Dark"
+
+    def test_crossover_con_x(self, monkeypatch):
+        monkeypatch.setattr(gameplay, "gioco_con_pagina_ufficiale", lambda g: None)
+        monkeypatch.setattr(gameplay, "cerca_gioco_steam", self._steam({"Fortnite"}))
+        assert gameplay.scegli_parte_trovabile("Fortnite x Sonic") == "Fortnite"
+
+    def test_nome_semplice_non_cerca_niente(self, monkeypatch):
+        def vietato(nome):
+            raise AssertionError("non doveva cercare")
+        monkeypatch.setattr(gameplay, "cerca_gioco_steam", vietato)
+        assert gameplay.scegli_parte_trovabile("Elden Ring") == "Elden Ring"
+
+    def test_nessuna_parte_trovata_lascia_il_nome(self, monkeypatch):
+        monkeypatch.setattr(gameplay, "gioco_con_pagina_ufficiale", lambda g: None)
+        monkeypatch.setattr(gameplay, "cerca_gioco_steam", self._steam(set()))
+        assert gameplay.scegli_parte_trovabile("Mario vs Sonic") == "Mario vs Sonic"
