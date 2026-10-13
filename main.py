@@ -23,6 +23,7 @@ import config
 from brain import (
     genera_script_samaritan,
     aggiorna_ultimo_video_id,
+    aggiorna_ultima_voce,
     carica_cronologia,
     costruisci_descrizione,
     costruisci_tag,
@@ -30,6 +31,7 @@ from brain import (
 from maker import assembla_video_finale
 from uploader import carica_short, token_youtube_scaduto
 import autoprofilo
+import copia_pubblica
 import notifier
 import orari
 
@@ -218,6 +220,9 @@ def esegui_pipeline_samaritan(tema=None):
     if video_id:
         # Collega il video alla memoria: senza questo il feedback loop e' cieco
         aggiorna_ultimo_video_id(video_id)
+        if not config.VIDEO_LUNGO:
+            # Il file a un indirizzo pubblico, per il rilancio su TikTok
+            aggiorna_ultima_voce(**copia_pubblica.prepara(video_path, video_id, dati))
 
     notifier.notifica_pubblicazione(dati, video_id, video_path)
 

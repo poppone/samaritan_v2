@@ -533,6 +533,13 @@ def salva_in_cronologia(dati):
 def aggiorna_ultimo_video_id(video_id):
     """Collega l'ultimo record di memoria all'ID YouTube, cosi' analyst.py
     puo' poi incrociare formato <-> retention reale."""
+    aggiorna_ultima_voce(video_id=video_id)
+
+
+def aggiorna_ultima_voce(**campi):
+    """Aggiunge campi al record di memoria di questa lavorazione."""
+    if not campi:
+        return
     cronologia = carica_cronologia()
     if not cronologia:
         return
@@ -544,7 +551,7 @@ def aggiorna_ultimo_video_id(video_id):
                 voce = candidata
                 break
     if isinstance(voce, dict):
-        voce["video_id"] = video_id
+        voce.update(campi)
         with open(config.FILE_CRONOLOGIA, "w", encoding="utf-8") as f:
             json.dump(cronologia, f, ensure_ascii=False, indent=2)
 
