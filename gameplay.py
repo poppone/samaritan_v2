@@ -93,6 +93,13 @@ ALIAS_GIOCHI = {
     "zelda": "The Legend of Zelda: Tears of the Kingdom",
     "legend of zelda": "The Legend of Zelda: Tears of the Kingdom",
     "the legend of zelda": "The Legend of Zelda: Tears of the Kingdom",
+    # Il 14 ottobre 2026 e' arrivato "Super Mario": stessa storia.
+    "mario": "Super Mario Bros. Wonder",
+    "super mario": "Super Mario Bros. Wonder",
+    "mario kart": "Mario Kart World",
+    "donkey kong": "Donkey Kong Bananza",
+    "kirby": "Kirby and the Forgotten Land",
+    "metroid": "Metroid Prime 4: Beyond",
 }
 
 # Parole che Steam aggiunge al nome dello stesso gioco: edizioni e ristampe.
