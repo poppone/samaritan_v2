@@ -121,6 +121,8 @@ class TestAlias:
             "Pokémon Legends: Z-A"
         assert gameplay.ALIAS_GIOCHI[gameplay._normalizza(
             "The Legend of Zelda")].startswith("The Legend of Zelda: ")
+        assert gameplay.ALIAS_GIOCHI[gameplay._normalizza("Super Mario")] == \
+            "Super Mario Bros. Wonder"
 
 
 # ===========================================================================
