@@ -321,8 +321,12 @@ jobs:
           echo "::error::Memoria non salvata dopo quattro tentativi."
           exit 1
 
+      # Il video vero sta su YouTube: questa copia e' solo una comodita'.
+      # Il 15 ottobre 2026 lo spazio artifact dell'account era finito e tutte
+      # e quattro le lavorazioni sono risultate rosse pur avendo pubblicato.
       - name: Conserva il video prodotto
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: samaritan-short
