@@ -864,8 +864,8 @@ class TestEpic:
 
 
 class TestNintendo:
-    """Nintendo non pubblica mp4 nelle schede, ma pubblica le schermate
-    ufficiali: valgono come gli screenshot Steam, animati in Ken Burns."""
+    """Nintendo pubblica le schermate ufficiali (animate in Ken Burns come gli
+    screenshot Steam) e, nelle schede dei giochi meno recenti, i trailer mp4."""
 
     RICERCA = {"response": {"docs": [
         {"title": "Pokémon Legends: Z-A",
@@ -897,6 +897,44 @@ class TestNintendo:
         assert all("08_content_images" in u for u in trovato["immagini"][:2])
         assert trovato["immagini"][2].endswith("/scena-nuova.jpg")
         assert trovato["nome"] == "Pokémon Legends: Z-A"
+
+    def test_i_trailer_mp4_delle_schede_vecchie(self, monkeypatch):
+        ricerca = {"response": {"docs": [
+            {"title": "Mario Kart 8",
+             "url": "/en-gb/Games/Wii-U-games/Mario-Kart-8-765384.html"}]}}
+        server = "https://production.smedia.lvp.llnw.net/81d5/Eh/x"
+        pagina = self.PAGINA + (
+            f'<video src="{server}/wii-u-mario-kart-8-preview-trailer-5-engb.mp4'
+            '?x=0&amp;h=f3aa"></video>'
+            f'<a href="{server}/nd_2014_11_05_mariokart8_en_yt_60.mp4?x=0&amp;h=5b15">'
+            f'<a href="{server}/wii-u-mario-kart-8-preview-trailer-5-engb.mp4'
+            '?x=0&amp;h=f3aa">'
+            # Un trailer di un altro gioco in fondo alla pagina resta fuori.
+            f'<a href="{server}/wii-u-splatoon-launch-trailer-engb.mp4?x=0">'
+            '<iframe src="https://www.youtube-nocookie.com/embed/DCN7-r1WA5Q">'
+        )
+        _finta_rete(monkeypatch, [
+            ("search.nintendo-europe.com", _RispostaFinta(dati=ricerca)),
+            ("nintendo.com/en-gb/Games", _RispostaFinta(pagina)),
+        ])
+        trovato = gameplay.materiale_nintendo("Mario Kart 8")
+        assert trovato["video"] == [
+            f"{server}/wii-u-mario-kart-8-preview-trailer-5-engb.mp4?x=0&h=f3aa",
+            f"{server}/nd_2014_11_05_mariokart8_en_yt_60.mp4?x=0&h=5b15",
+        ]
+        assert len(trovato["immagini"]) == 3
+
+    def test_da_youtube_non_si_prende_niente(self, monkeypatch):
+        # Le schede nuove incorporano i trailer da YouTube: restano le schermate.
+        pagina = self.PAGINA + (
+            '<iframe src="https://www.youtube-nocookie.com/embed/DCN7-r1WA5Q">')
+        _finta_rete(monkeypatch, [
+            ("search.nintendo-europe.com", _RispostaFinta(dati=self.RICERCA)),
+            ("nintendo.com/en-gb/Games", _RispostaFinta(pagina)),
+        ])
+        trovato = gameplay.materiale_nintendo("Pokemon Legends Z-A")
+        assert trovato["video"] == []
+        assert len(trovato["immagini"]) == 3
 
     def test_un_gioco_diverso_viene_scartato(self, monkeypatch):
         # La ricerca Nintendo risponde sempre qualcosa, come quella di Steam.

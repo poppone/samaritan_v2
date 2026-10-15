@@ -32,6 +32,7 @@ due video sullo stesso gioco a settimane di distanza montano le stesse
 identiche clip, che e' il modo piu' rapido per farsi riconoscere come canale
 automatizzato.
 """
+import html
 import json
 import os
 import re
@@ -927,6 +928,10 @@ _NINTENDO_IMMAGINE = re.compile(
     r"https://[^\"'\s<>\\]+/media/images/[^\"'\s<>\\]+?\.(?:jpg|jpeg|png)")
 _NINTENDO_ARREDAMENTO = ("01_website_elements", "02_logos", "/icons/",
                          "favicon", "_logo", "flag")
+# Le schede dei giochi piu' vecchi (Wii U, primi anni di Switch) hanno i
+# trailer come mp4 sul server video di Nintendo; quelle nuove li incorporano
+# da YouTube, e da YouTube non si scarica mai, quindi li' restano le schermate.
+_NINTENDO_MP4 = re.compile(r"https://[^\"'\s<>\\]+?\.mp4(?:\?[^\"'\s<>\\]*)?")
 
 
 _LARGHEZZA_NEL_NOME = re.compile(r"_image(\d+)w(?=\.)")
@@ -975,8 +980,29 @@ def _immagini_nintendo(pagina):
     return _solo_schermate(_senza_doppioni_di_misura(trovate))
 
 
+def _video_nintendo(pagina, titolo):
+    """Gli mp4 ufficiali della scheda che parlano di QUESTO gioco.
+
+    Il nome del file dice di che gioco e' il trailer
+    ('wii-u-mario-kart-8-trailer-release-date-engb.mp4'): si tengono solo
+    quelli che contengono una parola del titolo, cosi' un trailer di un altro
+    gioco messo in fondo alla pagina non finisce nello Short.
+    """
+    parole = [p for p in _normalizza(titolo).split() if len(p) >= 4]
+    if not parole:
+        return []
+    video = []
+    for url in _elenco_unico(_NINTENDO_MP4.findall(pagina)):
+        url = html.unescape(url)
+        file = _normalizza(url.split("?", 1)[0].rsplit("/", 1)[-1])
+        file = file.replace(" ", "")
+        if any(p in file for p in parole) and url not in video:
+            video.append(url)
+    return video
+
+
 def materiale_nintendo(nome):
-    """Le schermate ufficiali della scheda Nintendo del gioco, o None."""
+    """Trailer e schermate ufficiali della scheda Nintendo del gioco, o None."""
     for variante in _varianti_nome(nome):
         try:
             risposta = _scarica_pagina(
@@ -1002,8 +1028,9 @@ def materiale_nintendo(nome):
                 print(f"[Gameplay] Scheda Nintendo di '{titolo}' non letta: {e}")
                 continue
             immagini = _immagini_nintendo(pagina)
-            if immagini:
-                return {"nome": titolo, "video": [], "immagini": immagini}
+            video = _video_nintendo(pagina, titolo)
+            if immagini or video:
+                return {"nome": titolo, "video": video, "immagini": immagini}
     return None
 
 
@@ -1083,8 +1110,8 @@ def materiale_dai_negozi(nome, quanti_video=3, quante_immagini=4):
     """Cerca il gioco nei negozi ufficiali diversi da Steam.
 
     Il materiale dei negozi si somma, perche' nessuno dei quattro ha sempre
-    tutto: PlayStation ed Epic danno i filmati, Nintendo e Xbox soltanto
-    schermate. Si smette appena ce n'e' abbastanza di entrambi. Un negozio
+    tutto: PlayStation ed Epic danno i filmati, Xbox soltanto schermate e
+    Nintendo i filmati solo per i giochi meno recenti. Si smette appena ce n'e' abbastanza di entrambi. Un negozio
     che non risponde non ferma gli altri e non ferma il video.
     """
     nome = ALIAS_GIOCHI.get(_normalizza(nome or ""), nome)
