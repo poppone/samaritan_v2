@@ -141,8 +141,12 @@ jobs:
           git pull --rebase origin "${GITHUB_REF_NAME}"
           git push origin "HEAD:${GITHUB_REF_NAME}"
 
+      # Il video vero sta su YouTube: questa copia e' solo una comodita'.
+      # Il 15 ottobre 2026 lo spazio artifact dell'account era finito e tutte
+      # e quattro le lavorazioni sono risultate rosse pur avendo pubblicato.
       - name: Conserva il Reel prodotto
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: samaritan-reel
