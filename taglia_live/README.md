@@ -1,6 +1,6 @@
 # Clip dalle live Twitch
 
-Taglia gli Short dalle live di popponetv e li consegna a Finch, che decide
+Taglia gli Short dalle live Twitch del canale davidedurazzi e li consegna a Finch, che decide
 quali escono e quando. Gira sul PC, non su GitHub Actions.
 
 ```

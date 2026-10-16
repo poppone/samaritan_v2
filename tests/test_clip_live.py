@@ -150,3 +150,11 @@ def test_samaritan_resta_sintetico_di_default():
     import uploader
     firma = inspect.signature(uploader.carica_short)
     assert firma.parameters["contenuto_sintetico"].default is True
+
+
+def test_salta_i_saluti_finali():
+    energia = [1.0] * 9000
+    energia[8990] = 80.0      # musica di chiusura negli ultimi secondi
+    energia[4000] = 10.0
+    picchi = [c[3] for c in punteggio.candidati(punteggio.segnale(energia), quante=1)]
+    assert picchi and picchi[0] < 9000 - punteggio.SALTA_FINE
