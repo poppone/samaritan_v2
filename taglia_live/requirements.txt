@@ -1,0 +1,7 @@
+# Solo per il taglio sul PC: NON servono a GitHub Actions.
+yt-dlp>=2026.1.1
+faster-whisper>=1.1,<2
+numpy>=2,<3
+requests>=2.32,<3
+python-dotenv>=1.2,<2
+groq>=1.7,<2

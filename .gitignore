@@ -27,3 +27,9 @@ env/
 
 # === Modelli Whisper scaricati ===
 .cache/
+
+# === Taglio delle clip dalle live (gira sul PC) ===
+taglia_live/lavoro/
+taglia_live/stato_locale.json
+taglia_live/.venv/
+taglia_live/.env

@@ -151,13 +151,18 @@ def imposta_miniatura(youtube, video_id, percorso):
 
 
 def carica_short(filepath, titolo, descrizione, tag=None, privacy=None,
-                 miniatura=None, pubblica_alle=None):
+                 miniatura=None, pubblica_alle=None, contenuto_sintetico=True):
     """Carica il video e ritorna l'ID YouTube (o None se fallisce).
 
     Con `pubblica_alle` il video sale privato e YouTube lo rende pubblico da
     solo a quell'istante: e' l'unico modo di avere un orario preciso, visto
     che la run parte quando vuole GitHub. Vale solo per i video che dovevano
     essere pubblici: una prova privata resta privata.
+
+    `contenuto_sintetico` resta True per gli Short di Samaritan (voce e testo
+    generati). Le clip delle live di popponetv sono girate e parlate da lui:
+    per quelle si passa False, perche' dichiarare sintetico un video vero e'
+    sbagliato quanto il contrario.
     """
     privacy = privacy or config.PRIVACY_STATUS
     tag = tag or []
@@ -169,7 +174,8 @@ def carica_short(filepath, titolo, descrizione, tag=None, privacy=None,
     stato = {
         "privacyStatus": privacy,
         "selfDeclaredMadeForKids": False,
-        "containsSyntheticMedia": True,            # dichiarazione corretta
+        # Vedi la nota in cima: True per Samaritan, False per le clip live.
+        "containsSyntheticMedia": bool(contenuto_sintetico),
     }
     # YouTube accetta publishAt solo su un video privato: e' proprio cosi' che
     # funziona la programmazione, il video resta privato fino all'istante
