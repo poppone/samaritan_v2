@@ -46,7 +46,7 @@ _RADICI_INSULTI = (
     "cazz", "minchi", "stronz", "vaffancul", "fancul", "coglion", "puttan",
     "troi", "merd", "frocio", "froci", "negr", "ritardat", "mongolo",
     "porco dio", "porcodio", "dio cane", "diocane", "porca madonna",
-    "dio porco", "madonna puttana",
+    "dio porco", "madonna puttana", "in culo", "nel culo", "porco due",
 )
 
 _RE_EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")

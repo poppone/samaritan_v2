@@ -287,14 +287,14 @@ def monta_verticale(sorgente, sottotitoli, uscita):
 def proponi_testi(trascritto, gioco, titolo_live):
     base_desc = (f"Dalla live su Twitch: https://twitch.tv/{CANALE}\n"
                  f"{('Gioco: ' + gioco) if gioco else ''}\n\n#shorts #twitch #gaming")
-    ripiego = {"titolo": (gioco + " - " if gioco else "") + "dalla live di popponetv",
+    ripiego = {"titolo": (gioco + " - " if gioco else "") + "dalla live",
                "descrizione": base_desc}
     if not GROQ_KEY or not trascritto.strip():
         return ripiego
     from groq import Groq
     client = Groq(api_key=GROQ_KEY)
     domanda = (
-        "Sei l'editor degli Short YouTube di popponetv, streamer italiano. "
+        "Sei l'editor degli Short YouTube di Davide Durazzi, streamer italiano. "
         "Dal parlato di una clip della sua live proponi un titolo (max 70 "
         "caratteri, italiano, niente clickbait falso, niente emoji in eccesso) "
         "e una descrizione di 1-2 frasi. Non inventare fatti che non sono nel "
