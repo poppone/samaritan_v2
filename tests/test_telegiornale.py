@@ -51,7 +51,8 @@ class TestProfilo:
     def test_poppone_tv_non_e_un_telegiornale(self):
         p = profilo.predefinito()
         assert p.telegiornale is False
-        assert p.temi_esclusi_per("it") == ()
+        # Le sue esclusioni sono offerte, merch e sport, non i temi delicati.
+        assert not set(p.temi_esclusi_per("it")) & set(profilo.TEMI_DELICATI["it"])
 
     def test_un_canale_normale_non_filtra_niente(self):
         dati = _dati_tg()

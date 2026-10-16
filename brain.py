@@ -385,6 +385,15 @@ ORE_FRESCA = 12
 PUNTI_FRESCA = 2
 ORE_VECCHIA = 48
 PUNTI_VECCHIA = -2
+# Le storie di leaker e indiscrezioni: dal 5 all'11 ottobre 2026 "GTA leaker"
+# e "leaked clip" hanno fatto 49-67 visualizzazioni, i giochi veri 600-1.000.
+# Non si scartano (a volte il leak e' la notizia del giorno), scendono.
+PUNTI_INDISCREZIONE = -3
+PAROLE_INDISCREZIONE = (
+    "leak", "leaks", "leaked", "leaker", "leakers", "insider", "rumor",
+    "rumors", "rumour", "rumours", "trapelato", "trapelata", "trapelati",
+    "indiscrezione", "indiscrezioni", "voci di corridoio",
+)
 
 # Le parole che il pubblico di QUESTO canale scrive davvero nella ricerca di
 # YouTube, prese da Analytics (analyst.parole_cercate). Pesano piu' di tutto il
@@ -640,9 +649,20 @@ def _notizia_di_una_voce(fonte):
     return _impronta_notizia(testo)
 
 
+# "Survival Zelda-like", "un gioco in stile Zelda": il nome grosso c'e' ma
+# il gioco no. L'11 ottobre 2026 "Survival Zelda-like: sconto o mito?" e'
+# passato per Zelda ed era la promo di un gioco senza nome.
+_SOLO_PARAGONE = re.compile(
+    r"[\w'.:]+-(?:like|style|stile)\b|\b(?:stile|simile a)\s+[\w'.:]+")
+
+
 def _nomina_un_grosso(titolo):
-    """Vero se il titolo nomina uno dei nomi grossi del profilo."""
-    testo = _senza_accenti(titolo or "").lower()
+    """Vero se il titolo nomina uno dei nomi grossi del profilo.
+
+    Non vale il paragone: "Zelda-like" o "in stile Zelda" non parlano di
+    Zelda.
+    """
+    testo = _SOLO_PARAGONE.sub(" ", _senza_accenti(titolo or "").lower())
     return any(g in testo for g in profilo.attivo().nomi_grossi)
 
 
@@ -662,8 +682,11 @@ def _punteggio_notizia(titolo, apparizioni=1, cercate=frozenset(), ore=None):
     punti = 0
     if _nomina_un_grosso(titolo):
         punti += PUNTI_GIOCO_GROSSO
-    calde = sum(1 for parola in _lingua()["parole_calde"] if parola in testo)
+    calde = sum(1 for parola in _lingua()["parole_calde"]
+                if parola in testo and parola not in PAROLE_INDISCREZIONE)
     punti += min(calde, MAX_PAROLE_CALDE) * PUNTI_PAROLA_CALDA
+    if _tema_escluso(testo, PAROLE_INDISCREZIONE):
+        punti += PUNTI_INDISCREZIONE
     # Trovata da piu' di una ricerca: non e' un giudizio nostro, e' il segno
     # che la notizia sta girando.
     punti += (apparizioni - 1) * PUNTI_RIPETIZIONE
