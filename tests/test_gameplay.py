@@ -124,6 +124,17 @@ class TestAlias:
         assert gameplay.ALIAS_GIOCHI[gameplay._normalizza("Super Mario")] == \
             "Super Mario Bros. Wonder"
 
+    def test_slogan_e_personaggi_portano_al_gioco(self):
+        # Il 15 ottobre 2026 "You're Late, 007" e' finito su clip Pexels.
+        for nome in ("Youre Late, 007", "You're Late, 007", "007",
+                     "James Bond returns"):
+            assert gameplay.nome_con_alias(nome) == "007 First Light"
+        # La parola deve esserci intera, e il resto dei nomi non cambia.
+        assert gameplay.nome_con_alias("Agent 0070") == "Agent 0070"
+        assert gameplay.nome_con_alias("Hollow Knight") == "Hollow Knight"
+        assert gameplay.nome_con_alias("GTA 5") == "Grand Theft Auto V"
+        assert gameplay.nome_con_alias(None) is None
+
 
 # ===========================================================================
 # MATERIALE CHE NON SI RIPETE

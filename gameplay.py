@@ -103,6 +103,26 @@ ALIAS_GIOCHI = {
     "metroid": "Metroid Prime 4: Beyond",
 }
 
+# Serie che le notizie chiamano con uno slogan o un personaggio invece che col
+# nome del gioco: basta che il nome contenga la parola. Il 15 ottobre 2026
+# "You're Late, 007" (lo slogan di 007 First Light) e' finito su clip Pexels.
+ALIAS_PER_PAROLA = {
+    "007": "007 First Light",
+    "james bond": "007 First Light",
+}
+
+
+def nome_con_alias(nome):
+    """Il nome con cui cercare il gioco nei negozi."""
+    normale = _normalizza(nome or "")
+    if normale in ALIAS_GIOCHI:
+        return ALIAS_GIOCHI[normale]
+    parole = f" {normale} "
+    for parola, gioco in ALIAS_PER_PAROLA.items():
+        if f" {parola} " in parole:
+            return gioco
+    return nome
+
 # Parole che Steam aggiunge al nome dello stesso gioco: edizioni e ristampe.
 # Qualunque altra parola in piu' nel nome Steam indica un gioco diverso.
 PAROLE_EDIZIONE = {
@@ -238,7 +258,7 @@ def video_gia_fatti(gioco):
     """
     if not gioco:
         return 0
-    cercato = ALIAS_GIOCHI.get(_normalizza(gioco), gioco)
+    cercato = nome_con_alias(gioco)
     try:
         with open(config.FILE_CRONOLOGIA, "r", encoding="utf-8") as f:
             cronologia = json.load(f)
@@ -254,7 +274,7 @@ def video_gia_fatti(gioco):
         passato = (elemento.get("gioco") or "").strip()
         if not passato:
             continue
-        passato = ALIAS_GIOCHI.get(_normalizza(passato), passato)
+        passato = nome_con_alias(passato)
         if _somiglianza(passato, cercato) >= SOGLIA_CORRISPONDENZA:
             quanti += 1
     return quanti
@@ -364,7 +384,7 @@ def clip_mie(categoria, salto=0, quante=None):
 
 def cerca_gioco_steam(nome):
     """Ritorna (appid, nome_ufficiale) oppure (None, None)."""
-    nome = ALIAS_GIOCHI.get(_normalizza(nome), nome)
+    nome = nome_con_alias(nome)
 
     migliore = (0.0, None, None)
     for variante in _varianti_nome(nome):
@@ -1114,7 +1134,7 @@ def materiale_dai_negozi(nome, quanti_video=3, quante_immagini=4):
     Nintendo i filmati solo per i giochi meno recenti. Si smette appena ce n'e' abbastanza di entrambi. Un negozio
     che non risponde non ferma gli altri e non ferma il video.
     """
-    nome = ALIAS_GIOCHI.get(_normalizza(nome or ""), nome)
+    nome = nome_con_alias(nome)
     video, immagini, nome_ufficiale = [], [], None
 
     for etichetta, cercatore in _cercatori_negozi():
