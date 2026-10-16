@@ -34,7 +34,7 @@ from datetime import datetime, timezone
 QUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(QUI))
 
-from taglia_live import punteggio  # noqa: E402
+from taglia_live import impaginazione, punteggio  # noqa: E402
 
 try:
     from dotenv import load_dotenv
@@ -239,14 +239,14 @@ def _tempo_ass(t):
     return f"{cs // 360000}:{cs // 6000 % 60:02d}:{cs // 100 % 60:02d}.{cs % 100:02d}"
 
 
-def scrivi_ass(parole, percorso, per_riga=4):
+def scrivi_ass(parole, percorso, per_riga=4, margine=520):
     """Sottotitoli grandi a gruppi di poche parole, come negli Short."""
     righe = [
         "[Script Info]", "ScriptType: v4.00+", "PlayResX: 1080", "PlayResY: 1920", "",
         "[V4+ Styles]",
         "Format: Name, Fontname, Fontsize, PrimaryColour, OutlineColour, BackColour, "
         "Bold, Outline, Shadow, Alignment, MarginV",
-        "Style: Base,Arial,78,&H00FFFFFF,&H00000000,&H64000000,1,6,2,2,520", "",
+        f"Style: Base,Arial,78,&H00FFFFFF,&H00000000,&H64000000,1,6,2,2,{margine}", "",
         "[Events]",
         "Format: Layer, Start, End, Style, Text",
     ]
@@ -259,18 +259,71 @@ def scrivi_ass(parole, percorso, per_riga=4):
         f.write("\n".join(righe) + "\n")
 
 
-def monta_verticale(sorgente, sottotitoli, uscita):
-    """16:9 al centro su sfondo sfocato 9:16, sottotitoli bruciati.
+def misure(percorso):
+    """Larghezza e altezza del video."""
+    uscita = subprocess.run(
+        ["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
+         "stream=width,height", "-of", "csv=p=0", percorso],
+        capture_output=True, text=True, check=True).stdout.strip()
+    w, h = uscita.split(",")[:2]
+    return int(w), int(h)
+
+
+MODELLO_VOLTI = os.path.join(QUI, "modelli", "face_detection_yunet_2023mar.onnx")
+
+
+def volti_nei_fotogrammi(percorso, durata, quanti=6):
+    """I volti trovati in qualche fotogramma, un elenco per fotogramma.
+
+    Si usa YuNet (cv2.FaceDetectorYN), che c'e' sia in OpenCV 4 sia in 5: il
+    vecchio CascadeClassifier in OpenCV 5 non c'e' piu'. Il modello (230 KB,
+    licenza MIT, da opencv_zoo) sta in taglia_live/modelli/.
+    Senza OpenCV o senza modello ritorna [] e la clip resta al centro.
+    """
+    try:
+        import cv2
+        import numpy as np
+    except ImportError:
+        print("[Webcam] OpenCV non installato: impaginazione al centro.")
+        return []
+    if not hasattr(cv2, "FaceDetectorYN") or not os.path.exists(MODELLO_VOLTI):
+        print("[Webcam] Rilevatore di volti non disponibile: impaginazione al centro.")
+        return []
+    w, h = misure(percorso)
+    rilevatore = cv2.FaceDetectorYN.create(MODELLO_VOLTI, "", (w, h),
+                                           score_threshold=0.7)
+    risultato = []
+    for i in range(quanti):
+        istante = durata * (i + 0.5) / quanti
+        grezzo = subprocess.run(
+            ["ffmpeg", "-v", "error", "-ss", f"{istante:.2f}", "-i", percorso,
+             "-frames:v", "1", "-f", "rawvideo", "-pix_fmt", "bgr24", "-"],
+            capture_output=True).stdout
+        if len(grezzo) != w * h * 3:
+            continue
+        immagine = np.frombuffer(grezzo, dtype=np.uint8).reshape(h, w, 3)
+        _, volti = rilevatore.detect(immagine)
+        risultato.append([] if volti is None else
+                         [tuple(int(v) for v in r[:4]) for r in volti])
+    return risultato
+
+
+def scegli_impaginazione(percorso, durata):
+    w, h = misure(percorso)
+    scelta, riquadri = impaginazione.scegli(volti_nei_fotogrammi(percorso, durata), w, h)
+    print(f"[Webcam] impaginazione: {scelta}")
+    return scelta, riquadri
+
+
+def monta_verticale(sorgente, sottotitoli, uscita, scelta="centro", riquadri=None):
+    """Monta il 9:16 con i sottotitoli bruciati (vedi impaginazione.py).
 
     ffmpeg gira dentro la cartella del lavoro e riceve il nome nudo del file
     .ass: su Windows i due punti di 'C:' rompono il filtro 'ass'.
     """
     cartella = os.path.dirname(sottotitoli)
-    filtro = ("[0:v]scale=1080:1920:force_original_aspect_ratio=increase,"
-              "crop=1080:1920,boxblur=25:2,eq=brightness=-0.08[sfondo];"
-              "[0:v]scale=1080:-2[primo];"
-              "[sfondo][primo]overlay=(W-w)/2:(H-h)/2,"
-              f"ass={os.path.basename(sottotitoli)}[v]")
+    filtro = impaginazione.filtro_ffmpeg(scelta, riquadri,
+                                         os.path.basename(sottotitoli))
     subprocess.run(
         ["ffmpeg", "-y", "-v", "error", "-i", os.path.abspath(sorgente),
          "-filter_complex", filtro, "-map", "[v]", "-map", "0:a?",
@@ -394,8 +447,9 @@ def taglia(vod_id, prova=False):
         scarica_pezzo(vod_id, inizio, fine, grezzo)
         parole = trascrivi(grezzo)
         testo = " ".join(p[2] for p in parole)
-        scrivi_ass(parole, ass)
-        monta_verticale(grezzo, ass, finale)
+        scelta, riquadri = scegli_impaginazione(grezzo, fine - inizio)
+        scrivi_ass(parole, ass, margine=impaginazione.margine_sottotitoli(scelta))
+        monta_verticale(grezzo, ass, finale, scelta, riquadri)
 
         avvisi = punteggio.controlla_testo(testo, nomi_chat)
         punti = punteggio.applica_penalita(punti, avvisi)
@@ -408,7 +462,7 @@ def taglia(vod_id, prova=False):
             "secondo_inizio_vod": inizio, "durata": fine - inizio,
             "punteggio": punti, "lingua": "it", "video_url": None,
             "stato": "da_approvare", "voti": {}, "orario": None, "youtube_id": None,
-            "avvisi": avvisi, "trascrizione": testo[:1500],
+            "avvisi": avvisi, "trascrizione": testo[:1500], "impaginazione": scelta,
         }
         if not prova:
             release = release or release_del_giorno()

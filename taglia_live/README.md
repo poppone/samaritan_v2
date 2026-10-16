@@ -68,3 +68,17 @@ Vedi `punteggio.py`: energia dell'audio (urli, risate) piu' chat (messaggi al
 secondo, e soprattutto reazioni come "ahah", "LUL", "clip"), con la chat
 anticipata di 7 secondi perche' arriva in ritardo. Picchi distanti almeno
 90 secondi, clip da 15 a 60 secondi: 22 di contesto prima del picco, 12 dopo.
+
+## Impaginazione
+
+La webcam cambia posto da gioco a gioco, quindi la si cerca clip per clip
+(OpenCV, rilevatore YuNet, `impaginazione.py`):
+
+- **volto piccolo** in un angolo (si gioca): webcam ingrandita in alto, gioco
+  ritagliato in basso, sottotitoli sulla giunta;
+- **volto grande** (Contraddittorio, chiacchiere) o **nessun volto**: scena
+  intera al centro su sfondo sfocato.
+
+La scelta finisce nella scheda (`"impaginazione": "divisa"` o `"centro"`).
+Il modello YuNet (`modelli/face_detection_yunet_2023mar.onnx`, 230 KB) viene
+da opencv_zoo, licenza MIT.
