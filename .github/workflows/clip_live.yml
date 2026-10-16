@@ -1,0 +1,102 @@
+name: Clip Live (pubblicazione)
+
+# Pubblica su YouTube le clip delle live che Finch ha approvato.
+#
+# Il taglio NON avviene qui: scaricare e analizzare VOD di ore brucerebbe i
+# minuti del repository privato. Lo fa il PC di popponetv (taglia_live/), che
+# carica l'mp4 su una Release e scrive la scheda in clip_live/da_pubblicare/.
+# Qui si scarica solo la clip gia' pronta e la si carica: pochi minuti.
+#
+# Parte a ogni push sulle schede. Le schede "da_approvare" non fanno niente:
+# la lavorazione dura qualche secondo e finisce.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'clip_live/da_pubblicare/**.json'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: clip-live
+  cancel-in-progress: false
+
+jobs:
+  pubblica:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: C'e' qualcosa da pubblicare?
+        id: controllo
+        run: |
+          if grep -l '"stato": *"approvato"' clip_live/da_pubblicare/*.json 2>/dev/null; then
+            echo "procedi=si" >> "$GITHUB_OUTPUT"
+          else
+            echo "Nessuna clip approvata in attesa: fine."
+            echo "procedi=no" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Python
+        if: steps.controllo.outputs.procedi == 'si'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      # Bastano le librerie di Google e requests: niente Whisper ne' moviepy.
+      - name: Installa dipendenze
+        if: steps.controllo.outputs.procedi == 'si'
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Ripristina credenziali YouTube
+        if: steps.controllo.outputs.procedi == 'si'
+        env:
+          CLIENT_SECRET_B64: ${{ secrets.CLIENT_SECRET_B64 }}
+          YOUTUBE_TOKEN_B64: ${{ secrets.YOUTUBE_TOKEN_B64 }}
+        run: |
+          if [ -n "$CLIENT_SECRET_B64" ] && [ -n "$YOUTUBE_TOKEN_B64" ]; then
+            echo "$CLIENT_SECRET_B64" | base64 -d > client_secret.json
+            echo "$YOUTUBE_TOKEN_B64" | base64 -d > token.pickle
+          fi
+
+      - name: Pubblica le clip approvate
+        if: steps.controllo.outputs.procedi == 'si'
+        env:
+          # config.py le vuole all'import; qui non vengono usate.
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # Per scaricare l'mp4 dalla Release del repository privato.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python clip_live_pubblica.py
+
+      - name: Salva lo stato delle schede
+        if: always() && steps.controllo.outputs.procedi == 'si'
+        run: |
+          git config --global user.name "Samaritan Bot"
+          git config --global user.email "bot@samaritan.local"
+          git add -- clip_live/da_pubblicare/
+          if git diff --staged --quiet; then
+            echo "Schede invariate."
+            exit 0
+          fi
+          # [skip ci]: senza, questo push farebbe ripartire la lavorazione.
+          git commit -m "Clip live pubblicate [skip ci]"
+          if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+            exit 0
+          fi
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
