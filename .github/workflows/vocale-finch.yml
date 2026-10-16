@@ -1,0 +1,32 @@
+name: Vocale di Finch
+
+# Il vocale del mattino di Finch su Telegram. Parte solo a mano o da Finch
+# (workflow_dispatch con il testo): nessun orario fisso, nessun commit.
+
+on:
+  workflow_dispatch:
+    inputs:
+      testo:
+        description: 'Il testo da leggere (massimo 2500 caratteri)'
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  vocale:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install "edge-tts>=7.2,<8" "requests>=2.32,<3"
+      - name: Vocale
+        env:
+          TESTO: ${{ github.event.inputs.testo }}
+          FINCH_VOCE: ${{ vars.FINCH_VOCE }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python vocale_finch.py
