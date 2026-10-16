@@ -8,5 +8,7 @@ if not exist .venv (
   .venv\Scripts\python -m pip install --upgrade pip
   .venv\Scripts\pip install -r requirements.txt
 )
+REM Ogni volta: aggiunge le librerie nuove se requirements.txt e' cambiato.
+.venv\Scripts\pip install -q -r requirements.txt
 .venv\Scripts\python taglia_live.py %*
 if "%CLIP_AUTO%"=="" pause

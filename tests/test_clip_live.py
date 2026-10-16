@@ -197,3 +197,43 @@ def test_whisper_passa_alla_cpu_se_la_gpu_fallisce(monkeypatch):
     # la clip dopo resta sulla CPU, senza riprovare la GPU
     assert tl.trascrivi("y.mp4") == [(0.0, 0.5, "ciao")]
     assert caricati == ["cuda", "cpu"]
+
+
+# --- impaginazione ----------------------------------------------------------
+
+from taglia_live import impaginazione as imp
+
+
+def test_webcam_piccola_in_angolo_divide_lo_schermo():
+    # volti veri del primo giro di prova (Dirty Business, sorgente 1920x1080)
+    volti = [[(162, 66, 53, 68), (1688, 102, 54, 63)]] * 3 + [[(167, 65, 53, 72)]] * 3
+    scelta, r = imp.scegli(volti, 1920, 1080)
+    assert scelta == "divisa"
+    cx, cy, cw, ch = r["cam"]
+    assert cx <= 162 and cx + cw >= 162 + 53 and abs(cw / ch - imp.RAPPORTO_CAM) < 0.05
+    gx, gy, gw, gh = r["gioco"]
+    assert gh == 1080 and gx + gw <= 1920 and gw % 2 == 0
+
+
+def test_volto_grande_resta_al_centro():
+    volti = [[(845, 317, 311, 430)]] * 6          # Contraddittorio
+    assert imp.scegli(volti, 1920, 1080) == ("centro", None)
+
+
+def test_senza_volti_o_volti_sporadici_resta_al_centro():
+    assert imp.scegli([], 1920, 1080) == ("centro", None)
+    assert imp.scegli([[], [], [], [], [], [(10, 10, 40, 40)]], 1920, 1080)[0] == "centro"
+
+
+def test_il_gioco_si_sposta_via_dalla_webcam_a_destra():
+    _scelta, r = imp.scegli([[(1700, 900, 50, 60)]] * 6, 1920, 1080)
+    cx = r["cam"][0]
+    gx, _gy, gw, _gh = r["gioco"]
+    assert gx + gw <= cx
+
+
+def test_filtro_ffmpeg_ha_le_due_fasce():
+    _s, r = imp.scegli([[(162, 66, 53, 68)]] * 6, 1920, 1080)
+    filtro = imp.filtro_ffmpeg("divisa", r, "x.ass")
+    assert "vstack" in filtro and "ass=x.ass" in filtro
+    assert "boxblur" in imp.filtro_ffmpeg("centro", None, "x.ass")
