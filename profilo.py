@@ -239,7 +239,31 @@ PREDEFINITO = {
     # Parole che, nel titolo o nel sommario di una notizia, la tolgono di
     # mezzo, per lingua. Vuoto = nessun filtro; un telegiornale che non le
     # scrive riceve TEMI_DELICATI.
-    "temi_esclusi": {},
+    # Per Poppone TV: offerte, merch e sport. Dati API dal 5 all'11 ottobre
+    # 2026: gli Short sui giochi veri fanno 600-1.000 visualizzazioni, quelli
+    # nati da "GTA 6 merch frenzy" 1, "Pokemon: Prime Day steals" 3, un
+    # giocatore di football americano in un titolo Pokemon 4, una promo
+    # Instant Gaming senza il nome del gioco ("Survival Zelda-like: sconto o
+    # mito?"). Fuori apposta "calcio" e "football", che sono EA FC, e "nba",
+    # che e' NBA 2K.
+    "temi_esclusi": {
+        "it": [
+            "offerta", "offerte", "sconto", "sconti", "scontato",
+            "scontata", "prezzo piu basso", "minimo storico",
+            "codice sconto", "coupon", "prime day", "black friday",
+            "cyber monday", "instant gaming", "merch", "merchandising",
+            "maglietta", "magliette", "felpa", "action figure", "nfl",
+            "super bowl",
+        ],
+        "en": [
+            "deals", "deal alert", "best deal", "steals", "discount",
+            "discounted", "lowest price", "price drop", "coupon",
+            "promo code", "prime day", "black friday", "cyber monday",
+            "instant gaming", "merch", "merchandise", "t shirt", "hoodie",
+            "action figure", "nfl", "super bowl", "touchdown",
+            "quarterback",
+        ],
+    },
 
     # Samaritan si scrive da solo i campi che mancano (soggetto, ricerche,
     # clip di riserva, nomi grossi, tag...) partendo dal solo argomento, e li
