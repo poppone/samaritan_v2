@@ -158,3 +158,42 @@ def test_salta_i_saluti_finali():
     energia[4000] = 10.0
     picchi = [c[3] for c in punteggio.candidati(punteggio.segnale(energia), quante=1)]
     assert picchi and picchi[0] < 9000 - punteggio.SALTA_FINE
+
+
+def test_whisper_passa_alla_cpu_se_la_gpu_fallisce(monkeypatch):
+    """Su Windows la GPU si carica ma la trascrizione esplode (cublas64_12.dll)."""
+    from taglia_live import taglia_live as tl
+
+    class Parola:
+        start, end, word = 0.0, 0.5, " ciao"
+
+    class Segmento:
+        words = [Parola()]
+
+    class Modello:
+        def __init__(self, dispositivo):
+            self.dispositivo = dispositivo
+
+        def transcribe(self, audio, **kw):
+            def segmenti():
+                if self.dispositivo == "cuda":
+                    raise RuntimeError("Library cublas64_12.dll is not found")
+                yield Segmento()
+            return segmenti(), None
+
+    caricati = []
+
+    def carica(dispositivo):
+        caricati.append(dispositivo)
+        return Modello(dispositivo)
+
+    monkeypatch.setattr(tl, "_audio_16k", lambda p: [0.0])
+    monkeypatch.setattr(tl, "_carica_modello", carica)
+    monkeypatch.setattr(tl, "_modello", None)
+    monkeypatch.setattr(tl, "_dispositivo", None)
+    monkeypatch.setattr(tl, "DISPOSITIVO", "")
+    assert tl.trascrivi("x.mp4") == [(0.0, 0.5, "ciao")]
+    assert caricati == ["cuda", "cpu"]
+    # la clip dopo resta sulla CPU, senza riprovare la GPU
+    assert tl.trascrivi("y.mp4") == [(0.0, 0.5, "ciao")]
+    assert caricati == ["cuda", "cpu"]

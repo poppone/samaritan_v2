@@ -50,6 +50,7 @@ GROQ_KEY = os.getenv("GROQ_API_KEY", "").strip()
 GROQ_MODELLI = [m.strip() for m in os.getenv(
     "GROQ_MODELLI", "openai/gpt-oss-120b,openai/gpt-oss-20b").split(",") if m.strip()]
 WHISPER = os.getenv("WHISPER_MODELLO_CLIP", "small").strip()
+DISPOSITIVO = os.getenv("WHISPER_DISPOSITIVO", "").strip().lower()
 TWITCH_DL = os.getenv("TWITCHDOWNLOADER", "TwitchDownloaderCLI").strip()
 QUANTE = int(os.getenv("CLIP_PER_LIVE", "5"))
 
@@ -172,6 +173,7 @@ def gioco_al_secondo(info, secondo):
 # --------------------------------------------------------------------------
 
 _modello = None
+_dispositivo = None
 
 
 def _audio_16k(percorso):
@@ -183,27 +185,53 @@ def _audio_16k(percorso):
     return np.frombuffer(grezzo, dtype=np.int16).astype(np.float32) / 32768.0
 
 
-def trascrivi(percorso):
-    """Parole con i tempi. GPU se c'e' (sotto gli 8 GB basta 'small')."""
-    global _modello
+def _carica_modello(dispositivo):
     from faster_whisper import WhisperModel
-    if _modello is None:
-        try:
-            _modello = WhisperModel(WHISPER, device="cuda",
-                                    compute_type="int8_float16")
-        except Exception:
-            print("[Whisper] GPU non disponibile, uso la CPU.")
-            _modello = WhisperModel(WHISPER, device="cpu", compute_type="int8")
-    # L'audio lo decodifica ffmpeg e non faster-whisper: dalla 15 PyAV ha
-    # tolto l'opzione metadata_errors che faster-whisper passa ancora ad
-    # av.open(), e la trascrizione si fermava con "unexpected keyword".
-    segmenti, _ = _modello.transcribe(_audio_16k(percorso), language="it",
+    if dispositivo == "cuda":
+        return WhisperModel(WHISPER, device="cuda", compute_type="int8_float16")
+    return WhisperModel(WHISPER, device="cpu", compute_type="int8")
+
+
+def _parole(audio):
+    # transcribe() e' pigro: gli errori della GPU escono mentre si leggono i
+    # segmenti, non quando si chiama. Per questo si legge tutto qui dentro.
+    segmenti, _ = _modello.transcribe(audio, language="it",
                                       word_timestamps=True, vad_filter=True)
     parole = []
     for seg in segmenti:
         for p in seg.words or []:
             parole.append((p.start, p.end, p.word.strip()))
     return parole
+
+
+def trascrivi(percorso):
+    """Parole con i tempi. GPU se funziona davvero, altrimenti CPU.
+
+    WHISPER_DISPOSITIVO=cpu nel .env salta del tutto la prova della GPU.
+    Su Windows la GPU NVIDIA spesso si carica ma poi manca cublas64_12.dll
+    (le librerie CUDA non sono installate): l'errore arriva alla prima
+    trascrizione, e a quel punto si passa alla CPU e si riprova.
+    """
+    global _modello, _dispositivo
+    # L'audio lo decodifica ffmpeg e non faster-whisper: dalla 15 PyAV ha
+    # tolto l'opzione metadata_errors che faster-whisper passa ancora ad
+    # av.open(), e la trascrizione si fermava con "unexpected keyword".
+    audio = _audio_16k(percorso)
+    if _modello is None:
+        dispositivo = DISPOSITIVO if DISPOSITIVO in ("cpu", "cuda") else "cuda"
+        try:
+            _modello, _dispositivo = _carica_modello(dispositivo), dispositivo
+        except Exception:
+            print("[Whisper] GPU non disponibile, uso la CPU.")
+            _modello, _dispositivo = _carica_modello("cpu"), "cpu"
+    try:
+        return _parole(audio)
+    except Exception as e:
+        if _dispositivo == "cpu":
+            raise
+        print(f"[Whisper] La GPU non va ({e}): passo alla CPU.")
+        _modello, _dispositivo = _carica_modello("cpu"), "cpu"
+        return _parole(audio)
 
 
 def _tempo_ass(t):
