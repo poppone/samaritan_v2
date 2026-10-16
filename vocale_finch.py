@@ -1,7 +1,7 @@
 """Vocale del mattino di Finch, il direttore della stanza degli agenti.
 
 Legge il testo dalla variabile TESTO con la voce ElevenLabs scelta da Davide
-("Davide - sport commentator", variabile FINCH_VOCE_ELEVENLABS) e lo manda su
+("Angelo", variabile FINCH_VOCE_ELEVENLABS) e lo manda su
 Telegram come audio. Se ElevenLabs non risponde (credito finito, chiave
 assente) ripiega sulla voce gratuita di Edge-TTS, cosi' il vocale arriva
 comunque. Lo lancia Finch una volta al giorno con il workflow "Vocale di Finch".
@@ -14,7 +14,7 @@ import edge_tts
 import requests
 
 VOCE = os.environ.get("FINCH_VOCE") or "it-IT-GiuseppeNeural"
-VOCE_ELEVENLABS = os.environ.get("FINCH_VOCE_ELEVENLABS") or "Davide"
+VOCE_ELEVENLABS = os.environ.get("FINCH_VOCE_ELEVENLABS") or "Angelo"
 MODELLO = os.environ.get("ELEVENLABS_MODELLO") or "eleven_multilingual_v2"
 API = "https://api.elevenlabs.io/v1"
 LIMITE_CARATTERI = 2500
@@ -36,7 +36,8 @@ def _id_voce(chiave, richiesta):
     for voce in voci:
         if voce.get("name", "").strip().lower().startswith(cercato):
             return voce["voice_id"]
-    raise RuntimeError(f"voce '{richiesta}' non trovata su ElevenLabs")
+    nomi = ", ".join(v.get("name", "") for v in voci)
+    raise RuntimeError(f"voce '{richiesta}' non trovata su ElevenLabs (voci nell'account: {nomi})")
 
 
 def _sintetizza_elevenlabs(chiave, testo, percorso):
