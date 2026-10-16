@@ -32,6 +32,7 @@ DOPO_IL_PICCO = 12        # reazione dopo il picco
 DURATA_MIN = 15
 DURATA_MAX = 60
 SALTA_INIZIO = 120        # i primi minuti di una live sono "ciao a tutti"
+SALTA_FINE = 180          # gli ultimi sono saluti, raid e musica di chiusura
 
 PAROLE_REAZIONE = (
     "ahah", "ahha", "haha", "lol", "lul", "kekw", "omegalul", "pog", "poggers",
@@ -143,7 +144,7 @@ def candidati(valori, quante=5, durata_live=None):
     """I momenti migliori: [(inizio, fine, punteggio, picco), ...] per punteggio.
 
     Greedy: prende il secondo piu' alto, esclude i DISTANZA_MINIMA attorno,
-    ripete. I primi SALTA_INIZIO secondi non contano.
+    ripete. I primi SALTA_INIZIO e gli ultimi SALTA_FINE secondi non contano.
     """
     durata_live = durata_live or len(valori)
     ordine = sorted(range(len(valori)), key=lambda i: valori[i], reverse=True)
@@ -151,7 +152,8 @@ def candidati(valori, quante=5, durata_live=None):
     for i in ordine:
         if len(presi) >= quante:
             break
-        if i < SALTA_INIZIO and durata_live > SALTA_INIZIO * 3:
+        lunga = durata_live > (SALTA_INIZIO + SALTA_FINE) * 3
+        if lunga and (i < SALTA_INIZIO or i > durata_live - SALTA_FINE):
             continue
         if valori[i] <= 0:
             break

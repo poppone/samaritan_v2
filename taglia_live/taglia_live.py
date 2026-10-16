@@ -43,7 +43,7 @@ try:
 except ImportError:
     pass
 
-CANALE = os.getenv("TWITCH_CANALE", "popponetv").strip()
+CANALE = os.getenv("TWITCH_CANALE", "davidedurazzi").strip()
 REPO = os.getenv("CLIP_REPO", "poppone/samaritan_v2").strip()
 TOKEN = os.getenv("GITHUB_TOKEN_CLIP", "").strip()
 GROQ_KEY = os.getenv("GROQ_API_KEY", "").strip()
@@ -174,6 +174,15 @@ def gioco_al_secondo(info, secondo):
 _modello = None
 
 
+def _audio_16k(percorso):
+    """L'audio della clip come Whisper lo vuole: mono, 16 kHz, float32."""
+    import numpy as np
+    grezzo = subprocess.run(
+        ["ffmpeg", "-v", "error", "-i", percorso, "-ac", "1", "-ar", "16000",
+         "-f", "s16le", "-"], capture_output=True, check=True).stdout
+    return np.frombuffer(grezzo, dtype=np.int16).astype(np.float32) / 32768.0
+
+
 def trascrivi(percorso):
     """Parole con i tempi. GPU se c'e' (sotto gli 8 GB basta 'small')."""
     global _modello
@@ -185,7 +194,10 @@ def trascrivi(percorso):
         except Exception:
             print("[Whisper] GPU non disponibile, uso la CPU.")
             _modello = WhisperModel(WHISPER, device="cpu", compute_type="int8")
-    segmenti, _ = _modello.transcribe(percorso, language="it",
+    # L'audio lo decodifica ffmpeg e non faster-whisper: dalla 15 PyAV ha
+    # tolto l'opzione metadata_errors che faster-whisper passa ancora ad
+    # av.open(), e la trascrizione si fermava con "unexpected keyword".
+    segmenti, _ = _modello.transcribe(_audio_16k(percorso), language="it",
                                       word_timestamps=True, vad_filter=True)
     parole = []
     for seg in segmenti:
