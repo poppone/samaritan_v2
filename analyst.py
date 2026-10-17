@@ -33,6 +33,11 @@ PESO_MIN, PESO_MAX = 0.35, 2.5
 # e 'FIELD_UNKNOWN_VALUE' su max-results, che non sembra affatto un limite
 # superato. Con 40 il 21 settembre 2026 non e' tornato niente.
 MAX_TERMINI_RICERCA = 25
+# Il rapporto per video ne restituisce al massimo 200 per richiesta: oltre si
+# va avanti a pagine (startIndex). Dieci pagine sono duemila video, ben oltre
+# quelli che un canale pubblica in novanta giorni.
+RIGHE_PER_PAGINA = 200
+MAX_PAGINE_VIDEO = 10
 # Sotto questa soglia un termine e' un caso isolato, non una domanda ricorrente.
 MIN_VIEWS_TERMINE = 2
 # Parole che compaiono nei termini ma non dicono di che argomento si tratta.
@@ -77,33 +82,96 @@ def scarica_performance():
         oggi = datetime.date.today()
         inizio = oggi - datetime.timedelta(days=GIORNI_ANALISI)
 
-        risposta = analytics.reports().query(
-            ids="channel==MINE",
-            startDate=inizio.isoformat(),
-            endDate=oggi.isoformat(),
-            metrics=("views,averageViewPercentage,averageViewDuration,"
-                     "likes,comments,subscribersGained"),
-            dimensions="video",
-            sort="-views",
-            maxResults=200,
-        ).execute()
+        risposte = _scarica_pagine_video(analytics, inizio, oggi)
 
     except Exception as e:
         print(f"[Samaritan Analyst] Statistiche non disponibili ({e}). "
               f"Uso pesi neutri.")
         return {}
 
-    colonne = [c["name"] for c in risposta.get("columnHeaders", [])]
     performance = {}
-    for riga in risposta.get("rows", []):
-        record = dict(zip(colonne, riga))
-        video_id = record.pop("video", None)
-        if video_id:
-            performance[video_id] = record
+    for risposta in risposte:
+        colonne = [c["name"] for c in risposta.get("columnHeaders", [])]
+        for riga in risposta.get("rows", []) or []:
+            record = dict(zip(colonne, riga))
+            video_id = record.pop("video", None)
+            if video_id and video_id not in performance:
+                performance[video_id] = record
 
     print(f"[Samaritan Analyst] Metriche raccolte per {len(performance)} video.")
     _controlla_contro_il_canale(analytics, performance, inizio, oggi)
     return performance
+
+
+def _scarica_pagine_video(analytics, inizio, fine):
+    """Tutte le pagine del rapporto per video, non solo la prima.
+
+    YouTube restituisce al massimo RIGHE_PER_PAGINA video per richiesta,
+    ordinati per visualizzazioni. Con quattro Short al giorno, in novanta
+    giorni i video sono piu' di duecento: dal 14 ottobre 2026 il file restava
+    fermo a 197 video e ogni giorno ne entravano tanti nuovi quanti ne
+    uscivano di vecchi, e i video nuovi con poche visualizzazioni rischiavano
+    di restare fuori. Si chiede quindi pagina dopo pagina con startIndex.
+    La prima pagina che fallisce solleva (come prima); una successiva che
+    fallisce non butta quelle gia' arrivate.
+    """
+    risposte = []
+    for numero in range(MAX_PAGINE_VIDEO):
+        try:
+            risposta = analytics.reports().query(
+                ids="channel==MINE",
+                startDate=inizio.isoformat(),
+                endDate=fine.isoformat(),
+                metrics=("views,averageViewPercentage,averageViewDuration,"
+                         "likes,comments,subscribersGained"),
+                dimensions="video",
+                sort="-views",
+                maxResults=RIGHE_PER_PAGINA,
+                startIndex=1 + numero * RIGHE_PER_PAGINA,
+            ).execute()
+        except Exception as e:
+            if not risposte:
+                raise
+            print(f"[Warning Analyst] Pagina {numero + 1} delle metriche non "
+                  f"arrivata ({e}): tengo le {numero} gia' scaricate.")
+            break
+        risposte.append(risposta)
+        if len(risposta.get("rows") or []) < RIGHE_PER_PAGINA:
+            break
+    return risposte
+
+
+def ultimo_giorno_con_dati():
+    """L'ultimo giorno per cui YouTube Analytics ha gia' dei numeri.
+
+    YouTube Analytics arriva con due-tre giorni di ritardo: il 13 ottobre
+    2026 il file era aggiornato quel giorno stesso ma i video piu' recenti
+    con dei numeri erano del 9-10, e da fuori sembrava fermo. Scriverlo nel
+    file ('dati_fino_al') distingue il ritardo normale da un aggiornamento
+    rotto. None se non si riesce a saperlo.
+    """
+    try:
+        from googleapiclient.discovery import build
+        from uploader import ottieni_credenziali, ha_scope_analytics
+
+        credenziali = ottieni_credenziali()
+        if not ha_scope_analytics(credenziali):
+            return None
+        analytics = build("youtubeAnalytics", "v2", credentials=credenziali)
+        oggi = datetime.date.today()
+        risposta = analytics.reports().query(
+            ids="channel==MINE",
+            startDate=(oggi - datetime.timedelta(days=14)).isoformat(),
+            endDate=oggi.isoformat(),
+            metrics="views",
+            dimensions="day",
+            sort="day",
+        ).execute()
+    except Exception as e:
+        print(f"[Samaritan Analyst] Ultimo giorno con dati non disponibile ({e}).")
+        return None
+    giorni = [r[0] for r in (risposta.get("rows") or []) if r and r[0]]
+    return max(giorni) if giorni else None
 
 
 def _views_del_canale(analytics, inizio, fine):
@@ -297,9 +365,14 @@ def aggiorna_performance():
     termini = scarica_termini_di_ricerca() or termini_di_ricerca()
     sorgenti = scarica_sorgenti_di_traffico() or sorgenti_di_traffico()
 
+    # 'aggiornato' e' quando gira lo script, 'dati_fino_al' fin dove arriva
+    # YouTube (due-tre giorni prima): chi legge il file vede i due ritardi.
+    dati_fino_al = ultimo_giorno_con_dati() or _dati_fino_al_salvato()
+
     with open(config.FILE_PERFORMANCE, "w", encoding="utf-8") as f:
         json.dump(
             {"aggiornato": datetime.date.today().isoformat(),
+             "dati_fino_al": dati_fino_al,
              "video": performance,
              "ricerche": termini,
              "sorgenti": sorgenti},
@@ -352,6 +425,16 @@ def parole_cercate():
             if len(parola) >= 2 and parola not in vuote and not parola.isdigit():
                 parole.add(parola)
     return frozenset(parole)
+
+
+def _dati_fino_al_salvato():
+    if not os.path.exists(config.FILE_PERFORMANCE):
+        return None
+    try:
+        with open(config.FILE_PERFORMANCE, "r", encoding="utf-8") as f:
+            return json.load(f).get("dati_fino_al")
+    except Exception:
+        return None
 
 
 def _carica_performance_salvata():

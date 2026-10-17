@@ -87,8 +87,10 @@ def prepara(percorso_video, video_id, dati):
             return {}
         campi = {"video_file_url": url}
         try:
-            from brain import costruisci_didascalia_tiktok
-            didascalia = costruisci_didascalia_tiktok(dati)
+            from brain import costruisci_didascalia_tiktok, normalizza_didascalia
+            # Normalizzata anche qui, subito prima di finire in cronologia:
+            # niente '\n' scritto per esteso ne' spazi doppi nel testo salvato.
+            didascalia = normalizza_didascalia(costruisci_didascalia_tiktok(dati))
             if didascalia:
                 campi["didascalia_tiktok"] = didascalia
         except Exception as e:

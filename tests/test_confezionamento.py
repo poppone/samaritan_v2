@@ -1589,6 +1589,32 @@ class TestDidascaliaTikTok:
         assert didascalia.startswith("Un titolo")
         assert "#gamingita" in didascalia
 
+    def test_il_backslash_n_scritto_diventa_un_a_capo(self):
+        # Short YhBgD6euibg, 13 ottobre 2026: il modello aveva scritto l'a
+        # capo come testo e nella didascalia salvata compariva '\n' in vista.
+        dati = dict(DATI_GTA, descrizione=(
+            "Scopri se la versione in scatola di GTA 6 ha davvero il disco."
+            "\\nTi sorprende questa novita'? Lascia il tuo commento!"))
+        didascalia = brain.costruisci_didascalia_tiktok(dati)
+        assert "\\n" not in didascalia
+        righe = didascalia.splitlines()
+        assert righe[2] == "Scopri se la versione in scatola di GTA 6 ha davvero il disco."
+        # La domanda finale resta fuori, come per una descrizione normale.
+        assert "Ti sorprende" not in didascalia
+
+    def test_niente_spazi_doppi(self):
+        dati = dict(DATI_GTA, titolo="GTA 6:  la scatola   senza disco ",
+                    descrizione="Una riga  con   spazi doppi.")
+        didascalia = brain.costruisci_didascalia_tiktok(dati)
+        assert "  " not in didascalia
+        assert didascalia.startswith("GTA 6: la scatola senza disco\n\n")
+        assert "Una riga con spazi doppi." in didascalia
+
+    def test_normalizza_didascalia(self):
+        assert brain.normalizza_didascalia(
+            "Titolo\\n\\n\\n\\nRiga  uno \\r\\nRiga due") == "Titolo\n\nRiga uno\nRiga due"
+        assert brain.normalizza_didascalia(None) == ""
+
     def test_la_descrizione_youtube_non_e_cambiata(self):
         # Il senso di questa modifica e' aggiungere TikTok senza toccare
         # niente di quello che finisce su YouTube.
