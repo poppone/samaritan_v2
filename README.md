@@ -7,12 +7,10 @@ richiesta un video lungo 16:9 da otto minuti.
 Non e' solo un generatore: misura la retention reale dei video pubblicati e
 usa quei dati per decidere cosa produrre dopo.
 
-> **Hai Samaritan per il tuo canale?** Non ti serve niente di questo file: si
-> installa da una pagina web, `installa/index.html`, senza terminale e senza
-> toccare il codice. I passi, spiegati per chi non programma, sono in
-> [GUIDA_CLIENTE.md](GUIDA_CLIENTE.md). Per pubblicare la pagina chi possiede
-> il repository modello deve segnarlo come *Template repository* e accendere
-> GitHub Pages (vedi [Installazione per i clienti](#installazione-per-i-clienti)).
+Il codice e' pubblico per trasparenza: e' una delle macchine dell'azienda di un
+solo umano raccontata su [davidedurazzi.it/azienda](https://www.davidedurazzi.it/azienda).
+Le chiavi non stanno qui: vivono nei Secrets di GitHub e in un `.env` locale
+che git ignora.
 
 ```
 FASE 0  analyst.py   scarica la retention reale degli ultimi 90 giorni
@@ -289,8 +287,8 @@ Stampa i valori base64 da incollare in **Settings > Secrets and variables > Acti
 `GROQ_API_KEY`, `PEXELS_API_KEY`, `CLIENT_SECRET_B64`, `YOUTUBE_TOKEN_B64`
 
 Al posto degli ultimi due vanno bene anche `YOUTUBE_CLIENT_ID`,
-`YOUTUBE_CLIENT_SECRET` e `YOUTUBE_REFRESH_TOKEN`, che sono quelli che scrive
-la pagina di installazione: niente file, niente pickle. Se ci sono tutti e due
+`YOUTUBE_CLIENT_SECRET` e `YOUTUBE_REFRESH_TOKEN`, che si ricavano dal giro OAuth di Google:
+niente file, niente pickle. Se ci sono tutti e due
 i modi vince il pickle.
 
 **Secrets opzionali**
@@ -509,55 +507,6 @@ resta nella chiave `gioco`, anche quando e' una ricetta: cambiarla vorrebbe
 dire buttare la cronologia gia' scritta.
 
 ---
-
-## Installazione per i clienti
-
-Chi compra Samaritan non apre un terminale: copia il repository dal modello e
-configura tutto da `installa/index.html`, una pagina statica che gira nel suo
-browser e parla solo con `api.github.com` e con i server OAuth di Google. Scrive
-`canale.json` con un commit (la prima volta azzera anche cronologia,
-`performance.json` e le clip di `clip_mie/`, che sono del modello, e spegne
-`promo.yml`), salva le chiavi nei Secrets cifrandole come chiede GitHub, fa il
-giro OAuth di Google per il refresh token e lancia un video di prova privato.
-La guida per il cliente e' [GUIDA_CLIENTE.md](GUIDA_CLIENTE.md).
-
-Dove sta cosa (29 settembre 2026):
-
-- **`poppone/samaritan-template`**, privato: la copia pulita da vendere, senza
-  la memoria e le clip di Poppone TV. Va acceso **Settings > General >
-  Template repository**. Un modello privato si copia solo se si ha accesso:
-  il cliente si invita (in sola lettura) dopo che ha pagato. Il nome e' la
-  costante `TEMPLATE_REPO` in cima alla pagina.
-- **`poppone/samaritan-installa`**, pubblico: contiene solo la pagina, perche'
-  GitHub Pages su un repository privato richiede un piano a pagamento. Con
-  **Settings > Pages** sul ramo `main` la pagina e' su
-  `https://poppone.github.io/samaritan-installa/`, ed e' quell'indirizzo che il
-  cliente registra su Google come URI di reindirizzamento (Google accetta solo
-  `https`).
-- La pagina si sviluppa qui, in `installa/index.html`, e si copia negli altri
-  due quando cambia. Rifiuta di scrivere sul modello e su questo repository.
-
-`telegram/worker.js` resta di Poppone TV (ha il repository scritto dentro):
-i clienti ricevono gli avvisi Telegram, ma non comandano la pipeline dal bot.
-
-## I Reel che vendono Samaritan (Instagram)
-
-Il canale YouTube parla di videogiochi. Il profilo Instagram parla di
-Samaritan: un Reel al giorno con i suoi numeri veri, per far scrivere in DM
-chi vuole la stessa macchina sul proprio canale.
-
-    python promo.py            # scrive, monta e pubblica il Reel di oggi
-    python promo.py --prova    # monta il Reel ma non lo pubblica
-
-Su GitHub Actions gira da solo con il workflow `Samaritan Promo (Instagram)`.
-Le due chiavi di Instagram si ricavano una volta sola: la procedura passo
-passo e' in [GUIDA_INSTAGRAM.md](GUIDA_INSTAGRAM.md). Senza quelle chiavi la
-lavorazione gira lo stesso, monta il Reel e lo manda su Telegram senza
-pubblicarlo.
-
-Questa parte e' tenuta separata da quella del canale di proposito: workflow
-suo, memoria sua (`promo_cronologia.json`), e nessun modulo della pipeline di
-YouTube la importa. Se Instagram cambia le regole, il canale non se ne accorge.
 
 ## Note su policy e monetizzazione
 

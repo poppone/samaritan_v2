@@ -76,15 +76,3 @@ class TestCredenzialiDaSecret:
         assert credenziali.valid is True
         assert not isinstance(credenziali, Credentials)
         assert rinnovi == []
-
-    def test_gli_scope_sono_quelli_chiesti_dalla_pagina(self):
-        """La pagina di installazione chiede a Google gli stessi permessi:
-        con uno in meno il refresh token non basterebbe a caricare video o a
-        leggere le statistiche."""
-        import os
-        import re
-        qui = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        with open(os.path.join(qui, "installa", "index.html"), encoding="utf-8") as f:
-            pagina = f.read()
-        blocco = re.search(r"const SCOPES = \[(.*?)\];", pagina, re.S).group(1)
-        assert re.findall(r'"([^"]+)"', blocco) == uploader.SCOPES

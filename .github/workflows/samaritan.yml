@@ -148,7 +148,7 @@ jobs:
       #   - client_secret.json e token.pickle in base64 (setup_secrets.py),
       #     il modo di sempre: se ci sono, vincono;
       #   - YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET e YOUTUBE_REFRESH_TOKEN,
-      #     scritti dalla pagina di installazione (installa/index.html): non
+      #     ricavati dal giro OAuth di Google: non
       #     c'e' niente da ripristinare su disco, li legge uploader.py.
       - name: Ripristina credenziali YouTube
         env:
@@ -168,7 +168,7 @@ jobs:
             exit 0
           fi
           echo "::error::Mancano le credenziali YouTube: servono CLIENT_SECRET_B64 e YOUTUBE_TOKEN_B64, oppure YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET e YOUTUBE_REFRESH_TOKEN."
-          echo "Si preparano con la pagina installa/index.html, oppure in locale con: python setup_secrets.py"
+          echo "Si preparano in locale con: python setup_secrets.py"
           exit 1
 
       - name: Esegui pipeline Samaritan
