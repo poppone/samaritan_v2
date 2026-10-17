@@ -23,6 +23,10 @@ class TestOfferteMerchSport:
         ("en", "NFL star Kyle Juszczyk shows his Pokemon lineup"),
         ("it", "Survival Zelda-like: sconto da non perdere su Instant Gaming"),
         ("it", "Le migliori offerte PS5 del Black Friday"),
+        ("en", "Pokemon: Holiday Plush Collection Shocks Fans"),
+        ("en", "Promising Western PS5 Action Game: Release Date Revealed"),
+        ("it", "Un promettente survival arriva su PS5"),
+        ("it", "Street food, fumetti, Pokemon e videogiochi: a Empoli quattro giorni con l'Urban Food Festival"),
     ])
     def test_scartate(self, monkeypatch, lingua, titolo):
         monkeypatch.setattr(config, "LINGUA", lingua)
@@ -33,6 +37,7 @@ class TestOfferteMerchSport:
         ("en", "EA Sports FC 27 football ratings revealed"),
         ("en", "NBA 2K27 gets a new trailer"),
         ("en", "Game Pass October lineup revealed"),
+        ("en", "Toy Story characters join Fortnite"),
         ("it", "EA FC 27, il calcio di EA cambia motore"),
         ("it", "GTA 6, nuovo trailer annunciato da Rockstar"),
     ])
