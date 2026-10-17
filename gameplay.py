@@ -1116,6 +1116,46 @@ def _immagini_xbox(catalogo):
                     yield indirizzo
 
 
+# ----------------------------------------------------------------- App Store
+# I giochi per telefono (Pokemon TCG Pocket, Clash Royale, Pokemon GO) non
+# stanno su nessuna console. La ricerca pubblica di Apple da' le schermate
+# ufficiali della scheda: il 16 ottobre 2026 "Pokemon TCG Pocket" senza
+# questo negozio e' finito su clip Pexels.
+APPSTORE_RICERCA = ("https://itunes.apple.com/search"
+                    "?term={}&entity=software&country=us&limit=5")
+# Gli indirizzi chiedono una miniatura ('.../392x696bb.jpg'); 'bb' vuol dire
+# "dentro questo riquadro", quindi chiedere un riquadro grande da' la
+# schermata alla risoluzione piena senza cambiarne le proporzioni.
+_APPSTORE_MISURA = re.compile(r"/\d+x\d+bb(\.\w+)$")
+
+
+def _appstore_grande(url):
+    return _APPSTORE_MISURA.sub(r"/2000x2000bb\1", url)
+
+
+def materiale_appstore(nome):
+    """Le schermate ufficiali della scheda App Store del gioco, o None."""
+    for variante in _varianti_nome(nome):
+        try:
+            risposta = _scarica_pagina(
+                APPSTORE_RICERCA.format(quote(variante))).json()
+        except Exception as e:
+            print(f"[Gameplay] Ricerca App Store '{variante}' fallita: {e}")
+            continue
+
+        for app in (risposta or {}).get("results") or []:
+            titolo = app.get("trackName") or ""
+            if _somiglianza(variante, titolo) < SOGLIA_CORRISPONDENZA:
+                continue
+            schermate = list(app.get("screenshotUrls") or []) + \
+                list(app.get("ipadScreenshotUrls") or [])
+            immagini = _elenco_unico(_appstore_grande(u) for u in schermate
+                                     if str(u).startswith("https://"))
+            if immagini:
+                return {"nome": titolo, "video": [], "immagini": immagini}
+    return None
+
+
 def _cercatori_negozi():
     """I negozi nell'ordine in cui si interrogano: prima quelli coi filmati."""
     return (
@@ -1123,15 +1163,16 @@ def _cercatori_negozi():
         ("Epic Games Store", materiale_epic),
         ("Nintendo", materiale_nintendo),
         ("Xbox", materiale_xbox),
+        ("App Store", materiale_appstore),
     )
 
 
 def materiale_dai_negozi(nome, quanti_video=3, quante_immagini=4):
     """Cerca il gioco nei negozi ufficiali diversi da Steam.
 
-    Il materiale dei negozi si somma, perche' nessuno dei quattro ha sempre
-    tutto: PlayStation ed Epic danno i filmati, Xbox soltanto schermate e
-    Nintendo i filmati solo per i giochi meno recenti. Si smette appena ce n'e' abbastanza di entrambi. Un negozio
+    Il materiale dei negozi si somma, perche' nessuno dei cinque ha sempre
+    tutto: PlayStation ed Epic danno i filmati, Xbox e App Store soltanto
+    schermate e Nintendo i filmati solo per i giochi meno recenti. Si smette appena ce n'e' abbastanza di entrambi. Un negozio
     che non risponde non ferma gli altri e non ferma il video.
     """
     nome = nome_con_alias(nome)
