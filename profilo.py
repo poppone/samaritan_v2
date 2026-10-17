@@ -245,23 +245,32 @@ PREDEFINITO = {
     # giocatore di football americano in un titolo Pokemon 4, una promo
     # Instant Gaming senza il nome del gioco ("Survival Zelda-like: sconto o
     # mito?"). Fuori apposta "calcio" e "football", che sono EA FC, e "nba",
-    # che e' NBA 2K.
+    # che e' NBA 2K. Il 17 ottobre sono passati anche "Pokemon: Holiday Plush
+    # Collection" e "Promising Western PS5 Action Game", da qui peluche e
+    # giochi senza nome.
     "temi_esclusi": {
         "it": [
             "offerta", "offerte", "sconto", "sconti", "scontato",
             "scontata", "prezzo piu basso", "minimo storico",
             "codice sconto", "coupon", "prime day", "black friday",
             "cyber monday", "instant gaming", "merch", "merchandising",
-            "maglietta", "magliette", "felpa", "action figure", "nfl",
-            "super bowl",
+            "maglietta", "magliette", "felpa", "action figure", "peluche",
+            "pupazzo", "pupazzi", "giocattolo", "giocattoli", "statuetta",
+            "statuette", "funko", "nfl", "super bowl",
+            # Il gioco senza nome: "un promettente survival", "un misterioso
+            # gioco PS5". Il video finisce su Pexels perche' non c'e' un
+            # gioco da cercare su Steam.
+            "promettente", "senza nome", "misterioso nuovo",
         ],
         "en": [
             "deals", "deal alert", "best deal", "steals", "discount",
             "discounted", "lowest price", "price drop", "coupon",
             "promo code", "prime day", "black friday", "cyber monday",
             "instant gaming", "merch", "merchandise", "t shirt", "hoodie",
-            "action figure", "nfl", "super bowl", "touchdown",
-            "quarterback",
+            "action figure", "plush", "plushie", "plushies", "toys",
+            "collectibles", "statue", "statues", "funko", "nfl",
+            "super bowl", "touchdown", "quarterback",
+            "promising", "unnamed", "untitled", "mysterious new",
         ],
     },
 
