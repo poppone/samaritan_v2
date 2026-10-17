@@ -26,6 +26,7 @@ class TestOfferteMerchSport:
         ("en", "Pokemon: Holiday Plush Collection Shocks Fans"),
         ("en", "Promising Western PS5 Action Game: Release Date Revealed"),
         ("it", "Un promettente survival arriva su PS5"),
+        ("it", "Street food, fumetti, Pokemon e videogiochi: a Empoli quattro giorni con l'Urban Food Festival"),
     ])
     def test_scartate(self, monkeypatch, lingua, titolo):
         monkeypatch.setattr(config, "LINGUA", lingua)

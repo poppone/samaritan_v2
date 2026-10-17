@@ -257,6 +257,9 @@ PREDEFINITO = {
             "maglietta", "magliette", "felpa", "action figure", "peluche",
             "pupazzo", "pupazzi", "giocattolo", "giocattoli", "statuetta",
             "statuette", "funko", "nfl", "super bowl",
+            # "Street food, fumetti, Pokemon e videogiochi: a Empoli quattro
+            # giorni con l'Urban Food Festival" (17 ottobre): una sagra.
+            "sagra", "street food", "festival",
             # Il gioco senza nome: "un promettente survival", "un misterioso
             # gioco PS5". Il video finisce su Pexels perche' non c'e' un
             # gioco da cercare su Steam.
@@ -269,7 +272,8 @@ PREDEFINITO = {
             "instant gaming", "merch", "merchandise", "t shirt", "hoodie",
             "action figure", "plush", "plushie", "plushies", "toys",
             "collectibles", "statue", "statues", "funko", "nfl",
-            "super bowl", "touchdown", "quarterback",
+            "super bowl", "touchdown", "quarterback", "food festival",
+            "street food",
             "promising", "unnamed", "untitled", "mysterious new",
         ],
     },
