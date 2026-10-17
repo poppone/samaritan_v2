@@ -2,9 +2,11 @@ name: Test
 
 # Samaritan pubblica da solo, di notte, senza nessuno a guardare: la rete di
 # sicurezza sulla logica deve girare a ogni push e a ogni pull request.
+# Solo sulle pull request (e a mano): girare a ogni push, compresi quelli del
+# bot che salva la memoria, costava circa 450 minuti al mese di Actions.
+# Tutto il codice entra in main da una PR, quindi i test girano lo stesso
+# prima di ogni modifica vera.
 on:
-  push:
-    branches: ['**']
   pull_request:
   workflow_dispatch:
 
