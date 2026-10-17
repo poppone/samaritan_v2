@@ -1018,9 +1018,46 @@ class TestXbox:
         assert not any("displaycatalog" in u for u in chiamate)
 
 
+class TestAppStore:
+    """I giochi per telefono non stanno su nessuna console: le schermate
+    ufficiali arrivano dalla ricerca pubblica dell'App Store."""
+
+    RICERCA = {"results": [
+        {"trackName": "Pokémon TCG Pocket",
+         "screenshotUrls": [
+             "https://is1-ssl.mzstatic.com/image/thumb/Purple/a/1.png/392x696bb.png",
+             "https://is1-ssl.mzstatic.com/image/thumb/Purple/a/2.png/392x696bb.png"],
+         "ipadScreenshotUrls": [
+             "https://is1-ssl.mzstatic.com/image/thumb/Purple/a/3.jpg/576x768bb.jpg"]},
+    ]}
+
+    def test_prende_le_schermate_a_risoluzione_piena(self, monkeypatch):
+        _finta_rete(monkeypatch, [
+            ("itunes.apple.com/search", _RispostaFinta(dati=self.RICERCA))])
+        trovato = gameplay.materiale_appstore("Pokemon TCG Pocket")
+        assert trovato["nome"] == "Pokémon TCG Pocket"
+        assert trovato["video"] == []
+        assert trovato["immagini"] == [
+            "https://is1-ssl.mzstatic.com/image/thumb/Purple/a/1.png/2000x2000bb.png",
+            "https://is1-ssl.mzstatic.com/image/thumb/Purple/a/2.png/2000x2000bb.png",
+            "https://is1-ssl.mzstatic.com/image/thumb/Purple/a/3.jpg/2000x2000bb.jpg",
+        ]
+
+    def test_un_app_diversa_viene_scartata(self, monkeypatch):
+        ricerca = {"results": [{"trackName": "Solitaire Card Pocket",
+                                "screenshotUrls": ["https://x/1/392x696bb.jpg"]}]}
+        _finta_rete(monkeypatch, [
+            ("itunes.apple.com/search", _RispostaFinta(dati=ricerca))])
+        assert gameplay.materiale_appstore("Pokemon TCG Pocket") is None
+
+    def test_ricerca_rotta_non_ferma_niente(self, monkeypatch):
+        _finta_rete(monkeypatch, [])
+        assert gameplay.materiale_appstore("Clash Royale") is None
+
+
 class TestMaterialeDaiNegozi:
-    """Nessuno dei quattro negozi ha sempre tutto: i filmati li danno
-    PlayStation ed Epic, le schermate Nintendo e Xbox."""
+    """Nessuno dei negozi ha sempre tutto: i filmati li danno
+    PlayStation ed Epic, le schermate Nintendo, Xbox e App Store."""
 
     def test_somma_i_filmati_di_uno_e_le_schermate_dell_altro(self, monkeypatch):
         monkeypatch.setattr(gameplay, "materiale_playstation",
@@ -1031,6 +1068,7 @@ class TestMaterialeDaiNegozi:
                             lambda n: {"nome": "Altro nome", "video": [],
                                        "immagini": ["i1", "i2"]})
         monkeypatch.setattr(gameplay, "materiale_xbox", lambda n: None)
+        monkeypatch.setattr(gameplay, "materiale_appstore", lambda n: None)
         trovato = gameplay.materiale_dai_negozi("Il Gioco", 3, 4)
         assert trovato == {"nome": "Il Gioco", "video": ["v1"],
                            "immagini": ["i1", "i2"]}
@@ -1044,6 +1082,7 @@ class TestMaterialeDaiNegozi:
                                        "immagini": []})
         monkeypatch.setattr(gameplay, "materiale_nintendo", lambda n: None)
         monkeypatch.setattr(gameplay, "materiale_xbox", lambda n: None)
+        monkeypatch.setattr(gameplay, "materiale_appstore", lambda n: None)
         assert gameplay.materiale_dai_negozi("Fortnite", 3, 4)["video"] == ["v1"]
 
     def test_quando_c_e_abbastanza_non_si_chiede_agli_altri(self, monkeypatch):
@@ -1060,12 +1099,14 @@ class TestMaterialeDaiNegozi:
         monkeypatch.setattr(gameplay, "materiale_epic", finto("epic", None))
         monkeypatch.setattr(gameplay, "materiale_nintendo", finto("nintendo", None))
         monkeypatch.setattr(gameplay, "materiale_xbox", finto("xbox", None))
+        monkeypatch.setattr(gameplay, "materiale_appstore", finto("app", None))
         gameplay.materiale_dai_negozi("X", quanti_video=2, quante_immagini=1)
         assert interrogati == ["ps"]
 
     def test_in_nessun_negozio_vuol_dire_niente(self, monkeypatch):
         for nome in ("materiale_playstation", "materiale_epic",
-                     "materiale_nintendo", "materiale_xbox"):
+                     "materiale_nintendo", "materiale_xbox",
+                     "materiale_appstore"):
             monkeypatch.setattr(gameplay, nome, lambda n: None)
         assert gameplay.materiale_dai_negozi("Gioco Inventato") is None
 
