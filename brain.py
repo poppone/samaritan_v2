@@ -1278,6 +1278,52 @@ def _parola_di_parte(testo):
     return _tema_escluso(testo, PAROLE_DI_PARTE.get(lingua, []))
 
 
+# Fatti che un titolo puo' promettere senza che la notizia li dica. Il fact-check
+# legge solo lo script: il 17 ottobre 2026 e' uscito "Urban Food Festival: il
+# glitch che rovina l'esperienza" da un articolo su una sagra, e "Pokémon:
+# Holiday Plush Collection Shocks Fans" da un annuncio di peluche. Ogni voce e'
+# un gruppo di parole equivalenti nelle due lingue: il titolo puo' usarne una
+# solo se la notizia ne usa una dello stesso gruppo. Le ultime quattro sono
+# enfasi piu' che fatti: all'ultimo tentativo passano, un titolo gonfiato vale
+# piu' di un buco nella pubblicazione, un glitch inventato no.
+PRETESE_TITOLO = [
+    ("glitch o bug", r"\bglitch|\bbug\b|\bbugs\b|\bbuggat|\bbuggy\b"),
+    ("leak", r"\bleak|\btrapelat|\bfuga di notizie|\bfuoriuscit"),
+    ("cancellazione", r"\bcancellat|\bcancel|\bscrapped\b|\bannullat"),
+    ("rinvio", r"\brinvi|\brimandat|\bslitta|\bdelay|\bpostpon"),
+    ("ban", r"\bban\b|\bbans\b|\bbanned\b|\bbannat|\bbandit"),
+    ("hacker", r"\bhack|\bcheat|\btruff|\bscam\b"),
+    ("chiusura", r"\bchiude\b|\bchiuder|\bchiusur|\bshut ?down|\bshuts down"),
+    ("crash", r"\bcrash"),
+]
+ENFASI_TITOLO = [
+    ("shock", r"\bshock|\bchoc\b|\bscioccat|\bsconvolg|\bstun"),
+    ("rabbia dei fan", r"\bfurios|\bfurious|\boutrage|\bbacklash|\bpolemic"
+                       r"|\binfuriat|\bangry\b|\brabbia\b|\bfuria\b"),
+    ("disastro", r"\bdisastr|\bdisaster|\bflop\b|\bfiasco"),
+    ("segreto", r"\bsegret|\bsecret|\bnascost|\bhidden\b"),
+]
+
+
+def _pretesa_inventata(titolo, notizia, gioco="", solo_fatti=False):
+    """La pretesa del titolo che la notizia non sostiene, o "".
+
+    `notizia` e' titolo piu' sommario dell'articolo. Il nome del gioco si toglie
+    prima del confronto, cosi' "Hidden Folks" o "Ban Land" non contano.
+    Con `solo_fatti` l'enfasi (shock, segreti, disastri) non si controlla.
+    """
+    t = _senza_accenti(titolo).lower()
+    for parola in re.split(r"[^0-9a-zA-Z]+", _senza_accenti(gioco or "").lower()):
+        if len(parola) >= 3:
+            t = re.sub(rf"\b{re.escape(parola)}\b", " ", t)
+    n = _senza_accenti(notizia or "").lower()
+    pretese = PRETESE_TITOLO + ([] if solo_fatti else ENFASI_TITOLO)
+    for nome, schema in pretese:
+        if re.search(schema, t) and not re.search(schema, n):
+            return nome
+    return ""
+
+
 def valida_titolo(titolo, gioco=""):
     """Ritorna (True, "") se il titolo e' pubblicabile, altrimenti (False, motivo).
 
@@ -2719,6 +2765,17 @@ def genera_script_samaritan(tema=None):
                         scarti_per_schema += 1
                 if ok:
                     ok, motivo = valida_titolo(titolo, gioco)
+                if ok and fonte:
+                    pretesa = _pretesa_inventata(
+                        titolo,
+                        notizie[idx]["titolo"] + " "
+                        + notizie[idx].get("sommario", ""),
+                        gioco, solo_fatti=ultima_spiaggia)
+                    if pretesa:
+                        ok = False
+                        motivo = (f"il titolo parla di {pretesa}, ma la "
+                                  f"notizia non ne parla. Nel titolo metti "
+                                  f"solo quello che la notizia dice")
                 if ok and fonte and idx in notizie_vietate:
                     ok = False
                     motivo = (f"usa la notizia [{idx}], che non si puo' piu' "

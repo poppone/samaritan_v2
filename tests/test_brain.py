@@ -419,6 +419,67 @@ class TestDettagliInventati:
 _SOMMARIO_BING_VERO = brain._sommario_bing
 
 
+class TestPretesaInventata:
+    """Il 17 ottobre 2026 sono usciti "Urban Food Festival: il glitch che
+    rovina l'esperienza" e "Pokémon: Holiday Plush Collection Shocks Fans":
+    il fact-check leggeva lo script, non il titolo."""
+
+    def test_glitch_che_la_notizia_non_dice(self):
+        notizia = ("Street food, fumetti, Pokémon e videogiochi: a Empoli "
+                   "quattro giorni con l'Urban Food Festival")
+        assert brain._pretesa_inventata(
+            "Urban Food Festival: il glitch che rovina l'esperienza 🍔",
+            notizia, "Urban Food Festival") == "glitch o bug"
+
+    def test_shock_che_la_notizia_non_dice(self):
+        notizia = "A New Holiday Plush Collection Is Coming to Pokémon Center"
+        assert brain._pretesa_inventata(
+            "Pokémon: Holiday Plush Collection Shocks Fans 🎁",
+            notizia, "Pokémon") == "shock"
+
+    def test_sinonimo_nell_altra_lingua_va_bene(self):
+        assert brain._pretesa_inventata(
+            "GTA 6: il leak del nuovo trailer",
+            "GTA 6 footage leaked ahead of trailer", "GTA 6") == ""
+        assert brain._pretesa_inventata(
+            "Elden Ring: un bug blocca i salvataggi",
+            "Elden Ring glitch wipes save files", "Elden Ring") == ""
+
+    def test_rinvio_detto_dalla_notizia(self):
+        assert brain._pretesa_inventata(
+            "Grand Theft Auto VI: Release Date Locked",
+            "GTA 6 locks in Nov. 19 release date after delays",
+            "Grand Theft Auto VI") == ""
+        assert brain._pretesa_inventata(
+            "GTA 6: di nuovo rinviato",
+            "GTA 6 locks in Nov. 19 release date", "GTA 6") == "rinvio"
+
+    def test_nome_del_gioco_non_conta(self):
+        assert brain._pretesa_inventata(
+            "Hidden Folks: arriva su Switch", "Hidden Folks comes to Switch",
+            "Hidden Folks") == ""
+        assert brain._pretesa_inventata(
+            "Crash Bandicoot: nuovo gioco annunciato",
+            "New Crash Bandicoot announced", "Crash Bandicoot") == ""
+
+    def test_all_ultimo_tentativo_passa_solo_l_enfasi(self):
+        notizia = "A New Holiday Plush Collection Is Coming to Pokémon Center"
+        assert brain._pretesa_inventata(
+            "Pokémon: Holiday Plush Collection Shocks Fans", notizia,
+            "Pokémon", solo_fatti=True) == ""
+        assert brain._pretesa_inventata(
+            "Pokémon: un glitch nei peluche", notizia,
+            "Pokémon", solo_fatti=True) == "glitch o bug"
+
+    def test_parole_simili_non_scattano(self):
+        assert brain._pretesa_inventata(
+            "Bandai Namco: nuovo Tekken annunciato",
+            "Bandai Namco announces new Tekken", "Tekken") == ""
+        assert brain._pretesa_inventata(
+            "Fortnite: la nuova banda di Peely",
+            "Fortnite adds Peely band skins", "Fortnite") == ""
+
+
 class TestSommarioBing:
     """Google News da' solo il titolo: il sommario arriva da Bing News."""
 
