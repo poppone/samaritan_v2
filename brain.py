@@ -1688,11 +1688,14 @@ def costruisci_didascalia_tiktok(dati, massimo_hashtag=4):
     leggono prima di 'altro', quindi resta il titolo, un rigo di contenuto e
     gli hashtag.
     """
-    titolo = (dati.get("titolo") or "").strip()
+    titolo = normalizza_didascalia(dati.get("titolo") or "")
 
     # Della descrizione tengo solo la prima riga: la seconda e' la domanda
-    # finale, che nel video la voce la dice gia'.
-    descrizione = (dati.get("descrizione") or "").strip()
+    # finale, che nel video la voce la dice gia'. Il modello a volte scrive
+    # l'a capo come testo, backslash e 'n': senza normalizzare, splitlines non
+    # lo vede e la domanda finisce attaccata alla prima riga col '\n' in
+    # vista (Short YhBgD6euibg, 13 ottobre 2026).
+    descrizione = normalizza_didascalia(dati.get("descrizione") or "")
     prima_riga = descrizione.splitlines()[0].strip() if descrizione else ""
 
     hashtag = costruisci_hashtag(dati, massimo=massimo_hashtag)
@@ -1704,7 +1707,23 @@ def costruisci_didascalia_tiktok(dati, massimo_hashtag=4):
         hashtag.append(per_te)
 
     parti = [p for p in (titolo, prima_riga, " ".join(hashtag)) if p]
-    return "\n\n".join(parti)
+    return normalizza_didascalia("\n\n".join(parti))
+
+
+def normalizza_didascalia(testo):
+    """Testo pulito per una didascalia: a capo veri e niente spazi doppi.
+
+    Trasforma in a capo vero la sequenza letterale backslash-n (e
+    backslash-r-backslash-n) che il modello lascia a volte nel testo,
+    riduce gli spazi ripetuti a uno, toglie gli spazi a inizio e fine riga
+    e non lascia piu' di una riga vuota di fila.
+    """
+    testo = (testo or "").replace("\\r\\n", "\n").replace("\\n", "\n")
+    testo = testo.replace("\r\n", "\n").replace("\r", "\n")
+    righe = [re.sub(r"[ \t]{2,}", " ", r).strip() for r in testo.split("\n")]
+    testo = "\n".join(righe)
+    testo = re.sub(r"\n{3,}", "\n\n", testo)
+    return testo.strip()
 
 
 def testo_miniatura(titolo, massimo_parole=4):

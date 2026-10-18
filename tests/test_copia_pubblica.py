@@ -39,6 +39,19 @@ def test_carica_e_restituisce_url_e_didascalia(monkeypatch, tmp_path):
     assert chiamate[0][1]["authorization"] == "Bearer t"
 
 
+def test_la_didascalia_salvata_non_ha_backslash_n_ne_spazi_doppi(monkeypatch, tmp_path):
+    monkeypatch.setenv("BLOB_READ_WRITE_TOKEN", "t")
+    f = tmp_path / "v.mp4"; f.write_bytes(b"x")
+    monkeypatch.setattr(copia_pubblica.requests, "put",
+                        lambda *a, **k: Risposta(j={"url": "https://x/abc.mp4"}))
+    monkeypatch.setattr(copia_pubblica, "pulisci", lambda token: 0)
+    import brain
+    monkeypatch.setattr(brain, "costruisci_didascalia_tiktok",
+                        lambda d: "Titolo\\nriga  due\n\n#gaming")
+    campi = copia_pubblica.prepara(str(f), "abc", {"titolo": "t"})
+    assert campi["didascalia_tiktok"] == "Titolo\nriga due\n\n#gaming"
+
+
 def test_errore_di_rete_non_esce(monkeypatch, tmp_path):
     monkeypatch.setenv("BLOB_READ_WRITE_TOKEN", "t")
     f = tmp_path / "v.mp4"; f.write_bytes(b"x")

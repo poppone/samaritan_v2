@@ -436,3 +436,117 @@ class TestIlLimiteDelleRighe:
         finto = _prepara_analytics(monkeypatch, [["gta 6", 10]])
         analyst.scarica_termini_di_ricerca()
         assert finto.chiamate[0]["maxResults"] == analyst.MAX_TERMINI_RICERCA
+
+
+# ---------------------------------------------------------------------------
+# 13-17 ottobre 2026: il Direttore vedeva performance.json "fermo al 9/10".
+# Il file si aggiornava ogni giorno, ma YouTube Analytics arriva con due-tre
+# giorni di ritardo e il rapporto per video si fermava alla prima pagina da
+# 200: dal 14/10 il file restava a 197 video, con i nuovi che spingevano fuori
+# i vecchi.
+# ---------------------------------------------------------------------------
+class _PagineFinte:
+    """Finge il rapporto per video, una pagina per richiesta."""
+
+    def __init__(self, pagine, rotta_da=None):
+        self.pagine = pagine
+        self.rotta_da = rotta_da
+        self.chiamate = []
+
+    def reports(self):
+        return self
+
+    def query(self, **kwargs):
+        self.chiamate.append(kwargs)
+        return self
+
+    def execute(self):
+        indice = len(self.chiamate) - 1
+        if self.rotta_da is not None and indice >= self.rotta_da:
+            raise RuntimeError("500")
+        righe = self.pagine[indice] if indice < len(self.pagine) else []
+        return {"columnHeaders": [{"name": "video"}, {"name": "views"}],
+                "rows": righe}
+
+
+def _righe(inizio, quante):
+    return [[f"v{i}", 1000 - i] for i in range(inizio, inizio + quante)]
+
+
+class TestPagineDelRapportoVideo:
+
+    def test_scarica_tutte_le_pagine(self, monkeypatch):
+        monkeypatch.setattr(analyst, "RIGHE_PER_PAGINA", 3)
+        finto = _PagineFinte([_righe(0, 3), _righe(3, 3), _righe(6, 1)])
+        oggi = datetime.date(2026, 10, 17)
+        risposte = analyst._scarica_pagine_video(finto, oggi, oggi)
+        assert len(risposte) == 3
+        assert [c["startIndex"] for c in finto.chiamate] == [1, 4, 7]
+        assert all(c["maxResults"] == 3 for c in finto.chiamate)
+
+    def test_scarica_performance_unisce_le_pagine(self, monkeypatch):
+        monkeypatch.setattr(analyst, "RIGHE_PER_PAGINA", 2)
+        finto = _PagineFinte([_righe(0, 2), _righe(2, 2), []])
+        import googleapiclient.discovery
+        import uploader
+        monkeypatch.setattr(uploader, "ottieni_credenziali", lambda: object())
+        monkeypatch.setattr(uploader, "ha_scope_analytics", lambda c: True)
+        monkeypatch.setattr(googleapiclient.discovery, "build", lambda *a, **k: finto)
+        monkeypatch.setattr(analyst, "_controlla_contro_il_canale", lambda *a: None)
+        performance = analyst.scarica_performance()
+        assert sorted(performance) == ["v0", "v1", "v2", "v3"]
+        assert performance["v3"] == {"views": 997}
+
+    def test_una_pagina_successiva_rotta_tiene_le_prime(self, monkeypatch, capsys):
+        monkeypatch.setattr(analyst, "RIGHE_PER_PAGINA", 2)
+        finto = _PagineFinte([_righe(0, 2)], rotta_da=1)
+        oggi = datetime.date(2026, 10, 17)
+        risposte = analyst._scarica_pagine_video(finto, oggi, oggi)
+        assert len(risposte) == 1
+        assert "Pagina 2" in capsys.readouterr().out
+
+    def test_la_prima_pagina_rotta_solleva_come_prima(self):
+        finto = _PagineFinte([], rotta_da=0)
+        oggi = datetime.date(2026, 10, 17)
+        try:
+            analyst._scarica_pagine_video(finto, oggi, oggi)
+        except RuntimeError:
+            return
+        raise AssertionError("doveva sollevare")
+
+
+class TestDatiFinoAl:
+
+    def test_l_ultimo_giorno_con_dati(self, monkeypatch):
+        finto = _prepara_analytics(monkeypatch, [["2026-10-13", 500], ["2026-10-14", 300]])
+        assert analyst.ultimo_giorno_con_dati() == "2026-10-14"
+        assert finto.chiamate[0]["dimensions"] == "day"
+
+    def test_senza_scope_none(self, monkeypatch):
+        _prepara_analytics(monkeypatch, [["2026-10-14", 1]], scope=False)
+        assert analyst.ultimo_giorno_con_dati() is None
+
+    def test_finisce_nel_file_accanto_ad_aggiornato(self, monkeypatch, tmp_path):
+        file_finto = tmp_path / "performance.json"
+        monkeypatch.setattr(config, "FILE_PERFORMANCE", str(file_finto))
+        monkeypatch.setattr(analyst, "scarica_performance", lambda: {"v": {"views": 1}})
+        monkeypatch.setattr(analyst, "scarica_termini_di_ricerca", lambda: [])
+        monkeypatch.setattr(analyst, "scarica_sorgenti_di_traffico", lambda: [])
+        monkeypatch.setattr(analyst, "ultimo_giorno_con_dati", lambda: "2026-10-14")
+        analyst.aggiorna_performance()
+        salvato = json.loads(file_finto.read_text(encoding="utf-8"))
+        assert salvato["dati_fino_al"] == "2026-10-14"
+        assert salvato["aggiornato"] == datetime.date.today().isoformat()
+
+    def test_se_youtube_non_risponde_tiene_il_valore_vecchio(self, monkeypatch, tmp_path):
+        file_finto = tmp_path / "performance.json"
+        file_finto.write_text(json.dumps({"video": {}, "dati_fino_al": "2026-10-12"}),
+                              encoding="utf-8")
+        monkeypatch.setattr(config, "FILE_PERFORMANCE", str(file_finto))
+        monkeypatch.setattr(analyst, "scarica_performance", lambda: {"v": {"views": 1}})
+        monkeypatch.setattr(analyst, "scarica_termini_di_ricerca", lambda: [])
+        monkeypatch.setattr(analyst, "scarica_sorgenti_di_traffico", lambda: [])
+        monkeypatch.setattr(analyst, "ultimo_giorno_con_dati", lambda: None)
+        analyst.aggiorna_performance()
+        salvato = json.loads(file_finto.read_text(encoding="utf-8"))
+        assert salvato["dati_fino_al"] == "2026-10-12"
