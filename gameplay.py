@@ -37,11 +37,12 @@ import json
 import os
 import re
 import shutil
+import socket
 import subprocess
 import time
 import unicodedata
 from difflib import SequenceMatcher
-from urllib.parse import quote, urljoin
+from urllib.parse import quote, urljoin, urlparse
 
 import requests
 
@@ -572,6 +573,15 @@ def _scegli_variante_hls(url_master):
     return scelta[1]
 
 
+def _errore_ffmpeg(e):
+    """Le ultime righe che ffmpeg ha scritto, per capire dal log perche'."""
+    testo = getattr(e, "stderr", None) or b""
+    if isinstance(testo, bytes):
+        testo = testo.decode("utf-8", "replace")
+    testo = " ".join(testo.strip().splitlines()[-2:])
+    return f" ({testo[-300:]})" if testo else ""
+
+
 def _estrai_mp4(url_stream, destinazione, salta=SALTA_INTRO_SEC, durata=None,
                 a_1080=False):
     """Usa ffmpeg per trasformare lo stream HLS in un mp4 locale SENZA AUDIO.
@@ -604,7 +614,7 @@ def _estrai_mp4(url_stream, destinazione, salta=SALTA_INTRO_SEC, durata=None,
     except Exception as e:
         if a_1080:
             # Era gia' una ricodifica: non c'e' un piano B diverso da provare.
-            print(f"[Gameplay] Ricodifica fallita: {e}")
+            print(f"[Gameplay] Ricodifica fallita: {e}{_errore_ffmpeg(e)}")
             return False
         print(f"[Gameplay] Remux fallito ({e}), riprovo con ricodifica...")
         comando[comando.index("copy")] = "libx264"
@@ -614,7 +624,8 @@ def _estrai_mp4(url_stream, destinazione, salta=SALTA_INTRO_SEC, durata=None,
             subprocess.run(comando, check=True, timeout=max(300, durata * 5),
                            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
         except Exception as e2:
-            print(f"[Gameplay] Anche la ricodifica e' fallita: {e2}")
+            print(f"[Gameplay] Anche la ricodifica e' fallita: "
+                  f"{e2}{_errore_ffmpeg(e2)}")
             return False
 
     return os.path.exists(destinazione) and os.path.getsize(destinazione) > 100_000
@@ -731,6 +742,36 @@ def trailer_dalla_pagina_ufficiale(chiave):
     return elenco
 
 
+# Host gia' controllati in questa lavorazione: il nome si risolve una volta.
+_HOST_VISTI = {}
+
+
+def _host_raggiungibile(url):
+    """False se il nome dell'host non si risolve piu'.
+
+    Le schede Nintendo vecchie puntano i trailer a production.smedia.lvp.llnw.net,
+    la rete di Limelight che non esiste piu': il 18 ottobre 2026 lo Short su
+    Ocarina of Time ha provato due volte a scaricarlo (ffmpeg esce con 251) e
+    nel log restava un "1 filmati" che non c'era.
+    """
+    host = urlparse(url).hostname
+    if not host:
+        return False
+    if host not in _HOST_VISTI:
+        # Due prove: un singhiozzo del DNS del runner non deve costare i
+        # trailer di Rockstar per tutta la lavorazione.
+        _HOST_VISTI[host] = False
+        for prova in range(2):
+            try:
+                socket.getaddrinfo(host, 443)
+                _HOST_VISTI[host] = True
+                break
+            except OSError:
+                if prova == 0:
+                    time.sleep(1)
+    return _HOST_VISTI[host]
+
+
 def scarica_mp4_ufficiali(elenco, chiave, quanti=3, salto=0):
     """Scarica i primi mp4 dell'elenco, come scarica_trailer_steam.
 
@@ -743,6 +784,10 @@ def scarica_mp4_ufficiali(elenco, chiave, quanti=3, salto=0):
         if len(percorsi) >= quanti:
             break
         nome_file = os.path.basename(url.split("?")[0]) or "trailer.mp4"
+        if not _host_raggiungibile(url):
+            print(f"[Gameplay] Trailer saltato, il sito che lo ospita non "
+                  f"esiste piu': {urlparse(url).hostname}")
+            continue
         destinazione = os.path.join(
             config.DIR_TEMP, f"ufficiale_{chiave}_{indice}_{nome_file}")
         print(f"[Gameplay] Scarico trailer ufficiale dall'editore: {nome_file}")
