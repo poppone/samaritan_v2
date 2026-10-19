@@ -1112,6 +1112,26 @@ class TestMaterialeDaiNegozi:
 
 
 class TestScaricoDaiNegozi:
+    def test_salta_i_trailer_su_un_host_che_non_esiste_piu(
+            self, monkeypatch, tmp_path):
+        monkeypatch.setattr(config, "DIR_TEMP", str(tmp_path))
+        monkeypatch.setattr(gameplay, "_host_raggiungibile",
+                            lambda url: "llnw.net" not in url)
+        chiesti = []
+
+        def finto(url, destinazione, salta=0, durata=None, a_1080=False):
+            chiesti.append(url)
+            open(destinazione, "wb").close()
+            return True
+        monkeypatch.setattr(gameplay, "_estrai_mp4", finto)
+        monkeypatch.setattr(gameplay, "_durata_video", lambda u: None)
+
+        percorsi = gameplay.scarica_mp4_ufficiali(
+            ["https://production.smedia.lvp.llnw.net/x/zelda.mp4",
+             "https://cdn.vero/zelda2.mp4"], "zelda", quanti=2)
+        assert chiesti == ["https://cdn.vero/zelda2.mp4"]
+        assert len(percorsi) == 1
+
     def test_i_filmati_epic_si_chiamano_tutti_uguale_e_non_si_sovrascrivono(
             self, monkeypatch, tmp_path):
         monkeypatch.setattr(config, "DIR_TEMP", str(tmp_path))
@@ -1280,3 +1300,35 @@ class TestNomiComposti:
         monkeypatch.setattr(gameplay, "gioco_con_pagina_ufficiale", lambda g: None)
         monkeypatch.setattr(gameplay, "cerca_gioco_steam", self._steam(set()))
         assert gameplay.scegli_parte_trovabile("Mario vs Sonic") == "Mario vs Sonic"
+
+
+
+# La fixture comune di conftest lo sostituisce in ogni test: qui serve quello
+# vero, preso all'import del modulo.
+_HOST_RAGGIUNGIBILE_VERO = gameplay._host_raggiungibile
+
+
+class TestHostRaggiungibile:
+    def test_host_che_non_si_risolve_e_controllato_una_volta(self, monkeypatch):
+        import socket
+        monkeypatch.setattr(gameplay, "_HOST_VISTI", {})
+        chiamate = []
+
+        def finto(host, porta):
+            chiamate.append(host)
+            if host.endswith("llnw.net"):
+                raise socket.gaierror(-3, "Temporary failure in name resolution")
+            return [()]
+        monkeypatch.setattr(socket, "getaddrinfo", finto)
+        monkeypatch.setattr(gameplay.time, "sleep", lambda s: None)
+
+        morto = "https://production.smedia.lvp.llnw.net/a/zelda.mp4?x=0"
+        assert _HOST_RAGGIUNGIBILE_VERO(morto) is False
+        assert _HOST_RAGGIUNGIBILE_VERO(morto) is False
+        assert _HOST_RAGGIUNGIBILE_VERO("https://media.rockstargames.com/t.mp4")
+        # Due prove sull'host morto, poi resta in memoria.
+        assert chiamate == ["production.smedia.lvp.llnw.net"] * 2 + [
+            "media.rockstargames.com"]
+
+    def test_url_senza_host(self):
+        assert _HOST_RAGGIUNGIBILE_VERO("trailer.mp4") is False

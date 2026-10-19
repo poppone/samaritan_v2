@@ -70,3 +70,10 @@ def _niente_revisore_dalla_rete(monkeypatch, request):
     import brain
     monkeypatch.setattr(brain, "_revisione_qualita",
                         lambda titolo, script, titolo_notizia="", gioco="": None)
+
+
+@pytest.fixture(autouse=True)
+def _host_sempre_raggiungibili(monkeypatch):
+    """Gli URL dei test sono finti: niente DNS vero."""
+    import gameplay
+    monkeypatch.setattr(gameplay, "_host_raggiungibile", lambda url: True)
