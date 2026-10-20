@@ -237,3 +237,25 @@ def test_filtro_ffmpeg_ha_le_due_fasce():
     filtro = imp.filtro_ffmpeg("divisa", r, "x.ass")
     assert "vstack" in filtro and "ass=x.ass" in filtro
     assert "boxblur" in imp.filtro_ffmpeg("centro", None, "x.ass")
+
+
+# --- versione lunga per TikTok ------------------------------------------------
+
+def test_finestra_tiktok_supera_il_minuto():
+    for picco in (5, 600, 3599):
+        inizio, fine = punteggio.finestra_tiktok(picco, 3600)
+        assert punteggio.TIKTOK_MIN <= fine - inizio <= punteggio.TIKTOK_MAX
+        assert 0 <= inizio < fine <= 3600
+        assert fine - inizio > 60
+
+
+def test_finestra_tiktok_live_troppo_corta():
+    assert punteggio.finestra_tiktok(20, 40) is None
+
+
+def test_la_versione_tiktok_non_va_su_youtube(tmp_path):
+    _scrivi(tmp_path, "yt")
+    _scrivi(tmp_path, "tt", piattaforma="tiktok", orario="2026-10-18T16:00:00+02:00")
+    pronte, rimandate = pub.da_pubblicare(pub.leggi_schede(str(tmp_path)))
+    assert [s["id"] for _o, _p, s in pronte] == ["yt"]
+    assert rimandate == []

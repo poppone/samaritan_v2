@@ -53,6 +53,8 @@ WHISPER = os.getenv("WHISPER_MODELLO_CLIP", "small").strip()
 DISPOSITIVO = os.getenv("WHISPER_DISPOSITIVO", "").strip().lower()
 TWITCH_DL = os.getenv("TWITCHDOWNLOADER", "TwitchDownloaderCLI").strip()
 QUANTE = int(os.getenv("CLIP_PER_LIVE", "5"))
+# Versioni lunghe (65-90 s) per TikTok, dai momenti migliori della live. 0 = nessuna.
+QUANTE_TIKTOK = int(os.getenv("CLIP_TIKTOK_PER_LIVE", "2"))
 
 LAVORO = os.path.join(QUI, "lavoro")
 STATO = os.path.join(QUI, "stato_locale.json")
@@ -337,9 +339,10 @@ def monta_verticale(sorgente, sottotitoli, uscita, scelta="centro", riquadri=Non
 # Titolo e descrizione
 # --------------------------------------------------------------------------
 
-def proponi_testi(trascritto, gioco, titolo_live):
+def proponi_testi(trascritto, gioco, titolo_live, piattaforma="youtube"):
+    etichette = "#twitch #gaming #perte" if piattaforma == "tiktok" else "#shorts #twitch #gaming"
     base_desc = (f"Dalla live su Twitch: https://twitch.tv/{CANALE}\n"
-                 f"{('Gioco: ' + gioco) if gioco else ''}\n\n#shorts #twitch #gaming")
+                 f"{('Gioco: ' + gioco) if gioco else ''}\n\n{etichette}")
     ripiego = {"titolo": (gioco + " - " if gioco else "") + "dalla live",
                "descrizione": base_desc}
     if not GROQ_KEY or not trascritto.strip():
@@ -347,7 +350,8 @@ def proponi_testi(trascritto, gioco, titolo_live):
     from groq import Groq
     client = Groq(api_key=GROQ_KEY)
     domanda = (
-        "Sei l'editor degli Short YouTube di Davide Durazzi, streamer italiano. "
+        f"Sei l'editor dei video {'TikTok' if piattaforma == 'tiktok' else 'Short YouTube'} "
+        "di Davide Durazzi, streamer italiano. "
         "Dal parlato di una clip della sua live proponi un titolo (max 70 "
         "caratteri, italiano, niente clickbait falso, niente emoji in eccesso) "
         "e una descrizione di 1-2 frasi. Non inventare fatti che non sono nel "
@@ -435,10 +439,19 @@ def taglia(vod_id, prova=False):
     print(f"[Analisi] {len(energia) // 60} minuti, {len(messaggi)} messaggi, "
           f"{len(scelti)} momenti")
 
+    # Ai momenti migliori si aggiunge la versione lunga per TikTok, con un id
+    # suo: le due schede si approvano e si pubblicano separatamente.
+    da_montare = [(f"{vod_id}_{inizio:05d}", inizio, fine, punti, "youtube")
+                  for inizio, fine, punti, _picco in scelti]
+    for _inizio, _fine, punti, picco in scelti[:QUANTE_TIKTOK]:
+        lunga = punteggio.finestra_tiktok(picco, len(energia))
+        if lunga:
+            da_montare.append((f"{vod_id}_{lunga[0]:05d}_tt", lunga[0], lunga[1],
+                               punti, "tiktok"))
+
     release = None
     schede = []
-    for inizio, fine, punti, _picco in scelti:
-        cid = f"{vod_id}_{inizio:05d}"
+    for cid, inizio, fine, punti, piattaforma in da_montare:
         grezzo = os.path.join(cartella, f"{cid}_grezzo.mp4")
         finale = os.path.join(cartella, f"{cid}.mp4")
         ass = os.path.join(cartella, f"{cid}.ass")
@@ -454,7 +467,7 @@ def taglia(vod_id, prova=False):
         avvisi = punteggio.controlla_testo(testo, nomi_chat)
         punti = punteggio.applica_penalita(punti, avvisi)
         gioco = gioco_al_secondo(info, inizio)
-        testi = proponi_testi(testo, gioco, titolo_live)
+        testi = proponi_testi(testo, gioco, titolo_live, piattaforma)
 
         scheda = {
             "id": cid, "titolo": testi["titolo"], "descrizione": testi["descrizione"],
@@ -463,6 +476,7 @@ def taglia(vod_id, prova=False):
             "punteggio": punti, "lingua": "it", "video_url": None,
             "stato": "da_approvare", "voti": {}, "orario": None, "youtube_id": None,
             "avvisi": avvisi, "trascrizione": testo[:1500], "impaginazione": scelta,
+            "piattaforma": piattaforma,
         }
         if not prova:
             release = release or release_del_giorno()

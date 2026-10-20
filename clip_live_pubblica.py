@@ -8,7 +8,9 @@ Le schede le scrive taglia_live (stato "da_approvare"); Finch le porta a
   - stato "approvato",
   - con un orario,
   - senza youtube_id (non ancora caricata),
-  - con un video_url da cui scaricare l'mp4.
+  - con un video_url da cui scaricare l'mp4,
+  - non marcata "piattaforma": "tiktok" (le versioni lunghe da 65-90 secondi
+    sono per TikTok: le pubblica Davide o Metricool, non questo script).
 Al massimo una clip per giorno di uscita, come ha deciso Finch: se due
 approvate cadono nello stesso giorno esce la prima, l'altra resta ferma con
 un avviso.
@@ -63,7 +65,8 @@ def da_pubblicare(schede):
     candidate = []
     for percorso, s in schede:
         if (s.get("stato") == "approvato" and s.get("orario")
-                and not s.get("youtube_id") and s.get("video_url")):
+                and not s.get("youtube_id") and s.get("video_url")
+                and s.get("piattaforma", "youtube") != "tiktok"):
             candidate.append((leggi_orario(s["orario"]), percorso, s))
     candidate.sort(key=lambda c: c[0])
     rimandate = []
