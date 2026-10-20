@@ -280,6 +280,34 @@ class TestDettagliInventati:
         assert "Microsoft patched it within hours" in prompt_visti[1][1]
         assert risultato["fonte"].startswith(self.NOTIZIA["titolo"])
 
+    def test_titolo_con_pretesa_si_corregge_senza_rifare_lo_script(self, monkeypatch):
+        """19 ottobre 2026: tre script buoni buttati per "leak" o "shock" nel
+        solo titolo."""
+        import json as _json
+        gonfiato = _json.loads(self._risposta())
+        gonfiato["titolo"] = "GTA 6: Xbox players shock Microsoft"
+        corretto = '{"titolo": "GTA 6: Xbox players got it the hard way"}'
+        risultato, prompt_visti, _ = self._genera(
+            monkeypatch, [_json.dumps(gonfiato), corretto],
+            ['{"dettagli_inventati": []}'])
+        assert len(prompt_visti) == 2
+        assert prompt_visti[1][0].startswith("Correggi il TITOLO")
+        assert risultato["titolo"] == "GTA 6: Xbox players got it the hard way"
+        assert risultato["script"] == self.SCRIPT
+
+    def test_titolo_corretto_ancora_gonfiato_fa_riscrivere(self, monkeypatch):
+        import json as _json
+        gonfiato = _json.loads(self._risposta())
+        gonfiato["titolo"] = "GTA 6: Xbox players shock Microsoft"
+        risultato, prompt_visti, _ = self._genera(
+            monkeypatch,
+            [_json.dumps(gonfiato), '{"titolo": "GTA 6: a shocking trick"}',
+             self._risposta()],
+            ['{"dettagli_inventati": []}'])
+        assert len(prompt_visti) == 3
+        assert "parla di shock" in prompt_visti[2][1]
+        assert risultato["titolo"] == "GTA 6: Xbox players got it the hard way"
+
     def test_se_la_verifica_non_risponde_il_video_esce(self, monkeypatch):
         risultato, prompt_visti, _ = self._genera(
             monkeypatch, [self._risposta()],

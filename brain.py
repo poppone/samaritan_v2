@@ -2471,6 +2471,63 @@ def _correggi_script(script, dettagli, titolo_notizia, sommario=""):
         return ""
 
 
+_SCHEMA_TITOLO = {
+    "name": "titolo_corretto",
+    "strict": True,
+    "schema": {
+        "type": "object",
+        "properties": {"titolo": {"type": "string"}},
+        "required": ["titolo"],
+        "additionalProperties": False,
+    },
+}
+
+
+def _correggi_titolo(titolo, pretesa, titolo_notizia, sommario=""):
+    """Il titolo riscritto senza la pretesa che la notizia non sostiene.
+
+    Il 19 ottobre 2026 la lavorazione delle 18:00 ha buttato tre script
+    interi, buoni per il resto, perche' il titolo diceva "leak" o "shock":
+    ogni riscrittura da capo rimetteva una parola gonfiata. Correggere il solo
+    titolo costa una chiamata breve invece di un tentativo.
+
+    Stringa vuota se Groq non risponde: si torna alla riscrittura da capo.
+    Il risultato va ripassato da valida_titolo e _pretesa_inventata.
+    """
+    if not titolo or not pretesa or not titolo_notizia:
+        return ""
+    istruzioni = (
+        "Correggi il TITOLO di uno Short che racconta una notizia. Parla di "
+        f"{pretesa}, ma la notizia non ne parla: togli quella parte e metti al "
+        "suo posto una cosa che titolo o sommario della notizia dicono davvero. "
+        "Tieni il nome del gioco all'inizio, la stessa lingua, al massimo "
+        f"{MAX_CARATTERI_TITOLO} caratteri e al massimo una emoji. Rispondi in "
+        "JSON con la chiave 'titolo'."
+    )
+    notizia = f"TITOLO DELLA NOTIZIA: {titolo_notizia}"
+    if sommario:
+        notizia += f"\nSOMMARIO: {sommario}"
+    modello = config.GROQ_MODELLI[0]
+    try:
+        risposta = _chiedi_a_groq(
+            model=modello,
+            messages=[
+                {"role": "system", "content": istruzioni},
+                {"role": "user", "content": f"{notizia}\n\nTITOLO DA CORREGGERE: {titolo}"},
+            ],
+            temperature=0.3,
+            max_tokens=1500,
+            response_format={"type": "json_schema",
+                             "json_schema": _SCHEMA_TITOLO},
+            **({"reasoning_effort": "low"} if "gpt-oss" in modello else {}),
+        )
+        nuovo = _estrai_json(risposta.choices[0].message.content).get("titolo", "")
+        return _pulisci_titolo(str(nuovo)) if isinstance(nuovo, str) else ""
+    except Exception as e:
+        print(f"[Samaritan Brain] Correzione del titolo non riuscita: {e}")
+        return ""
+
+
 def _cambia_attacco(script, schema):
     """Lo script con la sola prima frase riscritta in un'altra forma.
 
@@ -2771,6 +2828,22 @@ def genera_script_samaritan(tema=None):
                         notizie[idx]["titolo"] + " "
                         + notizie[idx].get("sommario", ""),
                         gioco, solo_fatti=ultima_spiaggia)
+                    if pretesa:
+                        nuovo = _correggi_titolo(
+                            titolo, pretesa, notizie[idx]["titolo"],
+                            notizie[idx].get("sommario", ""))
+                        nuovo = _accorcia_titolo(nuovo) if nuovo else ""
+                        if nuovo and valida_titolo(nuovo, gioco)[0] \
+                                and not _pretesa_inventata(
+                                    nuovo,
+                                    notizie[idx]["titolo"] + " "
+                                    + notizie[idx].get("sommario", ""),
+                                    gioco, solo_fatti=ultima_spiaggia):
+                            print(f"[Samaritan Brain] Titolo corretto: parlava "
+                                  f"di {pretesa}, la notizia no. "
+                                  f"{titolo} -> {nuovo}")
+                            titolo = nuovo
+                            pretesa = ""
                     if pretesa:
                         ok = False
                         motivo = (f"il titolo parla di {pretesa}, ma la "
