@@ -34,6 +34,14 @@ DURATA_MAX = 60
 SALTA_INIZIO = 120        # i primi minuti di una live sono "ciao a tutti"
 SALTA_FINE = 180          # gli ultimi sono saluti, raid e musica di chiusura
 
+# Versione TikTok: il Creator Rewards Program paga solo video di oltre un
+# minuto, quindi attorno ai picchi migliori si taglia anche un pezzo piu' lungo
+# con piu' contesto prima (la situazione) e piu' reazione dopo.
+TIKTOK_PRIMA = 50
+TIKTOK_DOPO = 25
+TIKTOK_MIN = 65
+TIKTOK_MAX = 90
+
 PAROLE_REAZIONE = (
     "ahah", "ahha", "haha", "lol", "lul", "kekw", "omegalul", "pog", "poggers",
     "clip", "clippa", "noo", "nooo", "madonna", "assurdo", "gg", "wtf", "rip",
@@ -132,6 +140,23 @@ def finestra(picco, durata_live):
         inizio = max(0, fine - DURATA_MIN)
     if fine - inizio > DURATA_MAX:
         fine = inizio + DURATA_MAX
+    return int(inizio), int(fine)
+
+
+def finestra_tiktok(picco, durata_live):
+    """Come finestra(), ma tra TIKTOK_MIN e TIKTOK_MAX secondi.
+
+    None se la live e' troppo corta per un pezzo cosi' lungo.
+    """
+    if durata_live < TIKTOK_MIN:
+        return None
+    inizio = max(0, picco - TIKTOK_PRIMA)
+    fine = min(durata_live, picco + TIKTOK_DOPO)
+    if fine - inizio < TIKTOK_MIN:
+        fine = min(durata_live, inizio + TIKTOK_MIN)
+        inizio = max(0, fine - TIKTOK_MIN)
+    if fine - inizio > TIKTOK_MAX:
+        fine = inizio + TIKTOK_MAX
     return int(inizio), int(fine)
 
 

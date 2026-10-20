@@ -41,6 +41,15 @@ Per farlo partire da solo ogni notte: Utilita' di pianificazione di Windows,
 azione `taglia_live.bat`, e la variabile d'ambiente `CLIP_AUTO=1` cosi' la
 finestra si chiude da sola alla fine.
 
+## Versione lunga per TikTok
+
+Il Creator Rewards Program di TikTok paga solo video di oltre un minuto. Per i
+2 momenti migliori di ogni live (`CLIP_TIKTOK_PER_LIVE`, 0 per spegnere) lo
+script monta anche una versione da 65-90 secondi, con id che finisce in `_tt`
+e `"piattaforma": "tiktok"`. Finch la approva come le altre, ma
+`clip_live_pubblica.py` non la carica su YouTube: la pubblica Davide da TikTok
+Studio (o Metricool).
+
 ## Cosa c'e' nella scheda
 
 ```json
