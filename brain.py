@@ -2483,6 +2483,30 @@ _SCHEMA_TITOLO = {
 }
 
 
+# Parole corte che dicono in che lingua e' scritto un titolo. Il 21 ottobre
+# 2026 la correzione ha tradotto in italiano il titolo dello Short inglese
+# delle 21:00: "Shrek 2 Remastered: Trailer Parodia, uscita a novembre".
+_PAROLE_DI_LINGUA = {
+    "it": {"il", "lo", "la", "gli", "le", "di", "del", "della", "dei", "che",
+           "e", "è", "un", "una", "per", "con", "non", "nel", "nella", "alla",
+           "uscita", "arriva", "nuovo", "nuova", "data", "novembre", "ottobre",
+           "dicembre", "gennaio", "svelato", "svelata", "ecco", "sono", "più"},
+    "en": {"the", "of", "and", "is", "an", "for", "with", "to", "in", "on",
+           "new", "drops", "out", "release", "date", "revealed", "now", "are",
+           "november", "october", "december", "january", "gets", "its"},
+}
+
+
+def _lingua_del_titolo(titolo):
+    """'it' o 'en' se le parole del titolo lo dicono chiaramente, se no ""."""
+    parole = re.findall(r"[a-zà-ù]+", (titolo or "").lower())
+    conti = {codice: sum(p in elenco for p in parole)
+             for codice, elenco in _PAROLE_DI_LINGUA.items()}
+    migliore = max(conti, key=conti.get)
+    altre = [n for c, n in conti.items() if c != migliore]
+    return migliore if conti[migliore] > max(altre, default=0) else ""
+
+
 def _correggi_titolo(titolo, pretesa, titolo_notizia, sommario=""):
     """Il titolo riscritto senza la pretesa che la notizia non sostiene.
 
@@ -2500,7 +2524,8 @@ def _correggi_titolo(titolo, pretesa, titolo_notizia, sommario=""):
         "Correggi il TITOLO di uno Short che racconta una notizia. Parla di "
         f"{pretesa}, ma la notizia non ne parla: togli quella parte e metti al "
         "suo posto una cosa che titolo o sommario della notizia dicono davvero. "
-        "Tieni il nome del gioco all'inizio, la stessa lingua, al massimo "
+        f"Scrivi il titolo in {_lingua()['nome']}, anche se queste istruzioni "
+        "sono in italiano. Tieni il nome del gioco all'inizio, al massimo "
         f"{MAX_CARATTERI_TITOLO} caratteri e al massimo una emoji. Rispondi in "
         "JSON con la chiave 'titolo'."
     )
@@ -2833,6 +2858,11 @@ def genera_script_samaritan(tema=None):
                             titolo, pretesa, notizie[idx]["titolo"],
                             notizie[idx].get("sommario", ""))
                         nuovo = _accorcia_titolo(nuovo) if nuovo else ""
+                        if nuovo and _lingua_del_titolo(nuovo) not in (
+                                "", (config.LINGUA or "it").lower()):
+                            print(f"[Samaritan Brain] Titolo corretto scartato, "
+                                  f"e' nella lingua sbagliata: {nuovo}")
+                            nuovo = ""
                         if nuovo and valida_titolo(nuovo, gioco)[0] \
                                 and not _pretesa_inventata(
                                     nuovo,

@@ -284,6 +284,7 @@ class TestDettagliInventati:
         """19 ottobre 2026: tre script buoni buttati per "leak" o "shock" nel
         solo titolo."""
         import json as _json
+        monkeypatch.setattr(brain.config, "LINGUA", "en")
         gonfiato = _json.loads(self._risposta())
         gonfiato["titolo"] = "GTA 6: Xbox players shock Microsoft"
         corretto = '{"titolo": "GTA 6: Xbox players got it the hard way"}'
@@ -294,6 +295,23 @@ class TestDettagliInventati:
         assert prompt_visti[1][0].startswith("Correggi il TITOLO")
         assert risultato["titolo"] == "GTA 6: Xbox players got it the hard way"
         assert risultato["script"] == self.SCRIPT
+
+    def test_titolo_corretto_tradotto_nella_lingua_sbagliata_fa_riscrivere(
+            self, monkeypatch):
+        """21 ottobre 2026: lo Short inglese delle 21:00 e' uscito col titolo
+        "Shrek 2 Remastered: Trailer Parodia, uscita a novembre"."""
+        import json as _json
+        monkeypatch.setattr(brain.config, "LINGUA", "en")
+        gonfiato = _json.loads(self._risposta())
+        gonfiato["titolo"] = "GTA 6: Xbox players shock Microsoft"
+        risultato, prompt_visti, _ = self._genera(
+            monkeypatch,
+            [_json.dumps(gonfiato),
+             '{"titolo": "GTA 6: i giocatori Xbox e il gioco gratis"}',
+             self._risposta()],
+            ['{"dettagli_inventati": []}'])
+        assert len(prompt_visti) == 3
+        assert risultato["titolo"] == "GTA 6: Xbox players got it the hard way"
 
     def test_titolo_corretto_ancora_gonfiato_fa_riscrivere(self, monkeypatch):
         import json as _json
@@ -445,6 +463,17 @@ class TestDettagliInventati:
 # conftest spegne _sommario_bing in tutti i test perche' va in rete: qui serve
 # quello vero, preso all'import del modulo, prima che la fixture lo sostituisca.
 _SOMMARIO_BING_VERO = brain._sommario_bing
+
+
+class TestLinguaDelTitolo:
+    def test_riconosce_italiano_e_inglese(self):
+        assert brain._lingua_del_titolo(
+            "Shrek 2 Remastered: Trailer Parodia, uscita a novembre") == "it"
+        assert brain._lingua_del_titolo(
+            "Shrek 2 Remastered: Release Date Set for November") == "en"
+
+    def test_nel_dubbio_non_decide(self):
+        assert brain._lingua_del_titolo("GTA 6: Trailer 3") == ""
 
 
 class TestPretesaInventata:
