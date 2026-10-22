@@ -101,10 +101,14 @@ LINK_GAMING = {
     "it": [
         "Giochi scontati su Instant Gaming (link affiliato): "
         "https://www.instant-gaming.com/it/?igr=poppone",
+        "VPN per giocare e navigare protetto, NordVPN (link affiliato): "
+        "https://go.nordvpn.net/aff_c?offer_id=15&aff_id=159138&url_id=858",
     ],
     "en": [
         "Cheaper game keys on Instant Gaming (affiliate link): "
         "https://www.instant-gaming.com/en/?igr=poppone",
+        "Play and browse safer with NordVPN (affiliate link): "
+        "https://go.nordvpn.net/aff_c?offer_id=15&aff_id=159138&url_id=858",
     ],
 }
 
