@@ -237,6 +237,13 @@ def _lingua():
 # finiti in programma "GTA VI: Leaked NSFW detail" e "GTA VI: leak da 24
 # minuti di gameplay e nudi integrali", che YouTube non monetizza. Fuori
 # "naked" (Naked Snake di Metal Gear).
+# Dal 24 ottobre anche lo sblocco delle console: il 23 ottobre e' uscito
+# "Mario Kart 8 Deluxe: Switch 2 Jailbreak Sparks Mods", e Nintendo fa
+# togliere i video che mostrano come aggirare le protezioni. Le parole
+# inglesi stanno anche nell'elenco italiano: le ricerche italiane pescano
+# titoli inglesi.
+_SBLOCCO_CONSOLE = ("jailbreak", "jailbreaks", "jailbroken", "jailbreaking",
+                    "modchip", "modchips", "custom firmware", "cfw")
 TEMI_A_RISCHIO = {
     "it": (
         "non ufficiale", "non ufficiali", "pirateria", "piratato",
@@ -245,14 +252,15 @@ TEMI_A_RISCHIO = {
         "robux gratis", "v bucks gratis", "dmca",
         "nsfw", "nudo", "nuda", "nudi", "nude", "nudita", "porno", "sesso",
         "sessuale", "sessuali", "scena di sesso", "scene di sesso",
-    ),
+        "firmware modificato", "console modificata", "console modificate",
+    ) + _SBLOCCO_CONSOLE,
     "en": (
         "unofficial port", "unofficial pc port", "fan port", "piracy",
         "pirated", "crack", "cracked", "torrent", "torrents", "roms",
         "free download", "mod menu", "free robux", "free v bucks", "dmca",
         "nsfw", "nude", "nudes", "nudity", "porn", "sex", "sexual",
         "sex scene", "sex scenes",
-    ),
+    ) + _SBLOCCO_CONSOLE,
 }
 
 
