@@ -305,6 +305,8 @@ class TestTemiARischio:
         "Take-Two manda un DMCA al progetto",
         "GTA VI: leak da 24 minuti di gameplay e nudi integrali",
         "Nudità integrale per Jason e Lucia",
+        "Switch 2: il jailbreak apre la strada alle mod",
+        "Mario Kart World gira su una console modificata",
     ])
     def test_scarta_in_italiano(self, testo):
         assert brain._tema_escluso(testo)
@@ -315,6 +317,8 @@ class TestTemiARischio:
         "Denuvo cracked in record time",
         "Grand Theft Auto VI: Leaked NSFW detail shocks fans",
         "Baldur's Gate 3 sex scenes explained",
+        "Mario Kart 8 Deluxe: Switch 2 Jailbreak Sparks Mods",
+        "Switch 2 modchip already on sale",
     ])
     def test_scarta_in_inglese(self, testo):
         assert brain._tema_escluso(testo, brain.TEMI_A_RISCHIO["en"])
@@ -326,6 +330,7 @@ class TestTemiARischio:
         "GTA 6, il trailer ufficiale batte ogni record",
         "Crackdown 4 non e' in sviluppo",
         "Metal Gear Solid Delta: Naked Snake torna su PS5",
+        "Mario Kart 8 Deluxe: arrivano le mod ufficiali su PC",
     ])
     def test_lascia_passare_le_notizie_buone(self, testo):
         assert brain._tema_escluso(testo) == ""
