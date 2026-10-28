@@ -77,4 +77,4 @@ jobs:
       - name: Verifica
         run: |
           ffmpeg -version | head -1; ffprobe -version | head -1
-          ls ~/apt-cache | wc -l; ls -la ~/apt-cache | head -5
+          ls ~/apt-cache | wc -l  # secondo giro
