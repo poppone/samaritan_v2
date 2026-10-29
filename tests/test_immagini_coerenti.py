@@ -548,6 +548,10 @@ class TestPersoneCheParlano:
         assert stock.vietata("politician speaking at a rally")
         assert stock.vietata("woman with microphone at press conference")
 
+    def test_loghi_e_social_sono_vietati(self):
+        assert stock.vietata("youtube logo painted on a stone")
+        assert stock.vietata("hand holding phone with tiktok app")
+
     def test_auto_e_strade_vanno_bene(self):
         assert not stock.vietata("a red car on a race track")
         assert not stock.vietata("traffic on a highway in the rain")

@@ -53,6 +53,10 @@ PAROLE_VIETATE = {
     "campaign", "conference", "press", "interview", "microphone",
     "announcement", "parliament", "debate", "presenter", "reporter",
     "anchor", "spokesman", "spokesperson", "candidate", "ballot",
+    # Loghi e social non sono mai la notizia (29/10/2026: un logo di YouTube
+    # dipinto sotto "Scopri di piu' su Motori in 60 secondi").
+    "youtube", "logo", "subscribe", "instagram", "tiktok", "facebook",
+    "twitter", "influencer", "vlogger", "youtuber",
 }
 
 

@@ -2008,7 +2008,10 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti,
         "racing track', 'car factory assembly line', 'fuel pump gas "
         "station'). Niente nomi propri, niente marchi, niente titoli: le "
         "clip stock non li hanno, descrivi la scena. Ogni ricerca deve "
-        "c'entrare con la SUA frase, non con il canale in generale"
+        "c'entrare con la SUA frase, non con il canale in generale. Mai "
+        "scene sul canale, sui social, su YouTube, su loghi o telefoni: se lo "
+        "script chiude invitando a seguire il canale, quella parte non ha "
+        "una scena sua"
         + (": servono solo se il gioco non e' reperibile.\n" if p.usa_steam
            else ".\n")
     )
