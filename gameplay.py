@@ -1309,10 +1309,16 @@ def scegli_parte_trovabile(gioco):
     return gioco
 
 
-def procura_materiale(gioco=None, query_pexels="gameplay", minimo=3):
+def procura_materiale(gioco=None, query_pexels="gameplay", minimo=3,
+                      query_scene=None, contesto=""):
     """Ritorna una lista di sorgenti [{tipo, path, gioco}] per il montaggio.
 
     tipo = 'video' | 'immagine'
+
+    `query_scene` sono le ricerche d'archivio di ogni pezzo dello script, in
+    ordine (senza, vale la sola `query_pexels`); `contesto` e' il testo della
+    voce. Le clip d'archivio portano 'scena' e 'scene_totali', che il
+    montaggio usa per metterle nell'ordine delle frasi.
     """
     os.makedirs(config.DIR_TEMP, exist_ok=True)
     sorgenti = []
@@ -1394,12 +1400,20 @@ def procura_materiale(gioco=None, query_pexels="gameplay", minimo=3):
         return sorgenti, nome_ufficiale
 
     # ------------------------------------------------- Fallback su Pexels
-    mancanti = max(minimo - len(sorgenti), 2)
+    # Almeno una clip per scena, e le scene nell'ordine in cui la voce le
+    # dice: stock.py scarta le clip che non c'entrano con la loro frase.
+    scene = [q for q in (query_scene or []) if q and str(q).strip()] \
+        or [query_pexels]
+    # Due clip per scena: con uno stacco ogni 1,5-2 secondi una clip per
+    # scena si ripeterebbe troppo.
+    mancanti = max(minimo - len(sorgenti), 2, 2 * len(scene))
     print(f"[Gameplay] Materiale ufficiale insufficiente: "
-          f"integro con {mancanti} clip Pexels.")
-    from maker import scarica_clip_sfondo
-    for percorso in scarica_clip_sfondo(query_pexels, quante=mancanti):
-        sorgenti.append({"tipo": "video", "path": percorso, "gioco": None})
+          f"integro con {mancanti} clip Pexels su {len(scene)} scene.")
+    import stock
+    for percorso, scena in stock.scarica_clip_per_scene(
+            scene, quante=mancanti, contesto=contesto):
+        sorgenti.append({"tipo": "video", "path": percorso, "gioco": None,
+                         "scena": scena, "scene_totali": len(scene)})
 
     return sorgenti, nome_ufficiale
 

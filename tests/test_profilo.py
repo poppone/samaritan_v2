@@ -120,7 +120,7 @@ class TestSenzaCanaleJson:
             "RING', 'Counter-Strike 2'). Serve a scaricare gameplay reale di "
             "quel gioco",
             "gioco non e' reperibile (es: 'cyberpunk gameplay', 'fps shooter "
-            "action').\n8. DESCRIZIONE",
+            "action').\n7-bis. QUERY SCENE",
             "annunci o conferme attribuite agli sviluppatori",
             "parla di meccaniche, segreti di gioco o consigli, che non hanno "
             "bisogno di una fonte.",
@@ -379,15 +379,15 @@ class TestSteamMaiFuoriDalGaming:
                      "scarica_screenshot_steam", "gioco_con_pagina_ufficiale",
                      "scarica_trailer_ufficiali"):
             monkeypatch.setattr(gameplay, nome, self._vietato)
-        # Il ripiego su Pexels importa maker, che si porta dietro moviepy.
-        finto = types.ModuleType("maker")
+        # Il ripiego su Pexels passa da stock: qui non deve scaricare niente.
+        finto = types.ModuleType("stock")
 
-        def scarica(query, quante=None):
-            query_viste.append(query)
-            return [str(tmp_path / f"bg_{i}.mp4") for i in range(quante or 3)]
+        def scarica(scene, quante=None, contesto=""):
+            query_viste.extend(scene)
+            return [(str(tmp_path / f"bg_{i}.mp4"), 0) for i in range(quante or 3)]
 
-        finto.scarica_clip_sfondo = scarica
-        monkeypatch.setitem(sys.modules, "maker", finto)
+        finto.scarica_clip_per_scene = scarica
+        monkeypatch.setitem(sys.modules, "stock", finto)
 
     def test_la_cucina_usa_solo_stock(self, cucina, monkeypatch, tmp_path):
         query_viste = []

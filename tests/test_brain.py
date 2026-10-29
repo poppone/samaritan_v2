@@ -146,7 +146,7 @@ class TestSchemaRisposta:
 
         assert chiavi == {
             "titolo", "script", "gioco",
-            "query_video", "descrizione", "indice_notizia",
+            "query_video", "query_scene", "descrizione", "indice_notizia",
         }
         assert set(brain._SCHEMA_RISPOSTA["schema"]["required"]) == chiavi
         assert brain._SCHEMA_RISPOSTA["strict"] is True
