@@ -502,6 +502,20 @@ class TestPretesaInventata:
             "Elden Ring: un bug blocca i salvataggi",
             "Elden Ring glitch wipes save files", "Elden Ring") == ""
 
+    def test_dimissioni_che_la_notizia_non_dice(self):
+        # 27 ottobre 2026: IGN parlava di richieste di ferie, non di dimissioni.
+        notizia = ("GTA 6's Release Has Led to a Notable Spike in Time Off "
+                   "Requests, According to New Data")
+        assert brain._pretesa_inventata(
+            "Grand Theft Auto VI: Employees Quit Over Hype 🚀",
+            notizia, "Grand Theft Auto VI") == "dimissioni o licenziamenti"
+
+    def test_licenziamenti_detti_dalla_notizia(self):
+        assert brain._pretesa_inventata(
+            "Ubisoft: licenziamenti nello studio di Assassin's Creed",
+            "Ubisoft announces layoffs at Assassin's Creed studio",
+            "Assassin's Creed") == ""
+
     def test_rinvio_detto_dalla_notizia(self):
         assert brain._pretesa_inventata(
             "Grand Theft Auto VI: Release Date Locked",

@@ -1303,6 +1303,9 @@ PRETESE_TITOLO = [
     ("hacker", r"\bhack|\bcheat|\btruff|\bscam\b"),
     ("chiusura", r"\bchiude\b|\bchiuder|\bchiusur|\bshut ?down|\bshuts down"),
     ("crash", r"\bcrash"),
+    ("dimissioni o licenziamenti", r"\bquit\b|\bquits\b|\bquitting\b|\bresign"
+                                   r"|\bdimission|\bdimett|\blicenzi|\blayoff"
+                                   r"|\blaid off\b|\bfired\b|\bsacked\b"),
 ]
 ENFASI_TITOLO = [
     ("shock", r"\bshock|\bchoc\b|\bscioccat|\bsconvolg|\bstun"),
