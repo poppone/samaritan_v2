@@ -80,6 +80,7 @@ _SCHEMA_SCALETTA = {
             "titolo": {"type": "string"},
             "gioco": {"type": "string"},
             "query_video": {"type": "string"},
+            "query_scene": {"type": "array", "items": {"type": "string"}},
             "descrizione": {"type": "string"},
             "indice_notizia": {"type": "integer"},
             "sezioni": {
@@ -95,8 +96,8 @@ _SCHEMA_SCALETTA = {
                 },
             },
         },
-        "required": ["titolo", "gioco", "query_video", "descrizione",
-                     "indice_notizia", "sezioni"],
+        "required": ["titolo", "gioco", "query_video", "query_scene",
+                     "descrizione", "indice_notizia", "sezioni"],
         "additionalProperties": False,
     },
 }
@@ -138,6 +139,18 @@ def _prompt_scaletta(notizie, titoli_recenti, giochi_recenti):
             "cosa si deve VEDERE: serve a cercare clip stock senza diritti, "
             "niente nomi propri.\n"
         )
+    # Una ricerca d'archivio per sezione, nell'ordine delle sezioni: il
+    # montaggio mette ogni scena nella sua parte di video (vedi stock.py).
+    regola_query += (
+        "7-bis. QUERY SCENE: una lista con UNA ricerca per ogni sezione, "
+        "nello stesso ordine delle sezioni: in INGLESE, 2-4 parole concrete "
+        "che descrivono cosa si deve VEDERE mentre la voce racconta quella "
+        "sezione (es: 'motorcycle racing track', 'car factory assembly "
+        "line'). Niente nomi propri, niente marchi: le clip stock non li "
+        "hanno, descrivi la scena"
+        + (". Servono solo se il gioco non si trova sullo store.\n"
+           if p.usa_steam else ".\n")
+    )
     senza_fonte = ("meccaniche, storia del gioco, segreti, consigli"
                    if p.videogiochi else "curiosita', storia, consigli pratici")
 
@@ -184,8 +197,8 @@ def _prompt_scaletta(notizie, titoli_recenti, giochi_recenti):
         f"usat{p.g('i')} di recente:\n"
         f"   {json.dumps(giochi_recenti, ensure_ascii=False)}\n\n"
         "Rispondi ESCLUSIVAMENTE con un JSON valido con le chiavi: "
-        "'titolo', 'gioco', 'query_video', 'descrizione', 'indice_notizia', "
-        "'sezioni'."
+        "'titolo', 'gioco', 'query_video', 'query_scene', 'descrizione', "
+        "'indice_notizia', 'sezioni'."
     )
 
 
@@ -379,6 +392,11 @@ def genera_video_lungo(tema=None):
 
     query_video = brain.completa_query_video(
         str(scaletta.get("query_video", "gameplay")).strip())
+    # Una scena per sezione: qui il tetto e' il numero delle sezioni, non
+    # quello dello Short.
+    query_scene = brain.pulisci_query_scene(
+        scaletta.get("query_scene"), query_video,
+        massimo=max(len(sezioni), brain.MAX_SCENE))
 
     risultato = {
         "titolo": titolo,
@@ -386,6 +404,7 @@ def genera_video_lungo(tema=None):
         "sezioni": scritte,
         "gioco": gioco,
         "query_video": query_video,
+        "query_scene": query_scene,
         "descrizione": str(scaletta.get("descrizione", "")).strip(),
         "fonte": fonte,
         "fonte_url": fonte_url,

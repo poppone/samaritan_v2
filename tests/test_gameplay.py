@@ -513,11 +513,10 @@ class TestLeClipMieNelMateriale:
         monkeypatch.setattr(config, "USA_STEAM", False)
         monkeypatch.setattr(config, "MAX_CLIP_MIE", 2)
         monkeypatch.setattr(config, "FILE_CRONOLOGIA", str(tmp_path / "niente.json"))
-        # Il ripiego su Pexels importa maker, che si porta dietro moviepy e
-        # numpy: qui non serve nessuno dei due, serve solo che non scarichi.
-        finto = types.ModuleType("maker")
-        finto.scarica_clip_sfondo = lambda query, quante=None: []
-        monkeypatch.setitem(sys.modules, "maker", finto)
+        # Il ripiego su Pexels passa da stock: serve solo che non scarichi.
+        finto = types.ModuleType("stock")
+        finto.scarica_clip_per_scene = lambda scene, quante=None, contesto="": []
+        monkeypatch.setitem(sys.modules, "stock", finto)
 
     def test_un_gioco_di_guida_le_prende(self, monkeypatch, tmp_path):
         self._senza_steam(monkeypatch, tmp_path)

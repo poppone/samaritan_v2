@@ -1824,6 +1824,41 @@ def completa_query_video(query):
     return query
 
 
+# Quante ricerche di scena chiedere al modello: una per pezzo dello script.
+# Sotto le tre lo Short torna a una clip sola ripetuta, sopra le cinque i
+# pezzi durano meno di uno stacco e le ricerche Pexels si sprecano.
+MIN_SCENE = 3
+MAX_SCENE = 5
+
+
+def pulisci_query_scene(valore, query_video, massimo=MAX_SCENE):
+    """Le ricerche di scena pronte per stock.py, nell'ordine dello script.
+
+    Il modello a volte non manda il campo (testo libero, scalette vecchie) o
+    manda una stringa sola: in quel caso si ripiega sulla query_video di
+    sempre, cosi' il video si fa comunque. Ogni ricerca passa da
+    completa_query_video, come quella principale.
+    """
+    if isinstance(valore, str):
+        valore = [valore]
+    if not isinstance(valore, (list, tuple)):
+        valore = []
+    scene, viste = [], set()
+    for voce in valore:
+        # Massimo sei parole: oltre, Pexels non trova piu' niente.
+        testo = " ".join(str(voce or "").split()[:6]).strip(" .,;:")
+        if not testo:
+            continue
+        testo = completa_query_video(testo)
+        if testo.lower() in viste:
+            continue
+        viste.add(testo.lower())
+        scene.append(testo)
+        if len(scene) >= massimo:
+            break
+    return scene or [query_video]
+
+
 def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti,
                               aperture_recenti=(), giochi_recenti=(),
                               notizie_gia_usate=(), schemi_recenti=()):
@@ -1961,6 +1996,23 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti,
             "senza diritti: niente nomi propri, niente marchi.\n"
         )
 
+    # Una ricerca per ogni pezzo dello script, nell'ordine in cui la voce lo
+    # dice: con una sola query per tutto lo Short le clip d'archivio
+    # andavano per conto loro (un'auto elettrica in carica sotto una notizia
+    # di MotoGP). Le scene le usa stock.py, una finestra del video per scena.
+    regole_materiale += (
+        f"7-bis. QUERY SCENE: una lista di {MIN_SCENE}-{MAX_SCENE} ricerche in "
+        "INGLESE, 2-4 parole concrete ciascuna, una per ogni parte dello "
+        "script NELL'ORDINE in cui la voce le dice. Ognuna descrive cosa si "
+        "deve VEDERE mentre la voce dice quella parte (es: 'motorcycle "
+        "racing track', 'car factory assembly line', 'fuel pump gas "
+        "station'). Niente nomi propri, niente marchi, niente titoli: le "
+        "clip stock non li hanno, descrivi la scena. Ogni ricerca deve "
+        "c'entrare con la SUA frase, non con il canale in generale"
+        + (": servono solo se il gioco non e' reperibile.\n" if p.usa_steam
+           else ".\n")
+    )
+
     # Di cosa si puo' parlare senza una fonte, e a chi non si possono
     # attribuire annunci inventati.
     if p.videogiochi:
@@ -1996,11 +2048,13 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti,
             "risultati. In uno scontro fra due parti non dai ragione a "
             "nessuno: dici le posizioni che la fonte riporta.\n"
             "- Il loop della regola 2 non serve: chiudi con la CTA.\n"
-            "- QUERY VIDEO: immagini di repertorio NEUTRE che non mostrino il "
-            "fatto e non sembrino il suo filmato (per esempio 'city skyline "
-            "aerial', 'newspaper printing press', 'stock market screen', "
-            "'world map globe'). Mai violenza, armi, incidenti, ospedali, "
-            "polizia, bandiere o persone riconoscibili.\n"
+            "- QUERY VIDEO e QUERY SCENE: immagini di repertorio che "
+            "c'entrano con l'argomento di ogni frase ma non sembrano il "
+            "filmato del fatto (per una gara di MotoGP 'motorcycle racing "
+            "track', per i prezzi della benzina 'fuel pump gas station', per "
+            "una legge 'parliament building exterior'). Mai violenza, armi, "
+            "incidenti, ospedali, polizia, bandiere o persone "
+            "riconoscibili.\n"
             "- Il campo 'gioco' contiene il protagonista della notizia "
             "(un'azienda, un paese, un'istituzione), mai una persona "
             "privata.\n\n"
@@ -2056,8 +2110,8 @@ def _costruisci_system_prompt(formato, notizie, ultimi_titoli, hook_vincenti,
         f"   {json.dumps(ultimi_titoli, ensure_ascii=False)}\n"
         f"{blocco_ripetizioni}\n"
         "Rispondi ESCLUSIVAMENTE con un JSON valido con le chiavi: "
-        "'titolo', 'script', 'gioco', 'query_video', 'descrizione', "
-        "'indice_notizia'."
+        "'titolo', 'script', 'gioco', 'query_video', 'query_scene', "
+        "'descrizione', 'indice_notizia'."
     )
 
 
@@ -2075,12 +2129,13 @@ _SCHEMA_RISPOSTA = {
             "script": {"type": "string"},
             "gioco": {"type": "string"},
             "query_video": {"type": "string"},
+            "query_scene": {"type": "array", "items": {"type": "string"}},
             "descrizione": {"type": "string"},
             "indice_notizia": {"type": "integer"},
         },
         "required": [
             "titolo", "script", "gioco",
-            "query_video", "descrizione", "indice_notizia",
+            "query_video", "query_scene", "descrizione", "indice_notizia",
         ],
         "additionalProperties": False,
     },
@@ -2999,12 +3054,15 @@ def genera_script_samaritan(tema=None):
                 motivo_scarto = ""
 
                 query_video = completa_query_video(query_video)
+                query_scene = pulisci_query_scene(data.get("query_scene"),
+                                                  query_video)
 
                 risultato = {
                     "titolo": titolo,
                     "script": script,
                     "gioco": gioco,
                     "query_video": query_video,
+                    "query_scene": query_scene,
                     "descrizione": descrizione,
                     "fonte": fonte,
                     "fonte_url": fonte_url,
@@ -3043,6 +3101,101 @@ def genera_script_samaritan(tema=None):
     )
 
 
+# ===========================================================================
+# PERTINENZA DELLE CLIP D'ARCHIVIO
+# ===========================================================================
+_SCHEMA_PERTINENZA = {
+    "name": "clip_pertinenti",
+    "strict": True,
+    "schema": {
+        "type": "object",
+        "properties": {
+            "scene": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "scena": {"type": "integer"},
+                        "clip": {"type": "array", "items": {"type": "integer"}},
+                    },
+                    "required": ["scena", "clip"],
+                    "additionalProperties": False,
+                },
+            },
+        },
+        "required": ["scene"],
+        "additionalProperties": False,
+    },
+}
+
+
+def scegli_clip_pertinenti(scene, descrizioni, contesto=""):
+    """Quali clip candidate mostrano davvero la scena. UNA chiamata per video.
+
+    `scene` sono le ricerche in ordine, `descrizioni` una lista per scena con
+    la descrizione di ogni candidata (presa dall'indirizzo Pexels). Ritorna
+    {indice_scena: [indici delle candidate buone, dalla piu' adatta]}; una
+    scena che il modello non nomina manca dal dizionario, cioe' non e' stata
+    giudicata. Ritorna None se la chiamata non riesce: chi chiama usa le
+    candidate in ordine, come prima, perche' un video con una clip fuori tema
+    vale piu' di un video saltato.
+    """
+    righe = []
+    for i, (scena, voci) in enumerate(zip(scene, descrizioni), 1):
+        if not voci:
+            continue
+        righe.append(f"SCENA {i}: {scena}")
+        righe.extend(f"  {j}. {d}" for j, d in enumerate(voci, 1))
+    if not righe:
+        return None
+    istruzioni = (
+        "Scegli le clip d'archivio da montare sotto un video. Per ogni scena "
+        "hai cosa si deve vedere e le clip candidate, ognuna con la sua "
+        "descrizione. Tieni SOLO le clip che mostrano davvero il soggetto "
+        "della scena: per 'motorcycle racing track' vanno bene moto in "
+        "pista, non un'auto elettrica in carica ne' gente in ufficio. Il "
+        "testo della voce serve a capire l'argomento. Metti le clip tenute "
+        "in ordine, dalla piu' adatta; se nessuna va bene, lista vuota. "
+        "Rispondi in JSON con la chiave 'scene': una voce per scena con "
+        "'scena' (il numero) e 'clip' (i numeri delle clip tenute)."
+    )
+    utente = ""
+    if contesto:
+        utente = f"TESTO DELLA VOCE: {' '.join(str(contesto).split())[:900]}\n\n"
+    utente += "\n".join(righe)
+    modello = config.GROQ_MODELLI[-1]
+    try:
+        risposta = client.chat.completions.create(
+            model=modello,
+            messages=[
+                {"role": "system", "content": istruzioni},
+                {"role": "user", "content": utente},
+            ],
+            temperature=0,
+            max_tokens=2000,
+            response_format={"type": "json_schema",
+                             "json_schema": _SCHEMA_PERTINENZA},
+            **({"reasoning_effort": "low"} if "gpt-oss" in modello else {}),
+        )
+        dati = _estrai_json(risposta.choices[0].message.content)
+        verdetto = {}
+        for voce in dati.get("scene", []):
+            i = int(voce.get("scena", 0)) - 1
+            if not 0 <= i < len(descrizioni):
+                continue
+            buone = []
+            for j in voce.get("clip", []):
+                j = int(j) - 1
+                if 0 <= j < len(descrizioni[i]) and j not in buone:
+                    buone.append(j)
+            verdetto[i] = buone
+        return verdetto
+    except Exception as e:
+        print(f"[Samaritan Brain] Controllo di pertinenza delle clip non "
+              f"riuscito, le uso in ordine: {e}")
+        return None
+
+
 if __name__ == "__main__":
     dati = genera_script_samaritan()
     print("\n" + "=" * 60)
@@ -3050,6 +3203,7 @@ if __name__ == "__main__":
     print(f"FORMATO     : {dati['stile']}")
     print(f"GIOCO       : {dati.get('gioco') or '(non specifico)'}")
     print(f"QUERY VIDEO : {dati['query_video']}")
+    print(f"QUERY SCENE : {' | '.join(dati.get('query_scene') or [])}")
     print(f"FONTE       : {dati['fonte'] or '(evergreen)'}")
     print("-" * 60)
     print(dati["script"])

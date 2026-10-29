@@ -25,7 +25,6 @@ import re
 import random
 
 import numpy as np
-import requests
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageEnhance
 from moviepy import (
     VideoFileClip,
@@ -39,9 +38,11 @@ from moviepy import (
 import config
 import profilo
 import veste
+from stock import scarica_clip_sfondo, scegli_sorgente  # noqa: F401
 from voice import genera_voce_samaritan, grafia_canale, pulisci_testo
 
-# Le ricerche Pexels di riserva, quando quella del video trova troppo poco,
+# Le ricerche Pexels di riserva, ultimissimo ripiego quando le scene del
+# video non trovano clip adatte (stock.py prende la piu' vicina al tema),
 # stanno nel profilo del canale (voce 'query_stock_riserva'): per Poppone TV
 # sono scene di gioco, per un canale di cucina sarebbero pentole e fornelli.
 
@@ -77,83 +78,10 @@ def _carica_font(dimensione):
 # ===========================================================================
 # PEXELS (fallback quando il gioco non e' identificabile)
 # ===========================================================================
-def _orizzontale():
-    """Il video che stiamo montando e' piu' largo che alto?"""
-    return config.VIDEO_W >= config.VIDEO_H
-
-
-def _cerca_clip_pexels(query, gia_scaricati):
-    headers = {"Authorization": config.PEXELS_API_KEY}
-    query_pulita = re.sub(r"\b(vertical|short|shorts)\b", "", query,
-                          flags=re.IGNORECASE).strip()
-
-    # Chiedere a Pexels clip gia' del verso giusto evita di montare un video
-    # verticale dentro una cornice orizzontale, dove resterebbe una striscia
-    # stretta in mezzo a due bande sfocate.
-    orizzontale = _orizzontale()
-    verso = "landscape" if orizzontale else "portrait"
-
-    try:
-        r = requests.get(
-            "https://api.pexels.com/videos/search",
-            headers=headers,
-            params={"query": query_pulita, "orientation": verso, "per_page": 15},
-            timeout=12,
-        )
-        r.raise_for_status()
-        video_trovati = r.json().get("videos", [])
-    except Exception as e:
-        print(f"[Warning Pexels] Ricerca '{query_pulita}' fallita: {e}")
-        return []
-
-    risultati = []
-    for video in video_trovati:
-        if video["id"] in gia_scaricati:
-            continue
-        if orizzontale:
-            adatti = [f for f in video.get("video_files", [])
-                      if f.get("width", 0) >= f.get("height", 1)]
-        else:
-            adatti = [f for f in video.get("video_files", [])
-                      if f.get("height", 0) >= f.get("width", 1)]
-        adatti = adatti or video.get("video_files", [])
-        if not adatti:
-            continue
-        migliore = min(adatti,
-                       key=lambda f: abs(f.get("height", 0) - config.VIDEO_H))
-        risultati.append((video["id"], migliore["link"]))
-    return risultati
-
-
-def scarica_clip_sfondo(query, quante=None):
-    """Scarica clip stock verticali da Pexels."""
-    quante = quante or config.NUM_CLIP_SFONDO
-    os.makedirs(config.DIR_TEMP, exist_ok=True)
-
-    riserva = list(profilo.attivo().query_stock_riserva)
-    query_da_provare = [query] + random.sample(riserva, len(riserva))
-    percorsi, gia_scaricati = [], set()
-
-    for q in query_da_provare:
-        if len(percorsi) >= quante:
-            break
-        for video_id, link in _cerca_clip_pexels(q, gia_scaricati):
-            if len(percorsi) >= quante:
-                break
-            destinazione = os.path.join(config.DIR_TEMP, f"bg_{video_id}.mp4")
-            try:
-                print(f"[Samaritan Maker] Download clip stock '{q}'...")
-                dati = requests.get(link, timeout=60).content
-                if len(dati) < 50_000:
-                    continue
-                with open(destinazione, "wb") as f:
-                    f.write(dati)
-                percorsi.append(destinazione)
-                gia_scaricati.add(video_id)
-            except Exception as e:
-                print(f"[Warning Pexels] Download fallito: {e}")
-
-    return percorsi
+# La ricerca e il download delle clip d'archivio stanno in stock.py, che non
+# si porta dietro moviepy: li' c'e' anche il controllo che ogni clip c'entri
+# con la frase che la voce sta dicendo. Il nome resta anche qui per chi lo
+# importava da maker.
 
 
 # ===========================================================================
@@ -325,7 +253,8 @@ def costruisci_sfondo_montato(sorgenti, durata_totale, stile=None):
     """Alterna le sorgenti con uno stacco ogni 2-3 secondi.
 
     Video e immagini vengono mescolati: i trailer danno movimento, gli
-    screenshot danno inquadrature pulite del gioco. La veste decide quanto
+    screenshot danno inquadrature pulite del gioco. Le clip d'archivio con
+    una scena invece non si mescolano: vanno nell'ordine delle frasi. La veste decide quanto
     durano gli stacchi (`ritmo`) e da che verso si muove lo zoom.
     """
     stile = stile or STILE_BASE
@@ -333,13 +262,23 @@ def costruisci_sfondo_montato(sorgenti, durata_totale, stile=None):
     if not utilizzabili:
         return None
 
-    random.shuffle(utilizzabili)
-    # I video per primi: il video deve APRIRE con movimento, non con uno statico
-    utilizzabili.sort(key=lambda s: s["tipo"] != "video")
+    # Le clip d'archivio con una scena seguono l'ordine della voce: ogni
+    # scena ha la sua finestra di tempo (stock.scegli_sorgente). Mescolarle
+    # metteva la pista da corsa sotto la frase sui prezzi e viceversa.
+    per_scena = any(s.get("scena") is not None for s in utilizzabili)
+    usi = {}
+    if not per_scena:
+        random.shuffle(utilizzabili)
+        # I video per primi: il video deve APRIRE con movimento, non con uno
+        # statico
+        utilizzabili.sort(key=lambda s: s["tipo"] != "video")
 
     segmenti, coperto, indice = [], 0.0, 0
     while coperto < durata_totale:
-        sorgente = utilizzabili[indice % len(utilizzabili)]
+        if per_scena:
+            sorgente = scegli_sorgente(utilizzabili, coperto, durata_totale, usi)
+        else:
+            sorgente = utilizzabili[indice % len(utilizzabili)]
         indice += 1
 
         durata = random.uniform(config.STACCO_MIN * stile["ritmo"],
@@ -696,7 +635,8 @@ def genera_sottotitoli_clips(audio_path, titolo="", gioco="", stile=None):
 # ===========================================================================
 def assembla_video_finale(testo_per_audio=None, query_video="gameplay",
                           titolo="", gioco="", tema="Gaming",
-                          resoconto=None, audio_pronto=None, fonte=""):
+                          resoconto=None, audio_pronto=None, fonte="",
+                          query_scene=None):
     """Monta il video e lo scrive su disco. Ritorna il percorso, o None.
 
     `audio_pronto` e' il percorso di un audio gia' sintetizzato: lo passa il
@@ -716,6 +656,7 @@ def assembla_video_finale(testo_per_audio=None, query_video="gameplay",
         dati = genera_script_samaritan(tema)
         testo_per_audio = dati["script"]
         query_video = dati["query_video"]
+        query_scene = dati.get("query_scene")
         titolo = dati["titolo"]
         gioco = dati.get("gioco", "")
         fonte = dati.get("fonte", "")
@@ -728,7 +669,8 @@ def assembla_video_finale(testo_per_audio=None, query_video="gameplay",
     # Materiale ufficiale del gioco, con ripiego automatico su stock
     from gameplay import procura_materiale
     sorgenti, gioco_ufficiale = procura_materiale(
-        gioco=gioco, query_pexels=query_video, minimo=3
+        gioco=gioco, query_pexels=query_video, minimo=3,
+        query_scene=query_scene, contesto=testo_per_audio,
     )
     if not sorgenti:
         print("[Errore Maker] Nessun materiale video disponibile: interrompo.")

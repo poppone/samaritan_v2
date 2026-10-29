@@ -17,6 +17,8 @@ FASE 0  analyst.py   scarica la retention reale degli ultimi 90 giorni
 FASE 1  brain.py     sceglie il formato (pesato sui dati) e scrive lo script
                      ancorandolo a notizie gaming VERE
 FASE 2  gameplay.py  trailer e screenshot UFFICIALI del gioco da Steam
+        stock.py     clip d'archivio Pexels, una ricerca per scena dello script,
+                     solo quelle pertinenti, montate nell'ordine della voce
         voice.py     voce neurale Edge-TTS
         veste.py     sceglie la veste grafica, diversa a ogni video
         maker.py     stacco ogni 2-3s, zoom, sfondo sfocato, sottotitoli
