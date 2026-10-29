@@ -1404,7 +1404,9 @@ def procura_materiale(gioco=None, query_pexels="gameplay", minimo=3,
     # dice: stock.py scarta le clip che non c'entrano con la loro frase.
     scene = [q for q in (query_scene or []) if q and str(q).strip()] \
         or [query_pexels]
-    mancanti = max(minimo - len(sorgenti), 2, len(scene))
+    # Due clip per scena: con uno stacco ogni 1,5-2 secondi una clip per
+    # scena si ripeterebbe troppo.
+    mancanti = max(minimo - len(sorgenti), 2, 2 * len(scene))
     print(f"[Gameplay] Materiale ufficiale insufficiente: "
           f"integro con {mancanti} clip Pexels su {len(scene)} scene.")
     import stock

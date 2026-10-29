@@ -521,7 +521,8 @@ class TestProcuraMateriale:
         sorgenti, _ = gameplay.procura_materiale(
             "", query_pexels="race track", minimo=3,
             query_scene=["a b", "c d", "e f", "g h"], contesto="voce")
-        assert chiamate == [(["a b", "c d", "e f", "g h"], 4, "voce")]
+        # Due clip per scena, cosi' gli stacchi veloci non ripetono le stesse.
+        assert chiamate == [(["a b", "c d", "e f", "g h"], 8, "voce")]
         assert [(s["scena"], s["scene_totali"]) for s in sorgenti] == \
             [(0, 4), (1, 4), (2, 4), (3, 4)]
 
@@ -535,3 +536,52 @@ class TestProcuraMateriale:
                             chiamate.append(list(scene)) or [])
         gameplay.procura_materiale("", query_pexels="race track", minimo=3)
         assert chiamate == [["race track"]]
+
+
+# ---------------------------------------------------------------------------
+# Persone che parlano in pubblico (29/10/2026: un ragazzo a un leggio sotto
+# una notizia su Salvini sembrava Salvini)
+# ---------------------------------------------------------------------------
+class TestPersoneCheParlano:
+    def test_leggio_e_comizio_sono_vietati(self):
+        assert stock.vietata("man reading a speech at a podium")
+        assert stock.vietata("politician speaking at a rally")
+        assert stock.vietata("woman with microphone at press conference")
+
+    def test_auto_e_strade_vanno_bene(self):
+        assert not stock.vietata("a red car on a race track")
+        assert not stock.vietata("traffic on a highway in the rain")
+        assert not stock.vietata("")
+
+    def test_cerca_candidate_le_scarta(self, monkeypatch):
+        class Risposta:
+            def raise_for_status(self):
+                pass
+
+            def json(self):
+                file_ok = [{"width": 1080, "height": 1920, "link": "x"}]
+                return {"videos": [
+                    {"id": 1, "url": "https://www.pexels.com/video/"
+                     "man-reading-speech-at-podium-1/", "video_files": file_ok},
+                    {"id": 2, "url": "https://www.pexels.com/video/"
+                     "electric-car-on-the-road-2/", "video_files": file_ok},
+                ]}
+
+        monkeypatch.setattr(stock.requests, "get", lambda *a, **k: Risposta())
+        trovate = stock.cerca_candidate("self driving car", set())
+        assert [c["id"] for c in trovate] == [2]
+
+    def test_il_giudizio_chiede_di_scartarle(self, monkeypatch):
+        mandati = []
+
+        class Completamenti:
+            def create(self, **k):
+                mandati.append(k["messages"][0]["content"])
+                raise RuntimeError("niente rete")
+
+        class Client:
+            chat = type("C", (), {"completions": Completamenti()})()
+
+        monkeypatch.setattr(brain, "client", Client())
+        brain.scegli_clip_pertinenti(["car factory"], [["a car factory"]])
+        assert mandati and "leggio" in mandati[0]

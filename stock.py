@@ -41,6 +41,20 @@ MINIMO_CLIP = 2
 # Sotto questa dimensione il file scaricato non e' un video vero.
 BYTE_MINIMI = 50_000
 
+# Clip che non vanno mai sotto una notizia: una persona che parla a un
+# leggio, a un comizio o a un microfono sembra il politico o il personaggio
+# di cui parla la voce (29/10/2026: un ragazzo che legge un discorso sotto una
+# notizia su Salvini). Il filtro e' fisso, sulla descrizione Pexels, e vale
+# anche quando il giudizio del modello non risponde.
+PAROLE_VIETATE = {
+    "podium", "lectern", "speech", "speaking", "speaker", "speaks",
+    "politician", "politicians", "president", "minister", "senator",
+    "rally", "protest", "protesters", "election", "vote", "voting",
+    "campaign", "conference", "press", "interview", "microphone",
+    "announcement", "parliament", "debate", "presenter", "reporter",
+    "anchor", "spokesman", "spokesperson", "candidate", "ballot",
+}
+
 
 # ===========================================================================
 # DESCRIZIONI E VICINANZA
@@ -87,6 +101,11 @@ def riserva_in_ordine(riserva, argomento):
 # ===========================================================================
 # PEXELS
 # ===========================================================================
+def vietata(descrizione):
+    """La clip mostra qualcuno che parla in pubblico (vedi PAROLE_VIETATE)?"""
+    return bool(set(_parole(descrizione)) & PAROLE_VIETATE)
+
+
 def _orizzontale():
     """Il video che stiamo montando e' piu' largo che alto?"""
     return config.VIDEO_W >= config.VIDEO_H
@@ -124,6 +143,11 @@ def cerca_candidate(query, gia_viste):
     for video in video_trovati:
         if video.get("id") in gia_viste:
             continue
+        descrizione = descrizione_da_url(video.get("url", ""))
+        if vietata(descrizione):
+            print(f"[Samaritan Stock] Scartata '{descrizione}': persona che "
+                  f"parla in pubblico.")
+            continue
         if orizzontale:
             adatti = [f for f in video.get("video_files", [])
                       if f.get("width", 0) >= f.get("height", 1)]
@@ -138,7 +162,7 @@ def cerca_candidate(query, gia_viste):
         risultati.append({
             "id": video["id"],
             "link": migliore["link"],
-            "descrizione": descrizione_da_url(video.get("url", "")),
+            "descrizione": descrizione,
         })
     return risultati
 
