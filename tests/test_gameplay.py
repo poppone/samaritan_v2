@@ -124,6 +124,14 @@ class TestAlias:
         assert gameplay.ALIAS_GIOCHI[gameplay._normalizza("Super Mario")] == \
             "Super Mario Bros. Wonder"
 
+    def test_i_nomi_italiani_diventano_quelli_dei_negozi(self):
+        # Il 29 ottobre 2026 "Leggende Pokémon: Z-A" (con il trattino non
+        # separabile del modello) e' finito su clip Pexels.
+        for nome in ("Leggende Pokémon: Z\u2011A", "Leggende Pokémon: Z-A"):
+            assert gameplay.nome_con_alias(nome) == "Pokémon Legends: Z-A"
+        assert gameplay.nome_con_alias("Pokémon Scarlatto e Violetto") == \
+            "Pokémon Scarlet and Violet"
+
     def test_slogan_e_personaggi_portano_al_gioco(self):
         # Il 15 ottobre 2026 "You're Late, 007" e' finito su clip Pexels.
         for nome in ("Youre Late, 007", "You're Late, 007", "007",
