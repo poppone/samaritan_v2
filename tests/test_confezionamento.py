@@ -188,9 +188,16 @@ class TestDescrizione:
         monkeypatch.setattr(config, "SITO_CANALE", "davidedurazzi.it")
         monkeypatch.setattr(config, "LINGUA", "it")
         righe = brain.costruisci_descrizione(DATI_GTA).split("\n")
-        assert "Approfondimenti su https://davidedurazzi.it" in righe[:4]
+        # Senza un articolo sulla notizia il link va alla home, con gli UTM.
+        assert any(r.startswith("Approfondimenti su https://www.davidedurazzi.it/?utm_source=youtube")
+                   for r in righe[:4])
         monkeypatch.setattr(config, "LINGUA", "en")
-        assert "More on https://davidedurazzi.it" in brain.costruisci_descrizione(DATI_GTA)
+        assert "More on https://www.davidedurazzi.it/?" in brain.costruisci_descrizione(DATI_GTA)
+
+    def test_sito_di_un_altro_resta_com_era(self, monkeypatch):
+        monkeypatch.setattr(config, "SITO_CANALE", "esempio.it")
+        monkeypatch.setattr(config, "LINGUA", "it")
+        assert "Approfondimenti su https://esempio.it" in brain.costruisci_descrizione(DATI_GTA)
 
     def test_senza_sito_nessuna_riga(self, monkeypatch):
         monkeypatch.setattr(config, "SITO_CANALE", "")

@@ -23,6 +23,7 @@ import os
 import sys
 import tempfile
 from datetime import datetime, timedelta
+from urllib.parse import urlencode
 from zoneinfo import ZoneInfo
 
 DIR_PROGETTO = os.path.dirname(os.path.abspath(__file__))
@@ -31,6 +32,7 @@ FUSO = ZoneInfo("Europe/Rome")
 # YouTube vuole publishAt nel futuro: sotto questo margine si pubblica subito.
 MARGINE = timedelta(minutes=15)
 TAG_BASE = ["popponetv", "twitch", "live", "gaming", "shorts"]
+SITO = "https://www.davidedurazzi.it"
 
 
 def leggi_schede(cartella=CARTELLA):
@@ -102,6 +104,28 @@ def tag_della(scheda):
     return tag
 
 
+def descrizione_con_sito(scheda):
+    """La descrizione della scheda con il link alla home di davidedurazzi.it.
+
+    Una clip della live non ha un articolo suo: porta alla home, con gli UTM
+    per vedere nelle statistiche del sito chi arriva dalle clip. Il link sta
+    dopo il primo paragrafo, prima di "altro". Se c'e' gia' non si ripete.
+    """
+    descrizione = scheda.get("descrizione") or ""
+    if "davidedurazzi.it" in descrizione:
+        return descrizione
+    url = SITO + "/?" + urlencode({
+        "utm_source": "youtube",
+        "utm_medium": "short",
+        "utm_campaign": f"clip-live-{scheda.get('id') or 'senza-id'}",
+    })
+    riga = f"Notizie e approfondimenti: {url}"
+    primo, sep, resto = descrizione.partition("\n\n")
+    if not sep:
+        return f"{descrizione}\n\n{riga}" if descrizione else riga
+    return f"{primo}\n\n{riga}\n\n{resto}"
+
+
 def salva(percorso, scheda):
     with open(percorso, "w", encoding="utf-8") as f:
         json.dump(scheda, f, ensure_ascii=False, indent=2)
@@ -138,7 +162,7 @@ def main():
             try:
                 scarica(s["video_url"], video, token)
                 video_id = uploader.carica_short(
-                    video, s["titolo"], s.get("descrizione", ""),
+                    video, s["titolo"], descrizione_con_sito(s),
                     tag=tag_della(s), privacy="public",
                     pubblica_alle=quando, contenuto_sintetico=False)
             except Exception as e:

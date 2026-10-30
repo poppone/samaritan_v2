@@ -77,3 +77,11 @@ def _host_sempre_raggiungibili(monkeypatch):
     """Gli URL dei test sono finti: niente DNS vero."""
     import gameplay
     monkeypatch.setattr(gameplay, "_host_raggiungibile", lambda url: True)
+
+
+@pytest.fixture(autouse=True)
+def _niente_articoli_dalla_rete(monkeypatch):
+    """Gli articoli del sito si scaricano da davidedurazzi.it: nei test
+    niente rete. I test sul link all'articolo ne mettono di finti."""
+    import brain
+    monkeypatch.setattr(brain, "_articoli_sito", [])

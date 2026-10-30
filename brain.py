@@ -17,9 +17,10 @@ import re
 import html
 import unicodedata
 import xml.etree.ElementTree as ET
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 from email.utils import parsedate_to_datetime
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import requests
 from groq import Groq
@@ -599,6 +600,13 @@ def salva_in_cronologia(dati):
         "fonte_url": dati.get("fonte_url", ""),
         "video_id": None,          # riempito dopo l'upload
     })
+    # L'articolo del sito sulla stessa notizia, senza UTM: chi rilancia lo
+    # Short (la stanza, Metricool) mette quelli della sua rete.
+    try:
+        if _articolo_del_video(dati):
+            cronologia[-1]["articolo_url"] = articolo_collegato(dati, rete="")
+    except Exception as e:
+        print(f"[Warning Sito] Articolo collegato non salvato: {e}")
     cronologia = cronologia[-200:]
     with open(config.FILE_CRONOLOGIA, "w", encoding="utf-8") as f:
         json.dump(cronologia, f, ensure_ascii=False, indent=2)
@@ -1677,6 +1685,203 @@ def _riga_materiale(dati, materiale):
             "ufficiale dei rispettivi editori.")
 
 
+# ===========================================================================
+# LINK ALL'ARTICOLO SUL SITO
+# ===========================================================================
+# Ogni video porta all'articolo di davidedurazzi.it sulla stessa notizia,
+# quando la redazione l'ha scritto, altrimenti alla home. Con gli UTM Davide
+# vede nelle statistiche del sito quanta gente arriva dai video, e da quale.
+SITO = "https://www.davidedurazzi.it"
+URL_ARTICOLI_SITO = SITO + "/content/articoli.json"
+TIMEOUT_ARTICOLI_SITO = 5
+GIORNI_ARTICOLI_SITO = 5
+# Un articolo e' "lo stesso" del video se almeno 2 parole del tema sono in
+# comune e coprono almeno un terzo di quelle del titolo dell'articolo: con
+# una parola sola "GTA" porterebbe a ogni articolo che lo nomina.
+MIN_PAROLE_ARTICOLO = 2
+SOGLIA_ARTICOLO = 0.34
+# Le sezioni del sito per l'argomento del canale.
+SEZIONI_SITO = {
+    profilo.ARGOMENTO_GAMING: ("gaming", "videogiochi"),
+    "motori": ("motori",),
+}
+# Parole che stanno in ogni titolo e non dicono di che cosa parla.
+_PAROLE_VUOTE_ARTICOLO = frozenset("""
+    alla alle della delle dello degli nella nelle sulla sulle anche come
+    cosa dopo oggi ecco sono stato stata essere hanno questo questa quello
+    quella tutto tutti molto perche quando senza nuovo nuova nuovi nuove
+    primo prima anni anno giorni ogni altro altri video gioco giochi arriva
+    ufficiale with from that this have about after what will your their
+""".split())
+
+_articoli_sito = None      # cache della run: si scarica una volta sola
+
+
+def _sito_di_davide():
+    """Vero se il sito del canale e' davidedurazzi.it (non quello di un cliente)."""
+    return "davidedurazzi.it" in (config.SITO_CANALE or "").lower()
+
+
+def _articoli_per_il_video():
+    """Vero se il video puo' portare a un articolo del sito: davidedurazzi.it
+    e' in italiano, quindi l'uscita inglese resta sulla home ("More on")."""
+    return _sito_di_davide() and (config.LINGUA or "it").lower() == "it"
+
+
+def _sezioni_del_canale():
+    """Le sezioni del sito che parlano dell'argomento del canale, o ()."""
+    argomento = (profilo.attivo().argomento or "").strip().lower()
+    if argomento in SEZIONI_SITO:
+        return SEZIONI_SITO[argomento]
+    for chiave, sezioni in SEZIONI_SITO.items():
+        if chiave in argomento:
+            return sezioni
+    return ()
+
+
+def _scarica_articoli_sito():
+    """Gli articoli pubblicati sul sito. Lista vuota se la rete non risponde."""
+    global _articoli_sito
+    if _articoli_sito is not None:
+        return _articoli_sito
+    _articoli_sito = []
+    try:
+        r = requests.get(URL_ARTICOLI_SITO, timeout=TIMEOUT_ARTICOLI_SITO)
+        r.raise_for_status()
+        dati = r.json()
+        if isinstance(dati, list):
+            _articoli_sito = [a for a in dati if isinstance(a, dict)]
+    except Exception as e:
+        print(f"[Warning Sito] Articoli del sito non letti: {e}")
+    return _articoli_sito
+
+
+def _parole_articolo(testo):
+    """Le radici delle parole che dicono di che cosa parla un titolo.
+
+    'Elettrica' ed 'elettriche' contano uguale (vocali finali tolte, e la
+    'h' di -che/-ghi dopo); gli anni no, perche' il 2027 sta in mezzo titoli.
+    """
+    radici = set()
+    for parola in _impronta_notizia(testo).split():
+        if parola in _PAROLE_VUOTE_ARTICOLO:
+            continue
+        if parola.isdigit():
+            if len(parola) < 2 or (len(parola) == 4 and parola[:2] in ("19", "20")):
+                continue
+        elif len(parola) <= 3 and not any(c.isdigit() for c in parola):
+            # 'gta' si', 'del' no: le sigle dei giochi stanno nel gioco,
+            # che si confronta a parte.
+            continue
+        if not parola.isdigit() and len(parola) > 4:
+            parola = parola.rstrip("aeiou") or parola
+            if parola.endswith(("ch", "gh")):
+                parola = parola[:-1]
+        radici.add(parola)
+    return radici
+
+
+def _adesso_a_roma():
+    """L'ora di Roma; in UTC se manca il database dei fusi (Windows senza
+    tzdata): sui 5 giorni della finestra un'ora di scarto non cambia niente."""
+    try:
+        return datetime.now(ZoneInfo("Europe/Rome"))
+    except (ZoneInfoNotFoundError, ValueError):
+        print("[Warning Sito] Fuso Europe/Rome non trovato, uso UTC")
+        return datetime.now(timezone.utc)
+
+
+def _slug_valido(slug):
+    """Vero se lo slug puo' stare nell'indirizzo cosi' com'e': il sito accetta
+    solo /articoli/[a-z0-9-]+, il resto darebbe un link rotto."""
+    return isinstance(slug, str) and re.fullmatch(r"[a-z0-9-]+", slug) is not None
+
+
+def _slug(testo, massimo=60):
+    """'GTA 6: rinviato' -> 'gta-6-rinviato'. Per utm_campaign."""
+    return "-".join(_impronta_notizia(testo).split())[:massimo].strip("-")
+
+
+def _articolo_del_video(dati, adesso=None):
+    """L'articolo del sito sulla stessa notizia del video, o None.
+
+    Del video si guardano il titolo e la notizia da cui e' nato: il titolo da
+    solo e' riscritto dal modello e puo' perdere le parole del tema. Il gioco
+    vale UNA parola in comune se l'articolo lo nomina ('GTA 6' compreso), e
+    le sue parole non contano di nuovo: altrimenti 'Xbox' o 'Mass Effect' da
+    soli porterebbero a qualunque articolo li nomini.
+    """
+    if not _articoli_per_il_video():
+        return None
+    sezioni = _sezioni_del_canale()
+    if not sezioni:
+        return None
+    gioco = (dati.get("gioco") or "").strip()
+    parole_gioco = _parole_articolo(gioco)
+    parole_video = _parole_articolo(" ".join((
+        dati.get("titolo") or "",
+        _notizia_di_una_voce(dati.get("fonte", "")))))
+    if not parole_video and not gioco:
+        return None
+    oggi = (adesso or _adesso_a_roma()).date()
+    limite = (oggi - timedelta(days=GIORNI_ARTICOLI_SITO)).isoformat()
+
+    migliore, punti_migliore = None, 0.0
+    for a in _scarica_articoli_sito():
+        # Il json arriva dalla rete: una voce storta si salta da sola, senza
+        # portare alla home i video di tutti gli altri articoli.
+        if a.get("pubblicato") is not True or not _slug_valido(a.get("slug")):
+            continue
+        if str(a.get("sezione") or "").lower() not in sezioni:
+            continue
+        if str(a.get("data") or "") < limite:
+            continue
+        titolo = str(a.get("titolo") or "")
+        parole = _parole_articolo(titolo)
+        if not parole:
+            continue
+        comuni = len((parole & parole_video) - parole_gioco)
+        if gioco and _gioco_nel_titolo(titolo, gioco):
+            comuni += 1
+        if comuni < MIN_PAROLE_ARTICOLO:
+            continue
+        punti = min(1.0, comuni / len(parole))
+        # A pari punti vince il piu' recente.
+        if punti >= SOGLIA_ARTICOLO and (
+                punti > punti_migliore
+                or (punti == punti_migliore
+                    and str(a.get("data")) > str(migliore.get("data")))):
+            migliore, punti_migliore = a, punti
+    return migliore
+
+
+def articolo_collegato(dati, rete="youtube"):
+    """L'indirizzo dell'articolo del sito sul video, con gli UTM della rete.
+
+    Senza un articolo abbastanza simile, o senza rete, e' la home del sito,
+    sempre con gli UTM. Non solleva mai: un link mancante non deve fermare
+    il video. Con rete vuota l'indirizzo esce pulito, senza UTM.
+    """
+    try:
+        articolo = _articolo_del_video(dati)
+    except Exception as e:
+        print(f"[Warning Sito] Articolo collegato non cercato: {e}")
+        articolo = None
+    if articolo:
+        url = f"{SITO}/articoli/{articolo['slug']}"
+        campagna = articolo["slug"]
+    else:
+        url = SITO + "/"
+        campagna = _slug(dati.get("titolo") or "") or "short"
+    if not rete:
+        return url
+    return url + "?" + urlencode({
+        "utm_source": rete,
+        "utm_medium": "lungo" if config.VIDEO_LUNGO else "short",
+        "utm_campaign": campagna,
+    })
+
+
 def costruisci_descrizione(dati, materiale=None, capitoli=""):
     """Descrizione del video.
 
@@ -1692,9 +1897,21 @@ def costruisci_descrizione(dati, materiale=None, capitoli=""):
 
     # Il sito sta subito sotto le prime righe, le uniche che si leggono prima
     # di "altro": chiesto da popponetv il 9 ottobre 2026.
+    # Se il sito e' davidedurazzi.it il link va all'articolo sulla stessa
+    # notizia, con gli UTM; senza articolo alla home, e allora non lo si
+    # chiama "articolo completo".
     sito = (config.SITO_CANALE or "").strip()
-    if sito:
-        invito = "More on" if (config.LINGUA or "it").lower() == "en" else "Approfondimenti su"
+    inglese = (config.LINGUA or "it").lower() == "en"
+    if sito and _sito_di_davide():
+        # In inglese _articolo_del_video non cerca: il link va alla home.
+        url = articolo_collegato(dati, "youtube")
+        if "/articoli/" in url:
+            invito = "Articolo completo:"
+        else:
+            invito = "More on" if inglese else "Approfondimenti su"
+        parti.append(f"\n{invito} {url}")
+    elif sito:
+        invito = "More on" if inglese else "Approfondimenti su"
         parti.append(f"\n{invito} https://{sito.removeprefix('https://')}")
 
     # I capitoli vanno IN ALTO, subito sotto le prime righe: YouTube li legge
@@ -1763,7 +1980,21 @@ def costruisci_didascalia_tiktok(dati, massimo_hashtag=4):
     if len(hashtag) < massimo_hashtag and per_te not in hashtag:
         hashtag.append(per_te)
 
-    parti = [p for p in (titolo, prima_riga, " ".join(hashtag)) if p]
+    # Il sito si nomina e basta: il link su TikTok non si clicca. Se la
+    # redazione non ha un articolo su questa notizia non lo si promette.
+    riga_sito = ""
+    if _sito_di_davide():
+        try:
+            inglese = (config.LINGUA or "it").lower() == "en"
+            if _articolo_del_video(dati):
+                riga_sito = "Articolo completo su davidedurazzi.it"
+            else:
+                riga_sito = ("More on davidedurazzi.it" if inglese
+                             else "Altre notizie su davidedurazzi.it")
+        except Exception as e:
+            print(f"[Warning Sito] Riga del sito non preparata: {e}")
+
+    parti = [p for p in (titolo, prima_riga, riga_sito, " ".join(hashtag)) if p]
     return normalizza_didascalia("\n\n".join(parti))
 
 
