@@ -259,3 +259,40 @@ def test_la_versione_tiktok_non_va_su_youtube(tmp_path):
     pronte, rimandate = pub.da_pubblicare(pub.leggi_schede(str(tmp_path)))
     assert [s["id"] for _o, _p, s in pronte] == ["yt"]
     assert rimandate == []
+
+
+# --- link al sito -------------------------------------------------------------
+
+def test_la_clip_porta_alla_home_del_sito_con_gli_utm():
+    scheda = {"id": "2899935903_01008",
+              "descrizione": "Davide spiega.\n\nDalla live su Twitch: x\n\n#shorts"}
+    testo = pub.descrizione_con_sito(scheda)
+    righe = testo.split("\n\n")
+    assert righe[0] == "Davide spiega."
+    assert righe[1].startswith("Notizie e approfondimenti: https://www.davidedurazzi.it/?")
+    assert "utm_source=youtube" in righe[1] and "utm_medium=short" in righe[1]
+    assert "utm_campaign=clip-live-2899935903_01008" in righe[1]
+    assert righe[-1] == "#shorts"
+
+
+def test_la_clip_non_ripete_il_link():
+    scheda = {"id": "a", "descrizione": "Vedi davidedurazzi.it"}
+    assert pub.descrizione_con_sito(scheda) == "Vedi davidedurazzi.it"
+    assert pub.descrizione_con_sito({"id": "a"}).startswith("Notizie e approfondimenti:")
+
+
+def test_la_clip_caricata_porta_il_link(tmp_path, monkeypatch):
+    _scrivi(tmp_path, "a", orario="2099-01-01T16:00:00+01:00", descrizione="Ciao.")
+    monkeypatch.setattr(pub, "CARTELLA", str(tmp_path))
+    monkeypatch.setattr(pub, "scarica", lambda url, dest, token=None: open(dest, "wb").close())
+    monkeypatch.setattr(pub, "_avvisa", lambda testo: None)
+    caricate = []
+
+    import uploader
+    monkeypatch.setattr(uploader, "carica_short",
+                        lambda video, titolo, descrizione, **kw: caricate.append(descrizione) or "V1")
+    assert pub.main() == 0
+    assert "https://www.davidedurazzi.it/?utm_source=youtube" in caricate[0]
+    # La scheda sul disco resta quella scritta da taglia_live.
+    salvata = json.load(open(os.path.join(tmp_path, "a.json"), encoding="utf-8"))
+    assert salvata["descrizione"] == "Ciao."
