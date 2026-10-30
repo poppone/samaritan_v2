@@ -109,6 +109,47 @@ class TestArticoloCollegato:
                                         "gioco": "Grand Theft Auto VI"})
         assert "/articoli/" not in url
 
+    @pytest.mark.parametrize("video", [
+        # Una parola sola in comune, ed e' il gioco: prima contava due volte.
+        {"titolo": "Xbox Game Pass aumenta i prezzi", "gioco": "Xbox Game Pass"},
+        {"titolo": "Mass Effect: la serie TV di Amazon cambia showrunner",
+         "gioco": "Mass Effect"},
+    ])
+    def test_il_gioco_conta_una_volta_sola(self, rete, monkeypatch, video):
+        monkeypatch.setattr(brain, "_articoli_sito", [
+            {"slug": "novembre-2026-gta-vi-e-le-nuove-uscite-su-xbox-e-pc",
+             "titolo": "Novembre 2026: GTA VI e le nuove uscite su Xbox e PC",
+             "sezione": "gaming", "data": _giorni_fa(1), "pubblicato": True},
+            {"slug": "ea-chiude-bioware-addio-al-nuovo-mass-effect",
+             "titolo": "EA chiude BioWare: addio al nuovo Mass Effect",
+             "sezione": "gaming", "data": _giorni_fa(1), "pubblicato": True},
+        ])
+        assert "/articoli/" not in brain.articolo_collegato(video)
+
+    def test_una_voce_storta_non_spegne_le_altre(self, rete, monkeypatch):
+        storte = [{"slug": "a", "titolo": 5, "sezione": ["gaming"],
+                   "data": None, "pubblicato": True},
+                  {"slug": "b", "titolo": ["x"], "sezione": "gaming",
+                   "data": _giorni_fa(0), "pubblicato": True}]
+        monkeypatch.setattr(brain, "_articoli_sito", storte + _articoli())
+        assert f"/articoli/{SLUG_GTA}?" in brain.articolo_collegato(GTA)
+
+    def test_slug_strano_non_finisce_nell_indirizzo(self, rete, monkeypatch):
+        articoli = _articoli()
+        articoli[0]["slug"] = "x y/../\u00e9?a=b"
+        monkeypatch.setattr(brain, "_articoli_sito", articoli)
+        assert brain.articolo_collegato(GTA).startswith("https://www.davidedurazzi.it/?")
+
+    def test_senza_fusi_orari_usa_utc(self, rete, monkeypatch):
+        def manca(nome):
+            raise brain.ZoneInfoNotFoundError(nome)
+        monkeypatch.setattr(brain, "ZoneInfo", manca)
+        assert f"/articoli/{SLUG_GTA}?" in brain.articolo_collegato(GTA)
+
+    def test_plurali_in_che_e_ghi(self):
+        assert brain._parole_articolo("elettrica") == brain._parole_articolo("elettriche")
+        assert brain._parole_articolo("dialogo") == brain._parole_articolo("dialoghi")
+
     def test_articoli_vecchi_bozze_e_altre_sezioni_esclusi(self, rete, monkeypatch):
         monkeypatch.setattr(brain, "_articoli_sito", _articoli()[2:])
         assert "/articoli/" not in brain.articolo_collegato(GTA)
@@ -138,9 +179,20 @@ class TestNeiTesti:
                    for r in righe[:5])
         assert "Approfondimenti su" not in "\n".join(righe)
 
-    def test_descrizione_in_inglese(self, rete, monkeypatch):
+    def test_in_inglese_niente_articolo_in_italiano(self, rete, monkeypatch, tmp_path):
+        # Il sito e' in italiano: l'uscita inglese porta alla home, come prima.
         monkeypatch.setattr(config, "LINGUA", "en")
-        assert "Full story: https://www.davidedurazzi.it/articoli/" in brain.costruisci_descrizione(GTA)
+        descrizione = brain.costruisci_descrizione(GTA)
+        assert "/articoli/" not in descrizione
+        assert "Full story" not in descrizione
+        assert "More on https://www.davidedurazzi.it/?utm_source=youtube" in descrizione
+        didascalia = brain.costruisci_didascalia_tiktok(GTA)
+        assert "More on davidedurazzi.it" in didascalia
+        assert "Articolo completo" not in didascalia
+        monkeypatch.setattr(config, "FILE_CRONOLOGIA", str(tmp_path / "c.json"))
+        brain.salva_in_cronologia(dict(GTA, script="x" * 100, query_video="gta"))
+        voce = json.load(open(tmp_path / "c.json", encoding="utf-8"))[-1]
+        assert "articolo_url" not in voce
 
     def test_senza_sito_niente_link(self, rete, monkeypatch):
         monkeypatch.setattr(config, "SITO_CANALE", "")

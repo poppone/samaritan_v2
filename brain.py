@@ -20,7 +20,7 @@ import xml.etree.ElementTree as ET
 from urllib.parse import quote, urlencode
 from email.utils import parsedate_to_datetime
 from datetime import datetime, timedelta, timezone
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import requests
 from groq import Groq
@@ -603,7 +603,7 @@ def salva_in_cronologia(dati):
     # L'articolo del sito sulla stessa notizia, senza UTM: chi rilancia lo
     # Short (la stanza, Metricool) mette quelli della sua rete.
     try:
-        if _sito_di_davide() and _articolo_del_video(dati):
+        if _articolo_del_video(dati):
             cronologia[-1]["articolo_url"] = articolo_collegato(dati, rete="")
     except Exception as e:
         print(f"[Warning Sito] Articolo collegato non salvato: {e}")
@@ -1722,6 +1722,12 @@ def _sito_di_davide():
     return "davidedurazzi.it" in (config.SITO_CANALE or "").lower()
 
 
+def _articoli_per_il_video():
+    """Vero se il video puo' portare a un articolo del sito: davidedurazzi.it
+    e' in italiano, quindi l'uscita inglese resta sulla home ("More on")."""
+    return _sito_di_davide() and (config.LINGUA or "it").lower() == "it"
+
+
 def _sezioni_del_canale():
     """Le sezioni del sito che parlano dell'argomento del canale, o ()."""
     argomento = (profilo.attivo().argomento or "").strip().lower()
@@ -1753,8 +1759,8 @@ def _scarica_articoli_sito():
 def _parole_articolo(testo):
     """Le radici delle parole che dicono di che cosa parla un titolo.
 
-    'Elettrica' ed 'elettriche' contano uguale (vocali finali tolte); gli
-    anni no, perche' il 2027 sta in mezzo titoli.
+    'Elettrica' ed 'elettriche' contano uguale (vocali finali tolte, e la
+    'h' di -che/-ghi dopo); gli anni no, perche' il 2027 sta in mezzo titoli.
     """
     radici = set()
     for parola in _impronta_notizia(testo).split():
@@ -1769,8 +1775,26 @@ def _parole_articolo(testo):
             continue
         if not parola.isdigit() and len(parola) > 4:
             parola = parola.rstrip("aeiou") or parola
+            if parola.endswith(("ch", "gh")):
+                parola = parola[:-1]
         radici.add(parola)
     return radici
+
+
+def _adesso_a_roma():
+    """L'ora di Roma; in UTC se manca il database dei fusi (Windows senza
+    tzdata): sui 5 giorni della finestra un'ora di scarto non cambia niente."""
+    try:
+        return datetime.now(ZoneInfo("Europe/Rome"))
+    except (ZoneInfoNotFoundError, ValueError):
+        print("[Warning Sito] Fuso Europe/Rome non trovato, uso UTC")
+        return datetime.now(timezone.utc)
+
+
+def _slug_valido(slug):
+    """Vero se lo slug puo' stare nell'indirizzo cosi' com'e': il sito accetta
+    solo /articoli/[a-z0-9-]+, il resto darebbe un link rotto."""
+    return isinstance(slug, str) and re.fullmatch(r"[a-z0-9-]+", slug) is not None
 
 
 def _slug(testo, massimo=60):
@@ -1783,34 +1807,40 @@ def _articolo_del_video(dati, adesso=None):
 
     Del video si guardano il titolo e la notizia da cui e' nato: il titolo da
     solo e' riscritto dal modello e puo' perdere le parole del tema. Il gioco
-    vale una parola in comune se l'articolo lo nomina ('GTA 6' compreso).
+    vale UNA parola in comune se l'articolo lo nomina ('GTA 6' compreso), e
+    le sue parole non contano di nuovo: altrimenti 'Xbox' o 'Mass Effect' da
+    soli porterebbero a qualunque articolo li nomini.
     """
+    if not _articoli_per_il_video():
+        return None
     sezioni = _sezioni_del_canale()
     if not sezioni:
         return None
     gioco = (dati.get("gioco") or "").strip()
+    parole_gioco = _parole_articolo(gioco)
     parole_video = _parole_articolo(" ".join((
         dati.get("titolo") or "",
-        _notizia_di_una_voce(dati.get("fonte", "")),
-        gioco)))
+        _notizia_di_una_voce(dati.get("fonte", "")))))
     if not parole_video and not gioco:
         return None
-    oggi = (adesso or datetime.now(ZoneInfo("Europe/Rome"))).date()
+    oggi = (adesso or _adesso_a_roma()).date()
     limite = (oggi - timedelta(days=GIORNI_ARTICOLI_SITO)).isoformat()
 
     migliore, punti_migliore = None, 0.0
     for a in _scarica_articoli_sito():
-        if a.get("pubblicato") is not True or not a.get("slug"):
+        # Il json arriva dalla rete: una voce storta si salta da sola, senza
+        # portare alla home i video di tutti gli altri articoli.
+        if a.get("pubblicato") is not True or not _slug_valido(a.get("slug")):
             continue
-        if (a.get("sezione") or "").lower() not in sezioni:
+        if str(a.get("sezione") or "").lower() not in sezioni:
             continue
         if str(a.get("data") or "") < limite:
             continue
-        titolo = a.get("titolo") or ""
+        titolo = str(a.get("titolo") or "")
         parole = _parole_articolo(titolo)
         if not parole:
             continue
-        comuni = len(parole & parole_video)
+        comuni = len((parole & parole_video) - parole_gioco)
         if gioco and _gioco_nel_titolo(titolo, gioco):
             comuni += 1
         if comuni < MIN_PAROLE_ARTICOLO:
@@ -1873,9 +1903,10 @@ def costruisci_descrizione(dati, materiale=None, capitoli=""):
     sito = (config.SITO_CANALE or "").strip()
     inglese = (config.LINGUA or "it").lower() == "en"
     if sito and _sito_di_davide():
+        # In inglese _articolo_del_video non cerca: il link va alla home.
         url = articolo_collegato(dati, "youtube")
         if "/articoli/" in url:
-            invito = "Full story:" if inglese else "Articolo completo:"
+            invito = "Articolo completo:"
         else:
             invito = "More on" if inglese else "Approfondimenti su"
         parti.append(f"\n{invito} {url}")
@@ -1956,8 +1987,7 @@ def costruisci_didascalia_tiktok(dati, massimo_hashtag=4):
         try:
             inglese = (config.LINGUA or "it").lower() == "en"
             if _articolo_del_video(dati):
-                riga_sito = ("Full story on davidedurazzi.it" if inglese
-                             else "Articolo completo su davidedurazzi.it")
+                riga_sito = "Articolo completo su davidedurazzi.it"
             else:
                 riga_sito = ("More on davidedurazzi.it" if inglese
                              else "Altre notizie su davidedurazzi.it")
