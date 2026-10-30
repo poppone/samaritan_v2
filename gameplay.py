@@ -102,6 +102,18 @@ ALIAS_GIOCHI = {
     "donkey kong": "Donkey Kong Bananza",
     "kirby": "Kirby and the Forgotten Land",
     "metroid": "Metroid Prime 4: Beyond",
+    # Nomi italiani ufficiali: i negozi e il sito Nintendo cercano col nome
+    # inglese. Il 29 ottobre 2026 "Leggende Pokémon: Z-A" e' finito su clip
+    # Pexels, mentre lo Short inglese delle 21:00 sullo stesso gioco aveva
+    # 147 schermate Nintendo.
+    "leggende pokemon z a": "Pokémon Legends: Z-A",
+    "leggende pokemon arceus": "Pokémon Legends: Arceus",
+    "pokemon scarlatto e violetto": "Pokémon Scarlet and Violet",
+    "pokemon scarlatto": "Pokémon Scarlet and Violet",
+    "pokemon violetto": "Pokémon Scarlet and Violet",
+    "pokemon spada e scudo": "Pokémon Sword and Shield",
+    "pokemon spada": "Pokémon Sword and Shield",
+    "pokemon scudo": "Pokémon Sword and Shield",
 }
 
 # Serie che le notizie chiamano con uno slogan o un personaggio invece che col
