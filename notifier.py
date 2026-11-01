@@ -128,13 +128,11 @@ def notifica_pubblicazione(dati, video_id, percorso_video):
         f"Fonte: {dati.get('fonte') or 'evergreen'}\n\n"
         f"{url}"
     )
-    if not invia_video(percorso_video, testo):
-        invia_messaggio(testo)
-
-    # Il file e' gia' pronto per TikTok: gli manca solo la didascalia. Vale
-    # solo per gli Short: su TikTok un 16:9 da otto minuti non si pubblica.
-    if not config.VIDEO_LUNGO:
-        invia_didascalia_tiktok(dati)
+    # Dal 1/11/2026 TikTok e Instagram li programma Finch su Metricool:
+    # su Telegram arriva solo l'avviso, senza file ne' didascalia da copiare
+    # (Davide: "perche' su telegram mi mandi le didascalie di tiktok e i video
+    # non fai da solo con metricool?").
+    invia_messaggio(testo + "\n\nTikTok e Instagram: li programma Finch su Metricool.")
 
 
 def notifica_errore(messaggio):

@@ -59,29 +59,20 @@ class TestDidascaliaTikTok:
 
 
 class TestNotificaPubblicazione:
-    def test_manda_prima_il_video_e_poi_la_didascalia(self, monkeypatch):
+    def test_manda_solo_un_avviso_senza_video_ne_didascalia(self, monkeypatch):
         ordine = []
         monkeypatch.setattr(config, "TELEGRAM_ATTIVO", True)
         monkeypatch.setattr(notifier, "invia_video",
                             lambda p, d="": ordine.append("video") or True)
+        monkeypatch.setattr(notifier, "invia_messaggio",
+                            lambda testo: ordine.append(testo) or True)
         monkeypatch.setattr(notifier, "invia_didascalia_tiktok",
                             lambda dati: ordine.append("tiktok") or True)
 
         notifier.notifica_pubblicazione(DATI, "abc123", "/tmp/non-esiste.mp4")
-        assert ordine == ["video", "tiktok"]
-
-    def test_la_didascalia_parte_anche_se_youtube_e_fallito(self, monkeypatch):
-        # Il file locale c'e' lo stesso, quindi su TikTok e' ancora pubblicabile.
-        ordine = []
-        monkeypatch.setattr(config, "TELEGRAM_ATTIVO", True)
-        monkeypatch.setattr(notifier, "invia_video", lambda p, d="": False)
-        monkeypatch.setattr(notifier, "invia_messaggio",
-                            lambda testo: ordine.append("testo") or True)
-        monkeypatch.setattr(notifier, "invia_didascalia_tiktok",
-                            lambda dati: ordine.append("tiktok") or True)
-
-        notifier.notifica_pubblicazione(DATI, None, "/tmp/non-esiste.mp4")
-        assert ordine == ["testo", "tiktok"]
+        assert len(ordine) == 1
+        assert "Metricool" in ordine[0]
+        assert "video" not in ordine and "tiktok" not in ordine
 
 
 class TestOgniEsitoArrivaSuTelegram:
