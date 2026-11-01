@@ -1,12 +1,5 @@
 [
   {
-    "timestamp": 1789528561,
-    "titolo": "🚫 NON FARE QUESTO IN FORTNITE: L'ERRORE CHE TI FA PERDERE LA VITTORIA! #Shorts",
-    "estratto_script": "Ciao gamer! Oggi ti svelo l'errore più costoso in Fortnite: costruire ",
-    "stile": "DO_NOT_DO_THIS (Un errore madornale da evitare nei giochi)",
-    "query_video": "Fortnite gameplay vertical"
-  },
-  {
     "timestamp": 1789531631,
     "titolo": "🚫 GTA 6: La finta mappa di Vice City è solo un mito? 🔎 #Shorts",
     "estratto_script": "Ciao ragazzi! Oggi sfatiamo il mito della mappa di GTA 6 che sta spopo",
@@ -3492,5 +3485,21 @@
     "veste": "ghiaccio",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/olGTVB9MCwo-tYODAAcTMvbxwon38fHyCrXdFV5uq4.mp4",
     "didascalia_tiktok": "Assassin's Creed Valhalla: Major update confirmed 🗡\n\nUbisoft just dropped a big update for Assassin's Creed Valhalla and hinted at future remakes. How will this change your adventure? Comment below!\n\nMore on davidedurazzi.it\n\n#assassinscreedvalhalla #consigli #gamingita #fyp"
+  },
+  {
+    "timestamp": 1793534103,
+    "data": "2026-11-01",
+    "titolo": "Xbox Series X Digital Edition: $599 Drop 🎮",
+    "lingua": "en",
+    "slot": "20:00",
+    "uscita": 1793559600,
+    "formato": "short",
+    "estratto_script": "Imagine the console you love now half a grand cheaper. Microsoft just cut the Xbox Series ",
+    "stile": "DOMANDA_AL_PUBBLICO",
+    "gioco": "Xbox Series X Digital Edition",
+    "query_video": "xbox series x digital edition showcase gameplay",
+    "fonte": "Xbox Series X Digital Edition drops to $599,99 ahead of GTA 6 release (GameGPU)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMiqgFBVV95cUxPYVAxc3NZQ05zUm16cUdQcjNKZEFXRldqYUc0RWZicktyaG9fZWNIbXl4QzBFUWxRR09VRFZSbXUxSlJxaUlWREYxS1Q1ZmZJTHpOcVRqd0FCb1RzeGNCaUJGTHc4SDM3cWF5OTBMZDhmWEN3azJfZ3BoSEJLdmdIUkl3eWE2Q3ZPbnBWZElqWlZ5RFRCZ21FVGxldktHazU0OEhvSzFkU3hsQQ?oc=5",
+    "video_id": null
   }
 ]
