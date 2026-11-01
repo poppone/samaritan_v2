@@ -307,6 +307,7 @@ class TestTemiARischio:
         "Nudità integrale per Jason e Lucia",
         "Switch 2: il jailbreak apre la strada alle mod",
         "Mario Kart World gira su una console modificata",
+        "Switch 2: il primo emulatore per PC fa girare Mario Kart World",
     ])
     def test_scarta_in_italiano(self, testo):
         assert brain._tema_escluso(testo)
@@ -319,6 +320,8 @@ class TestTemiARischio:
         "Baldur's Gate 3 sex scenes explained",
         "Mario Kart 8 Deluxe: Switch 2 Jailbreak Sparks Mods",
         "Switch 2 modchip already on sale",
+        "First Nintendo Switch 2 emulator for PC is out, and it already boots "
+        "Mario Kart World",
     ])
     def test_scarta_in_inglese(self, testo):
         assert brain._tema_escluso(testo, brain.TEMI_A_RISCHIO["en"])
