@@ -243,8 +243,12 @@ def _lingua():
 # togliere i video che mostrano come aggirare le protezioni. Le parole
 # inglesi stanno anche nell'elenco italiano: le ricerche italiane pescano
 # titoli inglesi.
+# Dal 1 novembre anche gli emulatori: il 31 ottobre e' uscito "Mario Kart
+# World: First Switch 2 emulator runs it", e un emulatore che fa girare un
+# gioco appena uscito e' il tema su cui Nintendo manda piu' DMCA.
 _SBLOCCO_CONSOLE = ("jailbreak", "jailbreaks", "jailbroken", "jailbreaking",
-                    "modchip", "modchips", "custom firmware", "cfw")
+                    "modchip", "modchips", "custom firmware", "cfw",
+                    "emulator", "emulators", "emulatore", "emulatori")
 TEMI_A_RISCHIO = {
     "it": (
         "non ufficiale", "non ufficiali", "pirateria", "piratato",
