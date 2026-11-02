@@ -1,17 +1,5 @@
 [
   {
-    "timestamp": 1789708235,
-    "data": "2026-09-18",
-    "titolo": "Baldur's Gate 3: il dettaglio che quasi nessuno nota",
-    "estratto_script": "Stai giocando a Baldur's Gate 3 da anni e non hai mai notato questo dettaglio. Gli svilupp",
-    "stile": "DONT_DO_THIS",
-    "gioco": "Baldur's Gate 3",
-    "query_video": "baldur's gate 3 gameplay",
-    "fonte": "",
-    "fonte_url": "",
-    "video_id": "d8VTcpEjGoM"
-  },
-  {
     "timestamp": 1789709574,
     "data": "2026-09-18",
     "titolo": "Forza Horizon 6: leak che spacca 🚀",
@@ -3569,5 +3557,21 @@
     "fonte_url": "https://news.google.com/rss/articles/CBMizAFBVV95cUxNSUZBcXp4a0FwWVh3OHZpaFR4ZDBMNF9XVGM5VEttRXVJRzNwd2tmaXFCNkRVX1FxUWJwV0hOYktpbEh2b1JsOHpaWEhzbDdvd3ctUjZ6MjRxYmx2OWgyak5DVy1JVUNTRVFsNDhDblh2WmREWW9qSG1Ia3g5VHp1VnVKNlNMYjFhc2xJbUFMMUFzZkk2aWx2Mm5qRHpUZHQtc0N5R0FFOXpTZm9DSnQwNjc1aFhoc0RHaGVZM21XaWVMa0pzV1JNV0xDOGY?oc=5",
     "video_id": null,
     "voce": "Alex"
+  },
+  {
+    "timestamp": 1793635446,
+    "data": "2026-11-02",
+    "titolo": "GTA 6: When Can You Download? 📦",
+    "lingua": "en",
+    "slot": "21:00",
+    "uscita": 1793649600,
+    "formato": "short",
+    "estratto_script": "Guess what – Rockstar just announced the pre‑load date for GTA 6 on PS5, and it’s got ever",
+    "stile": "MYTH_BUSTING_VIRAL",
+    "gioco": "GTA 6",
+    "query_video": "GTA 6 pre load screen gameplay",
+    "fonte": "GTA 6 Pre Load Date Revealed – When You Can Download on PS5 (VICE)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMigAFBVV95cUxQMkVqdkNkSG1PRVRwYnpqUDNDdXlLbWRsNTBpSEkzUG5JYWJMNzh5WmF0MlpGeW1yQlBvX1p1bEkwS2xRV3ZJV3doWkNWWE56WmFZdW83bzNxSkplVVFxZHlPYUtyeGxxb1Q3OFhCakJ0UTVtM3hvRkRwNHloamZhcg?oc=5",
+    "video_id": null
   }
 ]
