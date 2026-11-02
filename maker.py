@@ -667,9 +667,10 @@ def assembla_video_finale(testo_per_audio=None, query_video="gameplay",
         return None
 
     # Materiale ufficiale del gioco, con ripiego automatico su stock
-    from gameplay import procura_materiale
+    from gameplay import procura_materiale, gioco_per_il_materiale
     sorgenti, gioco_ufficiale = procura_materiale(
-        gioco=gioco, query_pexels=query_video, minimo=3,
+        gioco=gioco_per_il_materiale(gioco, fonte),
+        query_pexels=query_video, minimo=3,
         query_scene=query_scene, contesto=testo_per_audio,
     )
     if not sorgenti:
