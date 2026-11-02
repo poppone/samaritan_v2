@@ -25,6 +25,8 @@
 
 const REPOSITORY = "poppone/samaritan_v2";
 const WORKFLOW = "samaritan.yml";
+const WORKFLOW_ASSISTENTE = "assistente-finch.yml";
+const DURATA_MASSIMA_VOCALE = 120; // secondi
 
 const COMANDI = {
   "/video": { lingua: "it", lungo: false, privacy: "public", cosa: "uno Short in italiano" },
@@ -86,9 +88,9 @@ async function rispondi(env, testo) {
   });
 }
 
-async function lancia(env, ordine, inputs) {
+async function lancia(env, ordine, inputs, workflow = WORKFLOW) {
   const r = await fetch(
-    `https://api.github.com/repos/${REPOSITORY}/actions/workflows/${WORKFLOW}/dispatches`,
+    `https://api.github.com/repos/${REPOSITORY}/actions/workflows/${workflow}/dispatches`,
     {
       method: "POST",
       headers: {
@@ -162,6 +164,25 @@ export default {
     const messaggio = aggiornamento.message || {};
     // Solo la sua chat comanda: il bot e' trovabile da chiunque su Telegram.
     if (String(messaggio.chat?.id ?? "") !== String(env.TELEGRAM_CHAT_ID)) return new Response("ok");
+
+    // Un vocale e' una domanda per l'assistente di Finch. Al workflow passa
+    // solo l'identificativo del file: il repository e' pubblico, quello che
+    // Davide dice non deve finire nei log.
+    const vocale = messaggio.voice || messaggio.audio;
+    if (vocale) {
+      if ((vocale.duration || 0) > DURATA_MASSIMA_VOCALE) {
+        await rispondi(env, "Il vocale e' troppo lungo: mandamene uno sotto i due minuti.");
+        return new Response("ok");
+      }
+      const guasto = await lancia(env, null, { file_id: vocale.file_id }, WORKFLOW_ASSISTENTE);
+      await rispondi(
+        env,
+        guasto
+          ? `Non sono riuscito ad ascoltarti. ${guasto}`
+          : "Ti ho sentito, ti rispondo a voce tra poco.",
+      );
+      return new Response("ok");
+    }
 
     const ordine = interpreta(messaggio.text);
     if (!ordine) {

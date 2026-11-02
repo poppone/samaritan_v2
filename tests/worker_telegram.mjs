@@ -59,3 +59,16 @@ assert.equal(chiamate.length, 2);
 assert.ok(JSON.parse(chiamate[1].opz.body).text.includes("uscita 4"));
 assert.ok(JSON.parse(chiamate[1].opz.body).text.includes("401"));
 console.log("tutto ok");
+// vocali: solo dalla chat di Davide, brevi, e al workflow passa solo il file_id
+globalThis.fetch = async (url, opz) => { chiamate.push({url, opz}); return url.includes("github") ? new Response(null,{status:204}) : new Response("{}"); };
+const vocale = (chat, durata) => new Request("https://w.dev/telegram", {method:"POST", headers:{"X-Telegram-Bot-Api-Secret-Token":"s"}, body: JSON.stringify({message:{chat:{id:chat}, voice:{file_id:"F1", duration:durata}}})});
+chiamate.length = 0;
+await worker.fetch(vocale(7, 10), env); assert.equal(chiamate.length, 0);
+await worker.fetch(vocale(42, 10), env);
+assert.ok(chiamate[0].url.endsWith("/actions/workflows/assistente-finch.yml/dispatches"));
+assert.deepEqual(JSON.parse(chiamate[0].opz.body), {ref:"main", inputs:{file_id:"F1"}});
+chiamate.length = 0;
+await worker.fetch(vocale(42, 300), env);
+assert.equal(chiamate.length, 1);
+assert.ok(!chiamate[0].url.includes("github"));
+assert.ok(JSON.parse(chiamate[0].opz.body).text.includes("troppo lungo"));

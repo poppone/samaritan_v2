@@ -113,3 +113,15 @@ l'uscita gia' coperta e si fermano.
 - Ogni comando fa partire la sua lavorazione, anche se un'altra e' gia' in
   corso: non aspetta e non toglie il posto alle uscite programmate. Due comandi
   uguali fanno due video uguali.
+
+## Vocali: l'assistente di Finch
+
+Se mandi un **vocale** al bot (sotto i due minuti), parte `assistente-finch.yml`:
+il vocale si trascrive, l'assistente risponde leggendo bacheca, guardiano e
+ultimo verbale della stanza, e ti risponde a voce (voce gratuita) con il testo
+in didascalia. E' sempre dichiarato come intelligenza artificiale e non esegue
+azioni: per pubblicare, spendere o scrivere email parla con Finch nel thread.
+
+Dopo l'aggiornamento del codice, incolla il nuovo `telegram/worker.js` in
+Cloudflare e premi Deploy. Non servono nuovi segreti (usa `GROQ_API_KEY`,
+`TELEGRAM_BOT_TOKEN` e `TELEGRAM_CHAT_ID` che ci sono gia').
