@@ -1,0 +1,39 @@
+name: Assistente di Finch
+
+# Risponde ai vocali di Davide su Telegram. Lo lancia il Worker di Cloudflare
+# (telegram/worker.js) con l'identificativo del file vocale: nessun orario
+# fisso, nessun commit. Il repository e' pubblico: il testo del vocale e la
+# risposta non compaiono mai nei log.
+
+on:
+  workflow_dispatch:
+    inputs:
+      file_id:
+        description: 'Identificativo Telegram del vocale'
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: assistente-finch
+  cancel-in-progress: false
+
+jobs:
+  rispondi:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install "edge-tts>=7.2,<8" "requests>=2.32,<3" "groq>=1.7,<2"
+      - name: Risposta
+        env:
+          FILE_ID: ${{ github.event.inputs.file_id }}
+          FINCH_VOCE: ${{ vars.FINCH_VOCE }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python assistente_finch.py
