@@ -1,17 +1,5 @@
 [
   {
-    "timestamp": 1789709574,
-    "data": "2026-09-18",
-    "titolo": "Forza Horizon 6: leak che spacca 🚀",
-    "estratto_script": "Stai sottovalutando Forza Horizon 6? Un file è trapelato cinque giorni prima del lancio. M",
-    "stile": "SEAMLESS_LOOP_FACTS",
-    "gioco": "Forza Horizon 6",
-    "query_video": "forza horizon 6 gameplay",
-    "fonte": "",
-    "fonte_url": "",
-    "video_id": "R1TdHJG09V8"
-  },
-  {
     "timestamp": 1789721630,
     "data": "2026-09-18",
     "titolo": "Fable: il nuovo mistero del Game Pass 🎮",
@@ -3574,5 +3562,21 @@
     "fonte_url": "https://news.google.com/rss/articles/CBMigAFBVV95cUxQMkVqdkNkSG1PRVRwYnpqUDNDdXlLbWRsNTBpSEkzUG5JYWJMNzh5WmF0MlpGeW1yQlBvX1p1bEkwS2xRV3ZJV3doWkNWWE56WmFZdW83bzNxSkplVVFxZHlPYUtyeGxxb1Q3OFhCakJ0UTVtM3hvRkRwNHloamZhcg?oc=5",
     "video_id": null,
     "voce": "Alex"
+  },
+  {
+    "timestamp": 1793640823,
+    "data": "2026-11-02",
+    "titolo": "GTA 6: Pre‑load Date Revealed – Download on PS5 🎮",
+    "lingua": "en",
+    "slot": "21:00",
+    "uscita": 1793649600,
+    "formato": "short",
+    "estratto_script": "Stop scrolling, GTA 6 pre‑load is finally set. Rockstar announced the exact day PS5 owners",
+    "stile": "DONT_DO_THIS",
+    "gioco": "Grand Theft Auto VI",
+    "query_video": "GTA 6 pre‑load announcement gameplay",
+    "fonte": "GTA 6 Pre Load Date Revealed – When You Can Download on PS5 (VICE)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMigAFBVV95cUxQMkVqdkNkSG1PRVRwYnpqUDNDdXlLbWRsNTBpSEkzUG5JYWJMNzh5WmF0MlpGeW1yQlBvX1p1bEkwS2xRV3ZJV3doWkNWWE56WmFZdW83bzNxSkplVVFxZHlPYUtyeGxxb1Q3OFhCakJ0UTVtM3hvRkRwNHloamZhcg?oc=5",
+    "video_id": null
   }
 ]
