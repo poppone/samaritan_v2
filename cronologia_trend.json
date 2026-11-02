@@ -1,12 +1,5 @@
 [
   {
-    "timestamp": 1789587621,
-    "titolo": "🚀 3 CURIOSE SULLA NUOVA GTA 6 CHE NON CONOSCEVI! #Shorts",
-    "estratto_script": "Benvenuti! Ecco tre curiosità sulla tanto attesa GTA 6. Prima: il rito",
-    "stile": "TOP_3_FACTS (3 curiosità veloci su un gioco del momento)",
-    "query_video": "GTA 6 gameplay vertical"
-  },
-  {
     "timestamp": 1789706466,
     "data": "2026-09-18",
     "titolo": "ELDEN RING: il dettaglio che quasi nessuno nota",
@@ -3551,5 +3544,21 @@
     "fonte_url": "https://news.google.com/rss/articles/CBMizAFBVV95cUxNSUZBcXp4a0FwWVh3OHZpaFR4ZDBMNF9XVGM5VEttRXVJRzNwd2tmaXFCNkRVX1FxUWJwV0hOYktpbEh2b1JsOHpaWEhzbDdvd3ctUjZ6MjRxYmx2OWgyak5DVy1JVUNTRVFsNDhDblh2WmREWW9qSG1Ia3g5VHp1VnVKNlNMYjFhc2xJbUFMMUFzZkk2aWx2Mm5qRHpUZHQtc0N5R0FFOXpTZm9DSnQwNjc1aFhoc0RHaGVZM21XaWVMa0pzV1JNV0xDOGY?oc=5",
     "video_id": null,
     "voce": "Alex"
+  },
+  {
+    "timestamp": 1793626669,
+    "data": "2026-11-02",
+    "titolo": "Zelda: Midnight launch surprise 🎮",
+    "lingua": "en",
+    "slot": "20:00",
+    "uscita": 1793646000,
+    "formato": "short",
+    "estratto_script": "The Legend of Zelda: Ocarina of Time Switch 2 remake drops in the UK tonight. Why does thi",
+    "stile": "EASTER_EGG_SECRET",
+    "gioco": "The Legend of Zelda: Ocarina of Time",
+    "query_video": "zelda ocarina gameplay",
+    "fonte": "Nintendo announces Zelda: Ocarina of Time UK midnight launch, with free N64 boxes up for grabs (Video Games Chronicle)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMizwFBVV95cUxPamZFa204ckRUOXA4Z3VaTkI3aVNac1E1bFRFTUNCVzBrWkJvdmFXUWxYQloxZ0lJRm80bU1hWXAxek9SX2ExcTVXT0ZVLXFrT3U2bWs3US1RVzQ3TVZ6UEdYRDd4a29CSEhoX2RGaDlWM0lmTW4xbkhyVFliZzdQdWk4aHBvRGRNYVJWUTZRQUhPbmkwTS1rUzFSTW1CT2FreWVOQ2lSNGFrY2EtZmh5N3Y1RlE0X0N1allha2FMQnJ4VjFUQ3FORHl0WDBXaTA?oc=5",
+    "video_id": null
   }
 ]
