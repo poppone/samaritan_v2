@@ -736,6 +736,32 @@ def gioco_con_pagina_ufficiale(gioco):
     return None
 
 
+# Console e piattaforme: nessun negozio ha materiale su di loro, e i video
+# finivano interi su clip Pexels. Il 21 e il 24 ottobre e il 1 novembre 2026
+# tre Short su PS5 e Xbox venivano da notizie che parlavano di GTA 6.
+_HARDWARE = re.compile(
+    r"\b(xbox|playstation|ps4|ps5|ps6|switch|steam deck|console)\b")
+
+
+def gioco_per_il_materiale(gioco, fonte=""):
+    """Il gioco di cui cercare il materiale.
+
+    Di solito e' `gioco`. Quando il video parla di una console (o non ha
+    gioco) e la notizia nomina un gioco con pagina ufficiale, si usa quello:
+    i trailer dell'editore citato dalla notizia valgono piu' dello stock.
+    """
+    if gioco and not _HARDWARE.search(_normalizza(gioco)):
+        return gioco
+    titolo_notizia = re.sub(r"\s*\([^()]*\)\s*$", "", fonte or "")
+    chiave = gioco_con_pagina_ufficiale(titolo_notizia)
+    if not chiave:
+        return gioco
+    nome = PAGINE_UFFICIALI[chiave]["nome"]
+    print(f"[Gameplay] Il video parla di una piattaforma ('{gioco}') ma la "
+          f"notizia nomina {nome}: uso il suo materiale.")
+    return nome
+
+
 def trailer_dalla_pagina_ufficiale(chiave):
     """Gli mp4 dei trailer elencati nella pagina ufficiale, in ordine."""
     voce = PAGINE_UFFICIALI[chiave]

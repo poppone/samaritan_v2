@@ -144,6 +144,35 @@ class TestAlias:
         assert gameplay.nome_con_alias(None) is None
 
 
+class TestGiocoPerIlMateriale:
+    """Il 1 novembre 2026 "Xbox Series X Digital Edition: $599 Drop" e' uscito
+    con 10 clip Pexels, ma la notizia parlava di GTA 6."""
+
+    def test_console_con_gta_nella_notizia(self):
+        fonte = ("Xbox Series X Digital Edition drops to $599,99 ahead of "
+                 "GTA 6 release (GameGPU)")
+        assert gameplay.gioco_per_il_materiale(
+            "Xbox Series X Digital Edition", fonte) == "Grand Theft Auto VI"
+        assert gameplay.gioco_per_il_materiale(
+            "", "PS5 lands new hardware upgrade intended for GTA 6 (X)") == \
+            "Grand Theft Auto VI"
+
+    def test_i_giochi_veri_restano(self):
+        assert gameplay.gioco_per_il_materiale(
+            "Forza Horizon 6", "Forza Horizon 6 vs GTA 6 (Z)") == \
+            "Forza Horizon 6"
+
+    def test_console_senza_gioco_noto_resta(self):
+        assert gameplay.gioco_per_il_materiale(
+            "Xbox 360", "Xbox CEO teases return of the Xbox 360 era (G)") == \
+            "Xbox 360"
+
+    def test_la_testata_non_conta(self):
+        # Una testata fra parentesi in fondo non e' la notizia.
+        assert gameplay.gioco_per_il_materiale(
+            "PS5", "PS5 price cut announced (GTA 6 News)") == "PS5"
+
+
 # ===========================================================================
 # MATERIALE CHE NON SI RIPETE
 # ===========================================================================
