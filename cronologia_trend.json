@@ -1,12 +1,5 @@
 [
   {
-    "timestamp": 1789532852,
-    "titolo": "👾 Sora in Fortnite: l'Easter Egg segreto che nessuno conosce! 🔥 #Shorts",
-    "estratto_script": "Ciao gamer! Fortnite ha appena svelato l'arrivo di Sora, l'eroe di Kin",
-    "stile": "EASTER_EGG_SECRET (Un segreto assurdo nascosto da un dev)",
-    "query_video": "Fortnite Sora gameplay vertical"
-  },
-  {
     "timestamp": 1789572720,
     "titolo": "⚡️ SORA INVADE FORTNITE! Scopri il crossover EPICO di questa settimana! #Shorts",
     "estratto_script": "Boom! Fortnite sta per cambiare volto: Sora, l'eroe di Kingdom Hearts,",
@@ -3531,5 +3524,21 @@
     "veste": "arena",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/QBFoPbAdTYc-rHHYIcmyCdiSKcRd4sijiX1f4ypSxu.mp4",
     "didascalia_tiktok": "GTA 6: 5 meccaniche che cambieranno tutto 🚀\n\nScopri le 5 nuove meccaniche di GTA 6 che cambieranno il modo di giocare. Quale ti sembra la più rivoluzionaria?\n\nAltre notizie su davidedurazzi.it\n\n#grandtheftautovi #curiosita #gamingita #perte"
+  },
+  {
+    "timestamp": 1793618662,
+    "data": "2026-11-02",
+    "titolo": "Grand Theft Auto VI: Play 18 hours early? 🤯",
+    "lingua": "en",
+    "slot": "18:00",
+    "uscita": 1793638800,
+    "formato": "short",
+    "estratto_script": "Imagine PS5 gamers unlocking GTA VI eighteen hours before anyone else. A PSN regional work",
+    "stile": "EASTER_EGG_SECRET",
+    "gioco": "Grand Theft Auto VI",
+    "query_video": "grand theft auto vi gameplay",
+    "fonte": "PS5 users can access GTA 6 up to 18 hours early on its release date with PSN workaround (Notebookcheck)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMizAFBVV95cUxNSUZBcXp4a0FwWVh3OHZpaFR4ZDBMNF9XVGM5VEttRXVJRzNwd2tmaXFCNkRVX1FxUWJwV0hOYktpbEh2b1JsOHpaWEhzbDdvd3ctUjZ6MjRxYmx2OWgyak5DVy1JVUNTRVFsNDhDblh2WmREWW9qSG1Ia3g5VHp1VnVKNlNMYjFhc2xJbUFMMUFzZkk2aWx2Mm5qRHpUZHQtc0N5R0FFOXpTZm9DSnQwNjc1aFhoc0RHaGVZM21XaWVMa0pzV1JNV0xDOGY?oc=5",
+    "video_id": null
   }
 ]
