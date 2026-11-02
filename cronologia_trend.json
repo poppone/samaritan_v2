@@ -1,12 +1,5 @@
 [
   {
-    "timestamp": 1789572720,
-    "titolo": "⚡️ SORA INVADE FORTNITE! Scopri il crossover EPICO di questa settimana! #Shorts",
-    "estratto_script": "Boom! Fortnite sta per cambiare volto: Sora, l'eroe di Kingdom Hearts,",
-    "stile": "NEWS_FLASH (Hook aggressivo su una notizia appena trapelata)",
-    "query_video": "Fortnite Sora crossover gameplay vertical"
-  },
-  {
     "timestamp": 1789587621,
     "titolo": "🚀 3 CURIOSE SULLA NUOVA GTA 6 CHE NON CONOSCEVI! #Shorts",
     "estratto_script": "Benvenuti! Ecco tre curiosità sulla tanto attesa GTA 6. Prima: il rito",
@@ -3541,5 +3534,21 @@
     "fonte_url": "https://news.google.com/rss/articles/CBMizAFBVV95cUxNSUZBcXp4a0FwWVh3OHZpaFR4ZDBMNF9XVGM5VEttRXVJRzNwd2tmaXFCNkRVX1FxUWJwV0hOYktpbEh2b1JsOHpaWEhzbDdvd3ctUjZ6MjRxYmx2OWgyak5DVy1JVUNTRVFsNDhDblh2WmREWW9qSG1Ia3g5VHp1VnVKNlNMYjFhc2xJbUFMMUFzZkk2aWx2Mm5qRHpUZHQtc0N5R0FFOXpTZm9DSnQwNjc1aFhoc0RHaGVZM21XaWVMa0pzV1JNV0xDOGY?oc=5",
     "video_id": null,
     "voce": "Alex"
+  },
+  {
+    "timestamp": 1793624609,
+    "data": "2026-11-02",
+    "titolo": "GTA 6: PS5 users can play 18 hrs early on release 🚀",
+    "lingua": "en",
+    "slot": "18:00",
+    "uscita": 1793638800,
+    "formato": "short",
+    "estratto_script": "You think waiting is fair? PS5 owners can actually start GTA 6 up to 18 hours before anyon",
+    "stile": "VIRAL_HOOK_NEWS",
+    "gioco": "Grand Theft Auto VI",
+    "query_video": "gta 6 launch footage gameplay",
+    "fonte": "PS5 users can access GTA 6 up to 18 hours early on its release date with PSN workaround (Notebookcheck)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMizAFBVV95cUxNSUZBcXp4a0FwWVh3OHZpaFR4ZDBMNF9XVGM5VEttRXVJRzNwd2tmaXFCNkRVX1FxUWJwV0hOYktpbEh2b1JsOHpaWEhzbDdvd3ctUjZ6MjRxYmx2OWgyak5DVy1JVUNTRVFsNDhDblh2WmREWW9qSG1Ia3g5VHp1VnVKNlNMYjFhc2xJbUFMMUFzZkk2aWx2Mm5qRHpUZHQtc0N5R0FFOXpTZm9DSnQwNjc1aFhoc0RHaGVZM21XaWVMa0pzV1JNV0xDOGY?oc=5",
+    "video_id": null
   }
 ]
