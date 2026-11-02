@@ -1,17 +1,5 @@
 [
   {
-    "timestamp": 1789706466,
-    "data": "2026-09-18",
-    "titolo": "ELDEN RING: il dettaglio che quasi nessuno nota",
-    "estratto_script": "Stai giocando a ELDEN RING da anni e non hai mai notato questo dettaglio. Gli sviluppatori",
-    "stile": "EASTER_EGG_SECRET",
-    "gioco": "ELDEN RING",
-    "query_video": "elden ring gameplay",
-    "fonte": "",
-    "fonte_url": "",
-    "video_id": "SYevIR-jeLU"
-  },
-  {
     "timestamp": 1789708235,
     "data": "2026-09-18",
     "titolo": "Baldur's Gate 3: il dettaglio che quasi nessuno nota",
@@ -3564,5 +3552,21 @@
     "veste": "notte",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/kG-4iB1Zobg-tEF4LuZgpDhUiZwZ9Vjr4oaeKKqTAn.mp4",
     "didascalia_tiktok": "Zelda: Midnight launch surprise 🎮\n\nNintendo's UK midnight launch gives away limited N64 replica boxes. Will you be one of the lucky few? Comment below!\n\nMore on davidedurazzi.it\n\n#thelegendofzeldaocarinaoftime #easteregg #gamingita #fyp"
+  },
+  {
+    "timestamp": 1793630054,
+    "data": "2026-11-02",
+    "titolo": "Grand Theft Auto VI: Early Access Rumor Busted 🚀",
+    "lingua": "en",
+    "slot": "18:00",
+    "uscita": 1793638800,
+    "formato": "short",
+    "estratto_script": "Rumor: PS5 owners can jump into GTA VI 18 hours before launch using a PSN workaround. The ",
+    "stile": "MYTH_BUSTING_VIRAL",
+    "gioco": "Grand Theft Auto VI",
+    "query_video": "grand theft auto vi gameplay",
+    "fonte": "PS5 users can access GTA 6 up to 18 hours early on its release date with PSN workaround (Notebookcheck)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMizAFBVV95cUxNSUZBcXp4a0FwWVh3OHZpaFR4ZDBMNF9XVGM5VEttRXVJRzNwd2tmaXFCNkRVX1FxUWJwV0hOYktpbEh2b1JsOHpaWEhzbDdvd3ctUjZ6MjRxYmx2OWgyak5DVy1JVUNTRVFsNDhDblh2WmREWW9qSG1Ia3g5VHp1VnVKNlNMYjFhc2xJbUFMMUFzZkk2aWx2Mm5qRHpUZHQtc0N5R0FFOXpTZm9DSnQwNjc1aFhoc0RHaGVZM21XaWVMa0pzV1JNV0xDOGY?oc=5",
+    "video_id": null
   }
 ]
