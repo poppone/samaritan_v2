@@ -1,18 +1,5 @@
 [
   {
-    "timestamp": 1789745272,
-    "data": "2026-09-18",
-    "titolo": "No Man's Sky: 10 anni di esplorazione 🌌",
-    "estratto_script": "Nessuno ti ha detto che un decennio non basta per scoprire tutto in No Man's Sky. L'update",
-    "stile": "DOMANDA_AL_PUBBLICO",
-    "gioco": "No Mans Sky",
-    "query_video": "no mans sky gameplay",
-    "fonte": "10 anni di No Man's Sky: arriva l'update Cosmos (tomshw.it)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMinwFBVV95cUxNOGxBVUZNQUNWakFhQkk0angzWXhkU3ZZZkJnMTR6Smd1aHdiTEdjRkF0SWZFVTRmUzdOd19paDgydDllTzlBRmYwUHNHam82NG85ZkVCVDE3YUphN0lyNWxJNnZLdmJFLVp3YmVyVzZKZzJLVjRTSXJ2b1hhNXdQUlFjdzREYTE3NWtqN1ZQQjgwYlhXT1dKZmxGTHFLbzQ?oc=5",
-    "video_id": "KxbKYIyTqIQ",
-    "voce": "Brando VOx"
-  },
-  {
     "timestamp": 1789762170,
     "data": "2026-09-18",
     "titolo": "Game Pass: due giochi gratis ora 🎮",
@@ -3607,5 +3594,21 @@
     "veste": "pulito",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/Fvxx1CkYPkc-ooDgbkPv64ogELprH5Ay03Fkd3PX9Z.mp4",
     "didascalia_tiktok": "Zelda Switch 2: Restock Chaos – Can You Grab One? 🎮\n\nNintendo admits they mis‑judged demand, causing a chaotic restock for the Switch 2 Zelda edition. Stay ahead of the hype! How would you secure yours before it sells out again?\n\nMore on davidedurazzi.it\n\n#thelegendofzeldatearsofthekingdom #gamingita #fyp"
+  },
+  {
+    "timestamp": 1793715913,
+    "data": "2026-11-03",
+    "titolo": "PS5: Security patch before GTA 6 launch 🚀",
+    "lingua": "en",
+    "slot": "21:00",
+    "uscita": 1793736000,
+    "formato": "short",
+    "estratto_script": "Sony has just released another PS5 software update, this time focusing on security fixes. ",
+    "stile": "DONT_DO_THIS",
+    "gioco": "",
+    "query_video": "ps5 software update gameplay",
+    "fonte": "Sony updates PS5 software yet again with security updates ahead of GTA 6 launch (PC Guide)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMirgFBVV95cUxPQWw4LVBSblNheDZraHBjQUZaeVBJcDk4d0xBTkpMMlk5OERPMWNqc1VFVnJHZFNiZlRmSFIwUEx3bEIyNk9HS2duRTEyeHlTeFZBLTVKdHowM1pmY0d4VEd6bWNTcGl6S05oSVYwZjVEb25fTW1QTFc2dFZaNnhaU2d3TGpJSEgxQTJVYnZwbGVZUlFNbDlta290YXRpYXlpTjhpY0F1Y1pqRlMtdkE?oc=5",
+    "video_id": null
   }
 ]
