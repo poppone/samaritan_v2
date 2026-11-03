@@ -1,18 +1,5 @@
 [
   {
-    "timestamp": 1789742796,
-    "data": "2026-09-18",
-    "titolo": "No Man's Sky: l'easter egg segreto dei fondatori 🚀",
-    "estratto_script": "Nessuno ti ha detto che il 10° anniversario nasconde un vero tesoro. Nel nuovo update Cosm",
-    "stile": "EASTER_EGG_SECRET",
-    "gioco": "No Mans Sky",
-    "query_video": "no man’s sky easter egg gameplay",
-    "fonte": "10 anni di No Man's Sky: arriva l'update Cosmos (tomshw.it)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMinwFBVV95cUxNOGxBVUZNQUNWakFhQkk0angzWXhkU3ZZZkJnMTR6Smd1aHdiTEdjRkF0SWZFVTRmUzdOd19paDgydDllTzlBRmYwUHNHam82NG85ZkVCVDE3YUphN0lyNWxJNnZLdmJFLVp3YmVyVzZKZzJLVjRTSXJ2b1hhNXdQUlFjdzREYTE3NWtqN1ZQQjgwYlhXT1dKZmxGTHFLbzQ?oc=5",
-    "video_id": "qdgHNpV9hso",
-    "voce": "Romario"
-  },
-  {
     "timestamp": 1789745272,
     "data": "2026-09-18",
     "titolo": "No Man's Sky: 10 anni di esplorazione 🌌",
@@ -3600,5 +3587,21 @@
     "veste": "fuoco",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/mPDK7B4DDGw-3NWKjmGEnuKnOpyl6H9YLsR00Tesyq.mp4",
     "didascalia_tiktok": "GTA 6: When Can You Pre‑Load? 🚀\n\nThe pre‑load date for GTA 6 is finally official. How will you make room for the biggest release of the year?\n\nMore on davidedurazzi.it\n\n#grandtheftautovi #rumor #gamingita #fyp"
+  },
+  {
+    "timestamp": 1793710435,
+    "data": "2026-11-03",
+    "titolo": "Zelda Switch 2: Restock Chaos – Can You Grab One? 🎮",
+    "lingua": "en",
+    "slot": "20:00",
+    "uscita": 1793732400,
+    "formato": "short",
+    "estratto_script": "You heard it straight from Nintendo – they admit they ‘underestimated’ demand for the Zeld",
+    "stile": "DOMANDA_AL_PUBBLICO",
+    "gioco": "The Legend of Zelda: Tears of the Kingdom",
+    "query_video": "Zelda Switch 2 gameplay",
+    "fonte": "Zelda Switch 2 restock update: Nintendo admits it ‘underestimated’ demand (The Shortcut | Matt Swider)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMiogFBVV95cUxPcy1jMV84c1NnVGE2eGFEU01hZVNNUmZXRlBVNzMzUUg4LVYtMEVmRlJaWEtFbzVEX0wwS25xWTJSM25XZU5VQlVoRWMtbXF3TW5DSmdrMjJpZ18xb1lfYnhyRmpPN2lDS3B1YThfcUtxNTRaN0FpMWpaM2RQSW9Rd3VKUEM2SmdVcHpuZ3c3M1dXOC1fVXFWY0ExN05LU3NMSHc?oc=5",
+    "video_id": null
   }
 ]
