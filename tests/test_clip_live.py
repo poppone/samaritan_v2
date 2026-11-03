@@ -354,3 +354,8 @@ def test_parola_isolata_non_apre_la_clip():
     parole = [(1.0, 1.6, "ma"), (45.8, 46.5, "non"), (46.5, 47.0, "ha"), (47.0, 48.3, "stamina")]
     inizio, _fine = punteggio.taglio_hook(parole, 75, minimo=15)
     assert inizio == 44.8
+
+
+def test_le_tiktok_devono_parlare_piu_delle_short():
+    assert punteggio.parole_minime("tiktok") > punteggio.parole_minime("youtube") >= 6
+    assert punteggio.parole_minime("altro") == punteggio.parole_minime("youtube")
