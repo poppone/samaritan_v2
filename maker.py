@@ -691,6 +691,20 @@ def assembla_video_finale(testo_per_audio=None, query_video="gameplay",
     durata = audio_clip.duration + 0.4
 
     sfondo = costruisci_sfondo_montato(sorgenti, durata, stile)
+    if sfondo is None and any(s.get("gioco") for s in sorgenti):
+        # Il materiale ufficiale c'era ma moviepy non ne ha aperto nemmeno
+        # un pezzo (2 novembre 2026, trailer di GTA VI col timecode): si
+        # ripiega sulle clip di riserva invece di saltare l'uscita.
+        print("[Warning Maker] Nessuna sorgente ufficiale montabile: "
+              "ripiego sul materiale di riserva.")
+        from gameplay import materiale_di_riserva
+        sorgenti = materiale_di_riserva(query_video, query_scene,
+                                        testo_per_audio, 3)
+        if resoconto is not None:
+            resoconto["sorgenti_ufficiali"] = 0
+            resoconto["sorgenti_stock"] = len(sorgenti)
+        if sorgenti:
+            sfondo = costruisci_sfondo_montato(sorgenti, durata, stile)
     if sfondo is None:
         print("[Errore Maker] Montaggio fallito: interrompo.")
         audio_clip.close()

@@ -643,6 +643,97 @@ def _estrai_mp4(url_stream, destinazione, salta=SALTA_INTRO_SEC, durata=None,
     return os.path.exists(destinazione) and os.path.getsize(destinazione) > 100_000
 
 
+# ===========================================================================
+# PULIZIA DELLE SORGENTI PRIMA DEL MONTAGGIO
+# ===========================================================================
+# Il 2 novembre 2026 le uscite delle 18:00 e delle 21:00 su GTA VI si sono
+# fermate tutte con "Montaggio fallito": i trailer di Rockstar portano una
+# traccia di timecode (tmcd) e il file scaricato se la tiene. L'ffmpeg di
+# moviepy la descrive con una riga "Stream group #0:0[0x2]: Track Reference:"
+# che il suo lettore non sa interpretare, e OGNI trailer veniva scartato.
+# Prima del montaggio ogni video si riscrive con il solo video e l'audio,
+# senza tracce dati, timecode e metadati.
+def _comando_pulizia(percorso, destinazione, ricodifica=False):
+    comando = [_ffmpeg(), "-y", "-loglevel", "error", "-i", percorso,
+               "-map", "0:v:0", "-map", "0:a?", "-dn", "-sn",
+               "-map_metadata", "-1", "-map_chapters", "-1"]
+    if ricodifica:
+        comando += ["-c:v", "libx264", "-preset", "veryfast", "-crf", "20",
+                    "-pix_fmt", "yuv420p", "-c:a", "aac"]
+    else:
+        comando += ["-c", "copy"]
+    return comando + [destinazione]
+
+
+def _leggibile_dal_montaggio(percorso):
+    """True se il montaggio sapra' aprire il file.
+
+    Si usa lo stesso lettore di moviepy, cioe' proprio quello che il 2
+    novembre falliva; dove moviepy non c'e' (i test, la CI) basta che
+    ffprobe ci trovi un video.
+    """
+    try:
+        from moviepy.video.io.ffmpeg_reader import ffmpeg_parse_infos
+    except ImportError:
+        ffmpeg_parse_infos = None
+    try:
+        if ffmpeg_parse_infos is not None:
+            return bool(ffmpeg_parse_infos(percorso).get("video_found"))
+        esito = subprocess.run(
+            [_ffprobe(), "-v", "error", "-select_streams", "v:0",
+             "-show_entries", "stream=codec_type", "-of", "csv=p=0", percorso],
+            check=True, timeout=60, stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL)
+        return "video" in esito.stdout.decode()
+    except Exception:
+        return False
+
+
+def normalizza_per_montaggio(percorso):
+    """Riscrive il video con solo video e audio. Ritorna il nuovo percorso,
+    o None se il file non si riesce a rendere leggibile.
+
+    Prima il remux (secondi), poi la ricodifica. Il file pulito va sempre in
+    DIR_TEMP: le clip girate in casa stanno nel repository e non si toccano.
+    """
+    os.makedirs(config.DIR_TEMP, exist_ok=True)
+    nome = os.path.splitext(os.path.basename(percorso))[0] + ".mp4"
+    destinazione = os.path.join(config.DIR_TEMP, f"pulito_{nome}")
+    if os.path.abspath(destinazione) == os.path.abspath(percorso):
+        destinazione = os.path.join(config.DIR_TEMP, f"pulito_bis_{nome}")
+
+    for ricodifica in (False, True):
+        try:
+            subprocess.run(_comando_pulizia(percorso, destinazione, ricodifica),
+                           check=True, timeout=600 if ricodifica else 120,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        except Exception as e:
+            fase = "ricodifica" if ricodifica else "remux"
+            print(f"[Gameplay] Pulizia ({fase}) fallita su {nome}: "
+                  f"{e}{_errore_ffmpeg(e)}")
+            continue
+        if os.path.exists(destinazione) and _leggibile_dal_montaggio(destinazione):
+            return destinazione
+
+    print(f"[Gameplay] Sorgente illeggibile anche dopo la pulizia, la "
+          f"scarto: {percorso}")
+    return None
+
+
+def normalizza_sorgenti(sorgenti):
+    """Pulisce i video della lista; quelli che restano illeggibili escono.
+    Le immagini passano come sono."""
+    pulite = []
+    for sorgente in sorgenti:
+        if sorgente.get("tipo") != "video":
+            pulite.append(sorgente)
+            continue
+        percorso = normalizza_per_montaggio(sorgente["path"])
+        if percorso:
+            pulite.append(dict(sorgente, path=percorso))
+    return pulite
+
+
 def scarica_trailer_steam(appid, dati, quanti=3, salto=0):
     """Scarica i trailer ufficiali come mp4 muti. Ritorna i percorsi locali.
 
@@ -1421,14 +1512,23 @@ def procura_materiale(gioco=None, query_pexels="gameplay", minimo=3,
                     sorgenti.append({"tipo": "immagine", "path": percorso,
                                      "gioco": nome_ufficiale})
 
+    # Ogni video passa dalla pulizia prima del montaggio: quelli che restano
+    # illeggibili escono qui, e se cosi' il materiale ufficiale non basta
+    # piu' si integra con Pexels come se non ci fosse mai stato.
+    ufficiali = len(sorgenti)
+    sorgenti = normalizza_sorgenti(sorgenti)
+    if ufficiali and not sorgenti:
+        print(f"[Gameplay] Nessuna sorgente ufficiale di '{nome_ufficiale}' "
+              f"e' leggibile: ripiego sul materiale di riserva.")
+
     # Le clip girate in casa: non sostituiscono il materiale del gioco, ci si
     # aggiungono. 'gioco' resta None perche' non sono di QUEL gioco, e il
     # conteggio del materiale ufficiale nel resoconto deve restare onesto.
     categoria = categoria_clip_mie(gioco, dati_gioco)
-    mie = clip_mie(categoria, salto)
-    for percorso in mie:
-        sorgenti.append({"tipo": "video", "path": percorso,
-                         "gioco": None, "mia": True})
+    mie = normalizza_sorgenti(
+        [{"tipo": "video", "path": percorso, "gioco": None, "mia": True}
+         for percorso in clip_mie(categoria, salto)])
+    sorgenti.extend(mie)
     if mie:
         print(f"[Gameplay] {len(mie)} clip girate in casa ('{categoria}').")
 
@@ -1437,23 +1537,30 @@ def procura_materiale(gioco=None, query_pexels="gameplay", minimo=3,
               f"{len(sorgenti) - len(mie)} sorgenti.")
         return sorgenti, nome_ufficiale
 
-    # ------------------------------------------------- Fallback su Pexels
+    sorgenti.extend(materiale_di_riserva(query_pexels, query_scene, contesto,
+                                         max(minimo - len(sorgenti), 0)))
+    return sorgenti, nome_ufficiale
+
+
+def materiale_di_riserva(query_pexels="gameplay", query_scene=None,
+                         contesto="", mancanti=3):
+    """Le clip Pexels per scena: il ripiego quando il materiale ufficiale
+    non c'e', non basta o non si riesce a montare."""
     # Almeno una clip per scena, e le scene nell'ordine in cui la voce le
     # dice: stock.py scarta le clip che non c'entrano con la loro frase.
     scene = [q for q in (query_scene or []) if q and str(q).strip()] \
         or [query_pexels]
     # Due clip per scena: con uno stacco ogni 1,5-2 secondi una clip per
     # scena si ripeterebbe troppo.
-    mancanti = max(minimo - len(sorgenti), 2, 2 * len(scene))
+    mancanti = max(mancanti, 2, 2 * len(scene))
     print(f"[Gameplay] Materiale ufficiale insufficiente: "
           f"integro con {mancanti} clip Pexels su {len(scene)} scene.")
     import stock
-    for percorso, scena in stock.scarica_clip_per_scene(
-            scene, quante=mancanti, contesto=contesto):
-        sorgenti.append({"tipo": "video", "path": percorso, "gioco": None,
-                         "scena": scena, "scene_totali": len(scene)})
-
-    return sorgenti, nome_ufficiale
+    riserva = [{"tipo": "video", "path": percorso, "gioco": None,
+                "scena": scena, "scene_totali": len(scene)}
+               for percorso, scena in stock.scarica_clip_per_scene(
+                   scene, quante=mancanti, contesto=contesto)]
+    return normalizza_sorgenti(riserva)
 
 
 if __name__ == "__main__":
