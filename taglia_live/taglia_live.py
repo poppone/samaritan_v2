@@ -43,7 +43,13 @@ try:
 except ImportError:
     pass
 
-CANALE = os.getenv("TWITCH_CANALE", "davidedurazzi").strip()
+CANALE_DAVIDE = "davidedurazzi"
+CANALE = os.getenv("TWITCH_CANALE", CANALE_DAVIDE).strip()
+# Dove sta la webcam: "alto-destra" ecc. o "x,y,l,a" (impaginazione.zona_webcam).
+# Vuota = si cerca da sola. Si cambia anche con --webcam.
+WEBCAM_ZONA = os.getenv("WEBCAM_ZONA", "").strip()
+# Bip sulle parolacce: "si", "no" o vuoto = solo per i canali dei clienti.
+CENSURA = os.getenv("CENSURA", "").strip().lower()
 REPO = os.getenv("CLIP_REPO", "poppone/samaritan_v2").strip()
 TOKEN = os.getenv("GITHUB_TOKEN_CLIP", "").strip()
 GROQ_KEY = os.getenv("GROQ_API_KEY", "").strip()
@@ -405,9 +411,34 @@ def volti_nei_fotogrammi(percorso, durata, quanti=10, ingrandisci=2):
 
 def scegli_impaginazione(percorso, durata):
     w, h = misure(percorso)
-    scelta, riquadri = impaginazione.scegli(volti_nei_fotogrammi(percorso, durata), w, h)
-    print(f"[Webcam] impaginazione: {scelta}")
+    zona = impaginazione.zona_webcam(WEBCAM_ZONA, w, h)
+    if WEBCAM_ZONA and not zona:
+        print(f"[Webcam] zona '{WEBCAM_ZONA}' non capita: cerco la webcam da solo.")
+    scelta, riquadri = impaginazione.scegli(volti_nei_fotogrammi(percorso, durata), w, h, zona)
+    print(f"[Webcam] impaginazione: {scelta}" + (f" (zona {WEBCAM_ZONA})" if zona else ""))
     return scelta, riquadri
+
+
+def e_cliente():
+    """Clip per il canale di un altro streamer, non per quello di Davide."""
+    return CANALE.lower() != CANALE_DAVIDE
+
+
+def censura_attiva():
+    if CENSURA in ("si", "sì", "1", "true"):
+        return True
+    if CENSURA in ("no", "0", "false"):
+        return False
+    return e_cliente()
+
+
+def filtro_bip(intervalli):
+    """Audio con le parolacce zittite e coperte da un bip a 1 kHz."""
+    dentro = "+".join(f"between(t,{a:.2f},{b:.2f})" for a, b in intervalli)
+    return (f"[0:a]volume='if({dentro},0,1)':eval=frame[voce];"
+            f"sine=frequency=1000:sample_rate=48000,volume='if({dentro},0.25,0)':eval=frame[bip];"
+            "[voce][bip]amix=inputs=2:duration=first:normalize=0,"
+            "loudnorm=I=-14:TP=-1.5[a]")
 
 
 def durata_video(percorso):
@@ -429,10 +460,11 @@ class ClipMuta(Exception):
 
 
 def monta_verticale(sorgente, sottotitoli, uscita, scelta="centro", riquadri=None,
-                    inizio=0.0, fine=None):
+                    inizio=0.0, fine=None, bip=()):
     """Monta il 9:16 con i sottotitoli bruciati (vedi impaginazione.py).
 
-    inizio/fine tagliano il grezzo (l'hook): i tempi del .ass devono gia'
+    inizio/fine tagliano il grezzo (l'hook): i tempi del .ass e di bip
+    (intervalli da coprire, in secondi della clip finale) devono gia'
     essere spostati di conseguenza.
     ffmpeg gira dentro la cartella del lavoro e riceve il nome nudo del file
     .ass: su Windows i due punti di 'C:' rompono il filtro 'ass'.
@@ -443,10 +475,14 @@ def monta_verticale(sorgente, sottotitoli, uscita, scelta="centro", riquadri=Non
     taglio = ["-ss", f"{inizio:.2f}"]
     if fine is not None:
         taglio += ["-t", f"{fine - inizio:.2f}"]
+    if bip:
+        audio = ["-filter_complex", f"{filtro};{filtro_bip(bip)}", "-map", "[v]", "-map", "[a]"]
+    else:
+        audio = ["-filter_complex", filtro, "-map", "[v]", "-map", "0:a?",
+                 "-af", "loudnorm=I=-14:TP=-1.5"]
     subprocess.run(
         ["ffmpeg", "-y", "-v", "error", *taglio, "-i", os.path.abspath(sorgente),
-         "-filter_complex", filtro, "-map", "[v]", "-map", "0:a?",
-         "-af", "loudnorm=I=-14:TP=-1.5", "-c:v", "libx264", "-preset", "medium",
+         *audio, "-c:v", "libx264", "-preset", "medium",
          "-crf", "21", "-pix_fmt", "yuv420p", "-r", "30", "-c:a", "aac",
          "-b:a", "160k", "-movflags", "+faststart", os.path.abspath(uscita)],
         cwd=cartella, check=True)
@@ -475,6 +511,19 @@ def titolo_di_ripiego(trascritto, gioco):
     return f"{frase} | {gioco}" if gioco else frase
 
 
+_RE_DAVIDE = re.compile(r"\b(?:Davide\s+Durazzi|DavideDurazzi|davidedurazzi|Davide)\b"
+                        r"(?:\s*[:\-–|]\s*)?", re.IGNORECASE)
+
+
+def senza_nomi_sbagliati(testo):
+    """Sulle clip di un cliente Groq a volte scrive comunque "Davide": via il
+    nome (con i due punti o il trattino che lo seguono) e spazi rimessi a posto."""
+    if not e_cliente():
+        return testo
+    pulito = re.sub(r"\s{2,}", " ", _RE_DAVIDE.sub("", testo)).strip(" :-–|")
+    return pulito[:1].upper() + pulito[1:] if pulito else pulito
+
+
 def proponi_testi(trascritto, gioco, titolo_live, piattaforma="youtube"):
     etichette = "#twitch #gaming #perte" if piattaforma == "tiktok" else "#shorts #twitch #gaming"
     base_desc = (f"Dalla live su Twitch: https://twitch.tv/{CANALE}\n"
@@ -487,13 +536,16 @@ def proponi_testi(trascritto, gioco, titolo_live, piattaforma="youtube"):
         return ripiego
     from groq import Groq
     client = Groq(api_key=GROQ_KEY)
+    streamer = "Davide Durazzi" if not e_cliente() else f"{CANALE}, streamer Twitch"
     domanda = (
         f"Sei l'editor dei video {'TikTok' if piattaforma == 'tiktok' else 'Short YouTube'} "
-        "di Davide Durazzi, streamer italiano. "
+        f"del canale Twitch {streamer}, italiano. "
         "Dal parlato di una clip della sua live proponi un titolo (max 70 "
         "caratteri, italiano, niente clickbait falso, niente emoji in eccesso) "
         "e una descrizione di 1-2 frasi. Non inventare fatti che non sono nel "
-        "parlato. Rispondi SOLO con JSON: {\"titolo\": \"...\", \"descrizione\": \"...\"}\n\n"
+        "parlato. Nel titolo non mettere nomi di persone ne' di canali; nella "
+        "descrizione chiama lo streamer solo 'lo streamer'. "
+        "Rispondi SOLO con JSON: {\"titolo\": \"...\", \"descrizione\": \"...\"}\n\n"
         f"Gioco: {gioco or 'sconosciuto'}\nTitolo della live: {titolo_live}\n"
         f"Parlato: {trascritto[:2500]}")
     for modello in GROQ_MODELLI:
@@ -502,9 +554,9 @@ def proponi_testi(trascritto, gioco, titolo_live, piattaforma="youtube"):
                 model=modello, messages=[{"role": "user", "content": domanda}],
                 temperature=0.6, response_format={"type": "json_object"})
             dati = json.loads(r.choices[0].message.content)
-            titolo = str(dati.get("titolo", "")).strip()[:100]
+            titolo = senza_nomi_sbagliati(str(dati.get("titolo", "")).strip())[:100]
             if titolo:
-                desc = str(dati.get("descrizione", "")).strip()
+                desc = senza_nomi_sbagliati(str(dati.get("descrizione", "")).strip())
                 return {"titolo": titolo, "descrizione": f"{desc}\n\n{base_desc}"}
         except Exception as e:
             print(f"[Groq] {modello}: {e}")
@@ -642,7 +694,7 @@ def monta_clip(vod_id, info, titolo_live, data_live, cartella, nomi_chat,
     servono = punteggio.parole_minime(piattaforma)
     if len(parole) < servono:
         os.remove(grezzo)
-        raise ClipMuta(f"{len(parole)} parole di Davide, ne servono almeno {servono}")
+        raise ClipMuta(f"{len(parole)} parole dello streamer, ne servono almeno {servono}")
     minimo = 61 if piattaforma == "tiktok" else punteggio.DURATA_MIN
     taglio = punteggio.taglio_hook(parole, durata_grezzo, minimo)
     parole = [(a - taglio[0], b - taglio[0], t) for a, b, t in parole
@@ -650,14 +702,24 @@ def monta_clip(vod_id, info, titolo_live, data_live, cartella, nomi_chat,
     testo = " ".join(p[2] for p in parole)
     print(f"[Hook] {cid}: tengo {taglio[0]:.1f}-{taglio[1]:.1f}s di {durata_grezzo:.0f}s, "
           f"{len(parole)} parole")
+    avvisi = punteggio.controlla_testo(testo, nomi_chat)
+    bip = []
+    if censura_attiva() and "insulti" in avvisi:
+        da_coprire = punteggio.parolacce(parole)
+        bip = [(parole[i][0] - 0.05, parole[i][1] + 0.05) for i in da_coprire]
+        parole = [(a, b, punteggio.copri_parola(t) if i in da_coprire else t)
+                  for i, (a, b, t) in enumerate(parole)]
+        testo = " ".join(p[2] for p in parole)
+        if bip:
+            avvisi = ["insulti_coperti" if a == "insulti" else a for a in avvisi]
+            print(f"[Bip] {cid}: {len(bip)} parolacce coperte")
     scelta, riquadri = scegli_impaginazione(grezzo, durata_grezzo)
     scrivi_ass(parole, ass, margine=impaginazione.margine_sottotitoli(scelta))
-    monta_verticale(grezzo, ass, finale, scelta, riquadri, taglio[0], taglio[1])
+    monta_verticale(grezzo, ass, finale, scelta, riquadri, taglio[0], taglio[1], bip)
     os.remove(grezzo)
     inizio_vero = inizio + int(taglio[0])
     durata = round(taglio[1] - taglio[0])
 
-    avvisi = punteggio.controlla_testo(testo, nomi_chat)
     punti = punteggio.correggi_per_parlato(punti, len(parole))
     punti = punteggio.applica_penalita(punti, avvisi)
     gioco = gioco_al_secondo(info, inizio)
@@ -679,7 +741,28 @@ def main():
     parser.add_argument("--prova", action="store_true",
                         help="monta le clip in taglia_live/lavoro ma non carica niente")
     parser.add_argument("--max-live", type=int, default=2)
+    parser.add_argument("--canale", help="canale Twitch dello streamer (default TWITCH_CANALE "
+                                         "o davidedurazzi); un altro canale = clip per un cliente")
+    parser.add_argument("--webcam", help='zona della webcam: "alto-destra", "basso-sinistra", '
+                                         '..., o "x,y,larghezza,altezza"')
+    parser.add_argument("--censura", choices=("si", "no"),
+                        help="bip sulle parolacce (default: si per i clienti, no per Davide)")
     args = parser.parse_args()
+
+    global CANALE, WEBCAM_ZONA, CENSURA
+    if args.canale:
+        CANALE = args.canale.strip().lstrip("@").lower()
+    if args.webcam:
+        WEBCAM_ZONA = args.webcam.strip()
+    if args.censura:
+        CENSURA = args.censura
+    # Le clip di un cliente non devono finire nella coda di pubblicazione di
+    # Davide: per loro si monta soltanto.
+    if e_cliente() and not args.prova:
+        sys.exit(f"Canale {CANALE}: clip per un cliente, si possono fare solo con --prova.")
+    print(f"[Canale] {CANALE}{' (cliente)' if e_cliente() else ''}, "
+          f"bip parolacce {'si' if censura_attiva() else 'no'}, "
+          f"webcam {WEBCAM_ZONA or 'automatica'}")
 
     for programma in ("ffmpeg",):
         if not shutil.which(programma):

@@ -297,7 +297,37 @@ def controlla_testo(testo, nomi_chat=()):
     return avvisi
 
 
-PENALITA = {"insulti": 40, "dati_personali": 50, "utente_chat": 30}
+PENALITA = {"insulti": 40, "insulti_coperti": 10, "dati_personali": 50, "utente_chat": 30}
+
+
+def _pulita(parola):
+    return re.sub(r"[^\w']", "", (parola or "").lower())
+
+
+def parolacce(parole):
+    """Indici delle parole da coprire col bip, in [(inizio, fine, testo), ...].
+
+    Le radici di una parola sola ("cazz", "merd"...) si cercano dentro ogni
+    parola; quelle di due parole ("porco dio") su ogni coppia vicina.
+    """
+    singole = [r for r in _RADICI_INSULTI if " " not in r]
+    doppie = [r for r in _RADICI_INSULTI if " " in r]
+    pulite = [_pulita(p[2]) for p in parole]
+    indici = set()
+    for i, p in enumerate(pulite):
+        if any(r in p for r in singole):
+            indici.add(i)
+        if i + 1 < len(pulite) and f"{p} {pulite[i + 1]}" in doppie:
+            indici.update((i, i + 1))
+    return sorted(indici)
+
+
+def copri_parola(testo):
+    """"cazzo" -> "c****": si capisce che c'era, non si legge."""
+    lettere = [i for i, c in enumerate(testo) if c.isalpha()]
+    if len(lettere) < 2:
+        return testo
+    return "".join("*" if i in lettere[1:] else c for i, c in enumerate(testo))
 
 
 def applica_penalita(punteggio, avvisi):

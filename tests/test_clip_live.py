@@ -206,7 +206,7 @@ from taglia_live import impaginazione as imp
 
 def test_webcam_piccola_in_angolo_divide_lo_schermo():
     # volti veri del primo giro di prova (Dirty Business, sorgente 1920x1080)
-    volti = [[(162, 66, 53, 68), (1688, 102, 54, 63)]] * 3 + [[(167, 65, 53, 72)]] * 3
+    volti = [[(162 + i, 66 + 2 * i, 53, 68), (1688, 102, 54, 63)] for i in range(3)] + [[(167 - i, 65 + i, 53, 72)] for i in range(3)]
     scelta, r = imp.scegli(volti, 1920, 1080)
     assert scelta == "divisa"
     cx, cy, cw, ch = r["cam"]
@@ -226,14 +226,14 @@ def test_senza_volti_o_volti_sporadici_resta_al_centro():
 
 
 def test_il_gioco_si_sposta_via_dalla_webcam_a_destra():
-    _scelta, r = imp.scegli([[(1700, 900, 50, 60)]] * 6, 1920, 1080)
+    _scelta, r = imp.scegli([[(1700 + 2 * i, 900 - i, 50, 60)] for i in range(6)], 1920, 1080)
     cx = r["cam"][0]
     gx, _gy, gw, _gh = r["gioco"]
     assert gx + gw <= cx
 
 
 def test_filtro_ffmpeg_ha_le_due_fasce():
-    _s, r = imp.scegli([[(162, 66, 53, 68)]] * 6, 1920, 1080)
+    _s, r = imp.scegli([[(162 + i, 66 + i, 53, 68)] for i in range(6)], 1920, 1080)
     filtro = imp.filtro_ffmpeg("divisa", r, "x.ass")
     assert "vstack" in filtro and "ass=x.ass" in filtro
     assert "boxblur" in imp.filtro_ffmpeg("centro", None, "x.ass")
@@ -359,3 +359,44 @@ def test_parola_isolata_non_apre_la_clip():
 def test_le_tiktok_devono_parlare_piu_delle_short():
     assert punteggio.parole_minime("tiktok") > punteggio.parole_minime("youtube") >= 6
     assert punteggio.parole_minime("altro") == punteggio.parole_minime("youtube")
+
+
+# --- clienti: webcam, nomi, parolacce (prova StrayDog del 3/11) ----------------
+
+# Volti veri di Pax Dei: sei ritratti dell'interfaccia fermi a sinistra e la
+# webcam a destra che si muove di qualche pixel.
+_HUD = [(23, 266, 29, 39), (23, 180, 29, 42), (20, 428, 29, 43), (22, 512, 27, 37)]
+_PAX = [_HUD + [(1713 + (i * 3) % 9, 500 + i % 3, 33 + i % 2, 48)] for i in range(10)]
+
+
+def test_i_ritratti_fermi_dell_hud_non_sono_la_webcam():
+    scelta, r = imp.scegli(_PAX, 1920, 1080)
+    assert scelta == "divisa" and r["cam"][0] > 1400
+
+
+def test_la_zona_della_webcam_si_puo_imporre():
+    assert imp.zona_webcam("alto-destra", 1920, 1080) == (960, 0, 1920, 540)
+    assert imp.zona_webcam("0.5,0.25,0.5,0.5", 1920, 1080) == (960, 270, 1920, 810)
+    assert imp.zona_webcam("boh", 1920, 1080) is None
+    ritratti_fermi = [_HUD + [(1715, 500, 33, 48)] for _ in range(10)]
+    scelta, r = imp.scegli(ritratti_fermi, 1920, 1080, imp.zona_webcam("destra", 1920, 1080))
+    assert scelta == "divisa" and r["cam"][0] > 1400
+
+
+def test_parolacce_coperte():
+    parole = [(0, 1, "ma"), (1, 2, "che"), (2, 3, "cazzo"), (3, 4, "vuoi,"), (4, 5, "porco"), (5, 6, "dio!")]
+    assert punteggio.parolacce(parole) == [2, 4, 5]
+    assert punteggio.copri_parola("cazzo") == "c****"
+    assert punteggio.copri_parola("dio!") == "d**!"
+    assert punteggio.applica_penalita(70, ["insulti_coperti"]) == 60
+
+
+def test_sulle_clip_dei_clienti_non_compare_davide(monkeypatch):
+    from taglia_live import taglia_live as tl
+    monkeypatch.setattr(tl, "CANALE", "straydogtv")
+    assert tl.e_cliente() and tl.censura_attiva()
+    assert tl.senza_nomi_sbagliati("Davide Durazzi: devi andare a sentimento") == "Devi andare a sentimento"
+    assert "Davide" not in tl.senza_nomi_sbagliati("Davide commenta il monitor")
+    monkeypatch.setattr(tl, "CANALE", "davidedurazzi")
+    assert not tl.e_cliente() and not tl.censura_attiva()
+    assert tl.senza_nomi_sbagliati("Davide commenta") == "Davide commenta"
