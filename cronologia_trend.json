@@ -1,17 +1,5 @@
 [
   {
-    "timestamp": 1789742121,
-    "data": "2026-09-18",
-    "titolo": "Fortnite: Tier List Lampo ⚡",
-    "estratto_script": "Stai sbagliando tutto su Fortnite. Primo posto: la nuova skin di stagione, assolutamente i",
-    "stile": "TIER_LIST_LAMPO",
-    "gioco": "Fortnite",
-    "query_video": "fortnite gameplay",
-    "fonte": "Fortnite prepara il prossimo aggiornamento, ecco quando sarà disponibile (SpazioGames)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMikwFBVV95cUxOaVkxdUlZQnRlU0ozZk51blU4eWRDSU5hVTVzUUo3dEtuVVB3ZURRQy1HbVhnNTBydWRnNVZjemEweXNmbHpsYWpIVW5tSHpvR2kwZlNQU3VPUy0wTDhFSzNaNURXSTJhMFJDN1pnaFMxNl9kbW01bFllbXZFeklyNWFNSW5GSTFJMWtjemZpZkdBRzA?oc=5",
-    "video_id": "hBMDcRhugbA"
-  },
-  {
     "timestamp": 1789742796,
     "data": "2026-09-18",
     "titolo": "No Man's Sky: l'easter egg segreto dei fondatori 🚀",
@@ -3592,5 +3580,21 @@
     "veste": "ghiaccio",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/FiOBgOyNNyw-6n6sLWhPSxrOtlgy7w7rDamyltiEIh.mp4",
     "didascalia_tiktok": "Hades 2: data di uscita su Xbox e PS5, su Game Pass 🎮\n\nScopri la data di uscita di Hades 2 e il lancio su Game Pass. Ti aspettiamo per discuterne nei commenti! Qual è la tua aspettativa per il nuovo titolo?\n\nAltre notizie su davidedurazzi.it\n\n#hades2 #newsgaming #gamingita #perte"
+  },
+  {
+    "timestamp": 1793703712,
+    "data": "2026-11-03",
+    "titolo": "GTA 6: When Can You Pre‑Load? 🚀",
+    "lingua": "en",
+    "slot": "18:00",
+    "uscita": 1793725200,
+    "formato": "short",
+    "estratto_script": "Guess what—Rockstar just dropped the exact pre‑load date for GTA 6 on PS5. No more specula",
+    "stile": "MYTH_BUSTING_VIRAL",
+    "gioco": "Grand Theft Auto VI",
+    "query_video": "gta 6 gameplay",
+    "fonte": "GTA 6 Pre Load Date Revealed – When You Can Download on PS5 (VICE)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMigAFBVV95cUxQMkVqdkNkSG1PRVRwYnpqUDNDdXlLbWRsNTBpSEkzUG5JYWJMNzh5WmF0MlpGeW1yQlBvX1p1bEkwS2xRV3ZJV3doWkNWWE56WmFZdW83bzNxSkplVVFxZHlPYUtyeGxxb1Q3OFhCakJ0UTVtM3hvRkRwNHloamZhcg?oc=5",
+    "video_id": null
   }
 ]
