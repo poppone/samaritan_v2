@@ -181,6 +181,13 @@ CODA_DOPO = 2.0           # e finisce due secondi dopo l'ultima (la reazione)
 PAUSA_HOOK = 3.0          # parole isolate da una pausa piu' lunga non aprono la clip
 POCO_PARLATO = 6          # sotto queste parole la clip vale meno
 PENALITA_MUTA = 15
+# Sotto queste parole la clip si scarta: una clip muta non si vende. Le
+# TikTok durano piu' di un minuto, quindi devono parlare di piu'.
+PAROLE_MIN = {"youtube": 6, "tiktok": 20}
+
+
+def parole_minime(piattaforma):
+    return PAROLE_MIN.get(piattaforma, PAROLE_MIN["youtube"])
 
 _INGLESE = set("""the you your you're can't cannot can our we us is are was were this that
 what why how my me i i'm it it's of to and so man anymore will won't don't do does

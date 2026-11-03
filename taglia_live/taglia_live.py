@@ -219,7 +219,9 @@ def gioco_al_secondo(info, secondo):
 _modello = None
 _dispositivo = None
 NO_PARLATO_MAX = 0.6      # segmenti che per Whisper sono probabilmente silenzio
-CONFIDENZA_MIN = -1.0     # avg_logprob sotto questo: parole tirate a indovinare
+# avg_logprob sotto questo: parole tirate a indovinare. Davide che parla sopra
+# il gioco sta spesso fra -1.0 e -1.2: con -1.0 si perdevano frasi vere.
+CONFIDENZA_MIN = -1.4
 
 
 def _audio_16k(percorso):
@@ -422,6 +424,10 @@ class ClipTronca(Exception):
     """Il montaggio e' finito prima del previsto: la clip non va consegnata."""
 
 
+class ClipMuta(Exception):
+    """Davide parla troppo poco: senza parlato la clip non regge."""
+
+
 def monta_verticale(sorgente, sottotitoli, uscita, scelta="centro", riquadri=None,
                     inizio=0.0, fine=None):
     """Monta il 9:16 con i sottotitoli bruciati (vedi impaginazione.py).
@@ -569,33 +575,43 @@ def taglia(vod_id, prova=False):
     # Si chiedono piu' momenti del necessario: i primi QUANTE vanno su YouTube,
     # le versioni lunghe per TikTok si prendono dai successivi, cosi' le due
     # piattaforme non ricevono lo stesso momento due volte.
-    scelti = punteggio.candidati(valori, quante=QUANTE + QUANTE_TIKTOK * 2)
+    scelti = punteggio.candidati(valori, quante=QUANTE + QUANTE_TIKTOK * 4)
     nomi_chat = sorted({m[1] for m in messaggi if m[1]})
     print(f"[Analisi] {len(energia) // 60} minuti, {len(messaggi)} messaggi, "
           f"{len(scelti)} momenti")
 
-    da_montare = [(f"{vod_id}_{inizio:05d}", inizio, fine, punti, "youtube")
-                  for inizio, fine, punti, _picco in scelti[:QUANTE]]
+    youtube = [(f"{vod_id}_{inizio:05d}", inizio, fine, punti, "youtube")
+               for inizio, fine, punti, _picco in scelti[:QUANTE]]
+    # Candidate TikTok in ordine di punteggio; quanto si parla lo dice solo
+    # Whisper, quindi si provano finche' QUANTE_TIKTOK hanno parlato a
+    # sufficienza (quelle mute vengono scartate da monta_clip).
+    tiktok = []
     for _inizio, _fine, punti, picco in scelti[QUANTE:]:
-        if sum(1 for c in da_montare if c[4] == "tiktok") >= QUANTE_TIKTOK:
-            break
         lunga = punteggio.finestra_tiktok(picco, len(energia))
-        if lunga and not any(punteggio.sovrapposte(lunga, (c[1], c[2])) for c in da_montare):
-            da_montare.append((f"{vod_id}_{lunga[0]:05d}_tt", lunga[0], lunga[1],
-                               punti, "tiktok"))
+        if lunga and not any(punteggio.sovrapposte(lunga, (c[1], c[2]))
+                             for c in youtube + tiktok):
+            tiktok.append((f"{vod_id}_{lunga[0]:05d}_tt", lunga[0], lunga[1],
+                           punti, "tiktok"))
 
     release = None
     schede = []
-    for cid, inizio, fine, punti, piattaforma in da_montare:
+    fatte_tiktok = 0
+    for cid, inizio, fine, punti, piattaforma in youtube + tiktok:
+        if piattaforma == "tiktok" and fatte_tiktok >= QUANTE_TIKTOK:
+            break
         try:
             scheda = monta_clip(vod_id, info, titolo_live, data_live, cartella, nomi_chat,
                                 cid, inizio, fine, punti, piattaforma)
+        except ClipMuta as e:
+            print(f"[Scartata] Clip {cid}: {e}")
+            continue
         except ClipTronca as e:
             print(f"[Errore] Clip {cid} TRONCA, scartata: {e}")
             continue
         except Exception as e:
             print(f"[Errore] Clip {cid} non montata, scartata: {type(e).__name__}: {e}")
             continue
+        fatte_tiktok += piattaforma == "tiktok"
         if not prova:
             release = release or release_del_giorno()
             scheda["video_url"] = carica_video(release, os.path.join(cartella, f"{cid}.mp4"),
@@ -623,6 +639,10 @@ def monta_clip(vod_id, info, titolo_live, data_live, cartella, nomi_chat,
         raise ClipTronca(f"il pezzo scaricato dura {durata_grezzo:.1f}s "
                          f"invece di {fine - inizio}s")
     parole = trascrivi(grezzo)
+    servono = punteggio.parole_minime(piattaforma)
+    if len(parole) < servono:
+        os.remove(grezzo)
+        raise ClipMuta(f"{len(parole)} parole di Davide, ne servono almeno {servono}")
     minimo = 61 if piattaforma == "tiktok" else punteggio.DURATA_MIN
     taglio = punteggio.taglio_hook(parole, durata_grezzo, minimo)
     parole = [(a - taglio[0], b - taglio[0], t) for a, b, t in parole
