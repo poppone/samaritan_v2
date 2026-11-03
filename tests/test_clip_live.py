@@ -340,3 +340,17 @@ def test_titolo_di_ripiego_usa_il_parlato():
     titolo = tl.titolo_di_ripiego("ok vai. Ma non ha più stamina, perché non è stordito? poi", "Phantom Blade Zero")
     assert titolo.startswith("Ma non ha più stamina") and titolo.endswith("| Phantom Blade Zero")
     assert tl.titolo_di_ripiego("", "X") == "X - dalla live"
+
+
+def test_la_webcam_e_il_volto_fermo_non_il_piu_grande():
+    # webcam piccola sempre a destra, volti del gioco piu' grandi che si spostano
+    webcam = (1732, 507, 24, 34)
+    volti = [[webcam, (300 + 150 * i, 400, 80, 100)] for i in range(6)]
+    volto, quota = imp.volto_tipico(volti)
+    assert volto == webcam and quota == 1.0
+
+
+def test_parola_isolata_non_apre_la_clip():
+    parole = [(1.0, 1.6, "ma"), (45.8, 46.5, "non"), (46.5, 47.0, "ha"), (47.0, 48.3, "stamina")]
+    inizio, _fine = punteggio.taglio_hook(parole, 75, minimo=15)
+    assert inizio == 44.8

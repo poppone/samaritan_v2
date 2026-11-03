@@ -178,6 +178,7 @@ def punteggio_da_z(z):
 
 HOOK_PRIMA = 1.0          # la clip parte un secondo prima della prima frase
 CODA_DOPO = 2.0           # e finisce due secondi dopo l'ultima (la reazione)
+PAUSA_HOOK = 3.0          # parole isolate da una pausa piu' lunga non aprono la clip
 POCO_PARLATO = 6          # sotto queste parole la clip vale meno
 PENALITA_MUTA = 15
 
@@ -213,7 +214,13 @@ def taglio_hook(parole, durata, minimo=DURATA_MIN):
     """
     if not parole:
         return 0.0, float(durata)
-    inizio = max(0.0, parole[0][0] - HOOK_PRIMA)
+    # Una parola sola seguita da lunghi secondi muti non e' l'inizio del
+    # discorso: si parte dalla prima parola che ha un seguito vicino.
+    primo = 0
+    while (primo < len(parole) - 1
+           and parole[primo + 1][0] - parole[primo][1] > PAUSA_HOOK):
+        primo += 1
+    inizio = max(0.0, parole[primo][0] - HOOK_PRIMA)
     fine = min(float(durata), parole[-1][1] + CODA_DOPO)
     if fine - inizio < minimo:
         fine = min(float(durata), inizio + minimo)
