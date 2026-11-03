@@ -85,3 +85,14 @@ def _niente_articoli_dalla_rete(monkeypatch):
     niente rete. I test sul link all'articolo ne mettono di finti."""
     import brain
     monkeypatch.setattr(brain, "_articoli_sito", [])
+
+
+@pytest.fixture(autouse=True)
+def _niente_pulizia_dei_video(monkeypatch, request):
+    """La pulizia dei video prima del montaggio chiama ffmpeg: i percorsi dei
+    test sono finti, quindi qui passa tutto com'e'. I test sulla pulizia
+    (test_pulizia_sorgenti.py) usano quella vera."""
+    if request.module.__name__.endswith("test_pulizia_sorgenti"):
+        return
+    import gameplay
+    monkeypatch.setattr(gameplay, "normalizza_per_montaggio", lambda p: p)
