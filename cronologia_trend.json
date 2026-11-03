@@ -1,17 +1,5 @@
 [
   {
-    "timestamp": 1789721630,
-    "data": "2026-09-18",
-    "titolo": "Fable: il nuovo mistero del Game Pass 🎮",
-    "estratto_script": "Nessuno ti ha detto che Fable sta per tornare sul Game Pass. Microsoft ha appena aggiornat",
-    "stile": "VIRAL_HOOK_NEWS",
-    "gioco": "Fable",
-    "query_video": "fable game pass update gameplay",
-    "fonte": "Microsoft aggiorna la sezione dei giochi in arrivo su Xbox Game Pass: Fable è vicino? (Everyeye.it)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMisgFBVV95cUxQUG1kYXliTlZlWlV2YmZiandXMF9Va195aC04WVFmcHBtamY4ZC13NlBpVnpSdWlCWFJYNlJoQWJpWG0wVlV4X01iWElja29zdktvQTNnSTVYMGpIXzRCakl2eko0OTlWQ0xqZTFnV1RzQjBwb1BHVzZqZHFjNklMNS1ldmg5ZGlJaTI2UzZKbDNqTWVIYXIxbXV1UHNnb3EyOVFzellBeER4b3JzSFZGMVdR?oc=5",
-    "video_id": "i_UngnzSNFs"
-  },
-  {
     "timestamp": 1789728828,
     "data": "2026-09-18",
     "titolo": "Forza Horizon 6: i file sono davvero trapelati? 🚀",
@@ -3579,5 +3567,21 @@
     "fonte_url": "https://news.google.com/rss/articles/CBMigAFBVV95cUxQMkVqdkNkSG1PRVRwYnpqUDNDdXlLbWRsNTBpSEkzUG5JYWJMNzh5WmF0MlpGeW1yQlBvX1p1bEkwS2xRV3ZJV3doWkNWWE56WmFZdW83bzNxSkplVVFxZHlPYUtyeGxxb1Q3OFhCakJ0UTVtM3hvRkRwNHloamZhcg?oc=5",
     "video_id": null,
     "voce": "Alex"
+  },
+  {
+    "timestamp": 1793673369,
+    "data": "2026-11-03",
+    "titolo": "GTA 6 Pre‑load Size Revealed 📦",
+    "lingua": "en",
+    "slot": "18:00",
+    "uscita": 1793638800,
+    "formato": "short",
+    "estratto_script": "Think you have enough SSD space for the upcoming GTA 6 pre‑load on PS5? The new details co",
+    "stile": "MYTH_BUSTING_VIRAL",
+    "gioco": "Grand Theft Auto VI",
+    "query_video": "GTA 6 preload size gameplay",
+    "fonte": "GTA 6 Pre Load Date Revealed – When You Can Download on PS5 (VICE)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMigAFBVV95cUxQMkVqdkNkSG1PRVRwYnpqUDNDdXlLbWRsNTBpSEkzUG5JYWJMNzh5WmF0MlpGeW1yQlBvX1p1bEkwS2xRV3ZJV3doWkNWWE56WmFZdW83bzNxSkplVVFxZHlPYUtyeGxxb1Q3OFhCakJ0UTVtM3hvRkRwNHloamZhcg?oc=5",
+    "video_id": null
   }
 ]
