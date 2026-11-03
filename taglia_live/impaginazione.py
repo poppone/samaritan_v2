@@ -25,7 +25,9 @@ RAPPORTO_GIOCO = LARGHEZZA / ALTEZZA_GIOCO
 
 VOLTO_GRANDE = 0.12      # volto oltre il 12% della larghezza: e' il soggetto
 QUOTA_FOTOGRAMMI = 0.5   # il volto deve esserci in almeno meta' dei fotogrammi
-ALLARGA_VOLTO = 3.2      # la webcam e' circa tre volte il volto
+# Il ritaglio e' largo sette volte il volto: testa intera, cappello e spalle.
+# Con 3.2 si vedeva mezza faccia sgranata (prova del 3/11 su Phantom Blade).
+ALLARGA_VOLTO = 7.0
 
 
 def _mediana(valori):
@@ -40,12 +42,33 @@ def _pari(v):
     return int(v) // 2 * 2
 
 
+def _vicini(a, b):
+    """Stesso posto: centri a meno di una larghezza di volto."""
+    ax, ay = a[0] + a[2] / 2, a[1] + a[3] / 2
+    bx, by = b[0] + b[2] / 2, b[1] + b[3] / 2
+    lato = max(a[2], b[2])
+    return abs(ax - bx) < lato and abs(ay - by) < lato
+
+
 def volto_tipico(volti_per_fotogramma):
-    """Un volto per fotogramma (il piu' grande), poi la mediana: un falso
-    positivo in un fotogramma non sposta il ritaglio."""
-    scelti = [max(v, key=lambda r: r[2] * r[3]) for v in volti_per_fotogramma if v]
-    if not scelti:
+    """Il volto che resta fermo nello stesso posto (la webcam), poi la mediana.
+
+    Non il piu' grande: i volti dei personaggi del gioco sono spesso piu'
+    grandi della webcam ma si spostano da un fotogramma all'altro. Si tiene
+    il posto in cui un volto compare nel maggior numero di fotogrammi; a
+    parita', il volto piu' grande.
+    """
+    tutti = [r for v in volti_per_fotogramma for r in v]
+    if not tutti:
         return None, 0.0
+    def presenze(r):
+        return sum(1 for v in volti_per_fotogramma if any(_vicini(r, x) for x in v))
+    migliore = max(tutti, key=lambda r: (presenze(r), r[2] * r[3]))
+    scelti = []
+    for v in volti_per_fotogramma:
+        vicini = [x for x in v if _vicini(migliore, x)]
+        if vicini:
+            scelti.append(max(vicini, key=lambda r: r[2] * r[3]))
     quota = len(scelti) / len(volti_per_fotogramma)
     return tuple(_mediana([r[i] for r in scelti]) for i in range(4)), quota
 
@@ -108,5 +131,7 @@ def filtro_ffmpeg(impaginazione, riquadri, file_ass):
 
 
 def margine_sottotitoli(impaginazione):
-    """Distanza dal fondo: sulla giunta per la divisa, sotto la scena per il centro."""
-    return 1920 - ALTEZZA_CAM - 150 if impaginazione == "divisa" else 520
+    """Distanza dal fondo: nel terzo basso del gioco per la divisa (sulla
+    giunta coprivano la barra del boss, che sta in alto), sotto la scena per
+    il centro."""
+    return 480 if impaginazione == "divisa" else 520
