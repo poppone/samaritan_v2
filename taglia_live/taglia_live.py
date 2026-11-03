@@ -219,7 +219,9 @@ def gioco_al_secondo(info, secondo):
 _modello = None
 _dispositivo = None
 NO_PARLATO_MAX = 0.6      # segmenti che per Whisper sono probabilmente silenzio
-CONFIDENZA_MIN = -1.0     # avg_logprob sotto questo: parole tirate a indovinare
+# avg_logprob sotto questo: parole tirate a indovinare. Davide che parla sopra
+# il gioco sta spesso fra -1.0 e -1.2: con -1.0 si perdevano frasi vere.
+CONFIDENZA_MIN = -1.4
 
 
 def _audio_16k(percorso):
