@@ -27,8 +27,8 @@ import re
 RITARDO_CHAT = 7          # secondi fra l'evento e la reazione in chat
 SMUSSO = 5                # finestra della media mobile, in secondi
 DISTANZA_MINIMA = 90      # due clip non pescano dallo stesso momento
-PRIMA_DEL_PICCO = 22      # contesto prima del picco
-DOPO_IL_PICCO = 12        # reazione dopo il picco
+PRIMA_DEL_PICCO = 18      # contesto prima del picco (poi si taglia all'hook)
+DOPO_IL_PICCO = 14        # reazione dopo il picco
 DURATA_MIN = 15
 DURATA_MAX = 60
 SALTA_INIZIO = 120        # i primi minuti di una live sono "ciao a tutti"
@@ -161,8 +161,75 @@ def finestra_tiktok(picco, durata_live):
 
 
 def punteggio_da_z(z):
-    """Da z-score a 0-100: la media della live vale 50."""
-    return int(max(0, min(100, round(50 + 12 * z))))
+    """Da z-score a 0-100: la media della live vale 50.
+
+    Sopra la media sale sempre piu' piano verso 100 senza arrivarci: i picchi
+    di una live lunga hanno z di 5-15 e con una retta finivano tutti a 100,
+    cosi' la classifica non distingueva piu' niente.
+    """
+    if z <= 0:
+        return int(max(0, round(50 + 12 * z)))
+    return int(min(99, round(100 - 50 * math.exp(-z / 4))))
+
+
+# --------------------------------------------------------------------------
+# Dopo la trascrizione: hook, voci del gioco, parlato
+# --------------------------------------------------------------------------
+
+HOOK_PRIMA = 1.0          # la clip parte un secondo prima della prima frase
+CODA_DOPO = 2.0           # e finisce due secondi dopo l'ultima (la reazione)
+POCO_PARLATO = 6          # sotto queste parole la clip vale meno
+PENALITA_MUTA = 15
+
+_INGLESE = set("""the you your you're can't cannot can our we us is are was were this that
+what why how my me i i'm it it's of to and so man anymore will won't don't do does
+not no yes he she they them his her with for from be been have has had there here
+must shall never ever now fail""".split())
+_ITALIANO = set("""il lo la le gli un una di da in con su per che non ma e è ho hai ha
+mi ti si ci vi c'è no sì come cosa perché poi qua là questo quello sono sei anche
+più già dai vai oh eh ah boh porco madonna dio bravo vieni troppo poco""".split())
+
+
+def sembra_inglese(parole):
+    """True se un pezzo di parlato e' inglese: le voci del gioco, non Davide.
+
+    Whisper gira con language="it", quindi il doppiaggio inglese del gioco
+    esce come italiano storpiato. Basta contare le parole piu' comuni delle
+    due lingue: "Our sex fist part cannot fail!" non ha niente di italiano.
+    """
+    basse = [re.sub(r"[^\w'’]", "", p.lower()).replace("’", "'") for p in parole]
+    en = sum(1 for p in basse if p in _INGLESE)
+    it = sum(1 for p in basse if p in _ITALIANO)
+    return en >= 1 and en > it
+
+
+def taglio_hook(parole, durata, minimo=DURATA_MIN):
+    """(inizio, fine) in secondi dentro la clip: niente silenzio prima della
+    prima frase e niente coda muta dopo l'ultima.
+
+    parole: [(inizio, fine, testo), ...] gia' filtrate. Non si scende mai sotto
+    `minimo` secondi: se tagliando la clip diventerebbe troppo corta, si
+    tiene piu' coda e, se non basta, piu' contesto prima.
+    """
+    if not parole:
+        return 0.0, float(durata)
+    inizio = max(0.0, parole[0][0] - HOOK_PRIMA)
+    fine = min(float(durata), parole[-1][1] + CODA_DOPO)
+    if fine - inizio < minimo:
+        fine = min(float(durata), inizio + minimo)
+    if fine - inizio < minimo:
+        inizio = max(0.0, fine - minimo)
+    return round(inizio, 2), round(fine, 2)
+
+
+def sovrapposte(a, b, margine=0):
+    """Due finestre (inizio, fine) che condividono almeno un secondo."""
+    return a[0] < b[1] - margine and b[0] < a[1] - margine
+
+
+def correggi_per_parlato(punti, n_parole):
+    """Senza parlato una clip regge poco: scende un po' in classifica."""
+    return max(0, punti - PENALITA_MUTA) if n_parole < POCO_PARLATO else punti
 
 
 def candidati(valori, quante=5, durata_live=None):

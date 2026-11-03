@@ -25,7 +25,9 @@ RAPPORTO_GIOCO = LARGHEZZA / ALTEZZA_GIOCO
 
 VOLTO_GRANDE = 0.12      # volto oltre il 12% della larghezza: e' il soggetto
 QUOTA_FOTOGRAMMI = 0.5   # il volto deve esserci in almeno meta' dei fotogrammi
-ALLARGA_VOLTO = 3.2      # la webcam e' circa tre volte il volto
+# Il ritaglio e' largo sette volte il volto: testa intera, cappello e spalle.
+# Con 3.2 si vedeva mezza faccia sgranata (prova del 3/11 su Phantom Blade).
+ALLARGA_VOLTO = 7.0
 
 
 def _mediana(valori):
@@ -108,5 +110,7 @@ def filtro_ffmpeg(impaginazione, riquadri, file_ass):
 
 
 def margine_sottotitoli(impaginazione):
-    """Distanza dal fondo: sulla giunta per la divisa, sotto la scena per il centro."""
-    return 1920 - ALTEZZA_CAM - 150 if impaginazione == "divisa" else 520
+    """Distanza dal fondo: nel terzo basso del gioco per la divisa (sulla
+    giunta coprivano la barra del boss, che sta in alto), sotto la scena per
+    il centro."""
+    return 480 if impaginazione == "divisa" else 520

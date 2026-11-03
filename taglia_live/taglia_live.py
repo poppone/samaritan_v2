@@ -124,11 +124,53 @@ def energia_audio(vod_id, cartella):
     return [float(v) for v in rms]
 
 
+# Le stesse chiamate che fa il sito di Twitch per mostrare la chat di un VOD
+# (e che usa TwitchDownloaderCLI): pubbliche, senza account.
+GQL = "https://gql.twitch.tv/gql"
+GQL_CLIENT = "kd1unb4b3q4t58fwlpcbzcbnm76a8fp"
+GQL_HASH_CHAT = "b70a3591ff0f4e0313d126c6a1502d79a1c02baebb288227c582044aa76adf6a"
+
+
+def chat_gql(vod_id, pagine_max=5000):
+    """La chat del VOD senza programmi esterni, pagina per pagina."""
+    import requests
+    messaggi, cursore = [], None
+    for _ in range(pagine_max):
+        variabili = {"videoID": vod_id}
+        if cursore:
+            variabili["cursor"] = cursore
+        else:
+            variabili["contentOffsetSeconds"] = 0
+        r = requests.post(GQL, timeout=30, headers={"Client-Id": GQL_CLIENT}, json=[{
+            "operationName": "VideoCommentsByOffsetOrCursor", "variables": variabili,
+            "extensions": {"persistedQuery": {"version": 1, "sha256Hash": GQL_HASH_CHAT}}}])
+        r.raise_for_status()
+        commenti = (((r.json()[0].get("data") or {}).get("video") or {})
+                    .get("comments") or {})
+        lati = commenti.get("edges") or []
+        for lato in lati:
+            nodo = lato.get("node") or {}
+            testo = "".join(f.get("text", "") for f in
+                            (nodo.get("message") or {}).get("fragments") or [])
+            messaggi.append((nodo.get("contentOffsetSeconds", 0),
+                             (nodo.get("commenter") or {}).get("displayName", ""), testo))
+        if not lati or not (commenti.get("pageInfo") or {}).get("hasNextPage"):
+            break
+        cursore = lati[-1].get("cursor")
+    return messaggi
+
+
 def chat_live(vod_id, cartella):
-    """[(secondo, autore, testo), ...] o [] se TwitchDownloaderCLI non c'e'."""
+    """[(secondo, autore, testo), ...]: TwitchDownloaderCLI se c'e', altrimenti
+    direttamente da Twitch; [] se non va nessuno dei due."""
     if not shutil.which(TWITCH_DL) and not os.path.exists(TWITCH_DL):
-        print("[Chat] TwitchDownloaderCLI non trovato: conto solo l'audio.")
-        return []
+        try:
+            messaggi = chat_gql(vod_id)
+            print(f"[Chat] scaricata da Twitch: {len(messaggi)} messaggi.")
+            return messaggi
+        except Exception as e:
+            print(f"[Chat] ERRORE: chat non scaricata ({e}): conto solo l'audio.")
+            return []
     percorso = os.path.join(cartella, "chat.json")
     try:
         subprocess.run([TWITCH_DL, "chatdownload", "--id", vod_id,
@@ -176,6 +218,8 @@ def gioco_al_secondo(info, secondo):
 
 _modello = None
 _dispositivo = None
+NO_PARLATO_MAX = 0.6      # segmenti che per Whisper sono probabilmente silenzio
+CONFIDENZA_MIN = -1.0     # avg_logprob sotto questo: parole tirate a indovinare
 
 
 def _audio_16k(percorso):
@@ -201,8 +245,23 @@ def _parole(audio):
                                       word_timestamps=True, vad_filter=True)
     parole = []
     for seg in segmenti:
+        dette = [p.word.strip() for p in seg.words or []]
+        # Via le voci del gioco e quello che Whisper tira a indovinare.
+        if (getattr(seg, "no_speech_prob", 0.0) > NO_PARLATO_MAX
+                or getattr(seg, "avg_logprob", 0.0) < CONFIDENZA_MIN
+                or punteggio.sembra_inglese(dette)):
+            continue
         for p in seg.words or []:
-            parole.append((p.start, p.end, p.word.strip()))
+            testo = p.word.strip()
+            if not testo:
+                continue
+            # Whisper spezza "c'è" in "c" + "'è": si riattacca, cosi' il
+            # sottotitolo non va a capo in mezzo alla parola.
+            if parole and testo[0] in "'’":
+                inizio, _fine, prima = parole[-1]
+                parole[-1] = (inizio, p.end, prima + testo)
+                continue
+            parole.append((p.start, p.end, testo))
     return parole
 
 
@@ -241,6 +300,36 @@ def _tempo_ass(t):
     return f"{cs // 360000}:{cs // 6000 % 60:02d}:{cs // 100 % 60:02d}.{cs % 100:02d}"
 
 
+RIGA_MAX_SECONDI = 3.0    # una riga non resta a schermo piu' di cosi'
+RIGA_MAX_CARATTERI = 22   # circa una riga a 78 pt su 1080
+PAUSA_NUOVA_RIGA = 0.6    # una pausa nel parlato apre una riga nuova
+
+
+def gruppi_sottotitoli(parole, per_riga=4):
+    """[(inizio, fine, testo), ...] a gruppi di poche parole.
+
+    Un gruppo si chiude a per_riga parole, a RIGA_MAX_CARATTERI o a una
+    pausa; non dura piu' di RIGA_MAX_SECONDI (Whisper a volte allunga una
+    parola su tutto il silenzio dopo, e la riga restava ferma 12 secondi).
+    """
+    gruppi, attuale = [], []
+    for p in parole:
+        if attuale and (len(attuale) >= per_riga
+                        or p[0] - attuale[-1][1] > PAUSA_NUOVA_RIGA
+                        or len(" ".join(x[2] for x in attuale + [p])) > RIGA_MAX_CARATTERI):
+            gruppi.append(attuale)
+            attuale = []
+        attuale.append(p)
+    if attuale:
+        gruppi.append(attuale)
+    risultato = []
+    for g in gruppi:
+        inizio = g[0][0]
+        fine = min(g[-1][1], g[-1][0] + 1.0, inizio + RIGA_MAX_SECONDI)
+        risultato.append((inizio, max(fine, inizio + 0.3), " ".join(x[2] for x in g)))
+    return risultato
+
+
 def scrivi_ass(parole, percorso, per_riga=4, margine=520):
     """Sottotitoli grandi a gruppi di poche parole, come negli Short."""
     righe = [
@@ -252,11 +341,9 @@ def scrivi_ass(parole, percorso, per_riga=4, margine=520):
         "[Events]",
         "Format: Layer, Start, End, Style, Text",
     ]
-    for i in range(0, len(parole), per_riga):
-        gruppo = parole[i:i + per_riga]
-        testo = " ".join(p[2] for p in gruppo).upper().replace("{", "").replace("}", "")
-        righe.append(f"Dialogue: 0,{_tempo_ass(gruppo[0][0])},"
-                     f"{_tempo_ass(gruppo[-1][1])},Base,{testo}")
+    for inizio, fine, testo in gruppi_sottotitoli(parole, per_riga):
+        testo = testo.upper().replace("{", "").replace("}", "")
+        righe.append(f"Dialogue: 0,{_tempo_ass(inizio)},{_tempo_ass(fine)},Base,{testo}")
     with open(percorso, "w", encoding="utf-8") as f:
         f.write("\n".join(righe) + "\n")
 
@@ -274,7 +361,7 @@ def misure(percorso):
 MODELLO_VOLTI = os.path.join(QUI, "modelli", "face_detection_yunet_2023mar.onnx")
 
 
-def volti_nei_fotogrammi(percorso, durata, quanti=6):
+def volti_nei_fotogrammi(percorso, durata, quanti=10, ingrandisci=2):
     """I volti trovati in qualche fotogramma, un elenco per fotogramma.
 
     Si usa YuNet (cv2.FaceDetectorYN), che c'e' sia in OpenCV 4 sia in 5: il
@@ -292,7 +379,9 @@ def volti_nei_fotogrammi(percorso, durata, quanti=6):
         print("[Webcam] Rilevatore di volti non disponibile: impaginazione al centro.")
         return []
     w, h = misure(percorso)
-    rilevatore = cv2.FaceDetectorYN.create(MODELLO_VOLTI, "", (w, h),
+    # Il volto in una webcam d'angolo e' di 20-30 pixel: a grandezza naturale
+    # YuNet lo trova in un fotogramma su sei, ingrandito due volte in tutti.
+    rilevatore = cv2.FaceDetectorYN.create(MODELLO_VOLTI, "", (w * ingrandisci, h * ingrandisci),
                                            score_threshold=0.7)
     risultato = []
     for i in range(quanti):
@@ -304,9 +393,11 @@ def volti_nei_fotogrammi(percorso, durata, quanti=6):
         if len(grezzo) != w * h * 3:
             continue
         immagine = np.frombuffer(grezzo, dtype=np.uint8).reshape(h, w, 3)
+        if ingrandisci > 1:
+            immagine = cv2.resize(immagine, (w * ingrandisci, h * ingrandisci))
         _, volti = rilevatore.detect(immagine)
         risultato.append([] if volti is None else
-                         [tuple(int(v) for v in r[:4]) for r in volti])
+                         [tuple(int(v / ingrandisci) for v in r[:4]) for r in volti])
     return risultato
 
 
@@ -317,35 +408,76 @@ def scegli_impaginazione(percorso, durata):
     return scelta, riquadri
 
 
-def monta_verticale(sorgente, sottotitoli, uscita, scelta="centro", riquadri=None):
+def durata_video(percorso):
+    uscita = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+         "-of", "csv=p=0", percorso], capture_output=True, text=True).stdout.strip()
+    try:
+        return float(uscita)
+    except ValueError:
+        return 0.0
+
+
+class ClipTronca(Exception):
+    """Il montaggio e' finito prima del previsto: la clip non va consegnata."""
+
+
+def monta_verticale(sorgente, sottotitoli, uscita, scelta="centro", riquadri=None,
+                    inizio=0.0, fine=None):
     """Monta il 9:16 con i sottotitoli bruciati (vedi impaginazione.py).
 
+    inizio/fine tagliano il grezzo (l'hook): i tempi del .ass devono gia'
+    essere spostati di conseguenza.
     ffmpeg gira dentro la cartella del lavoro e riceve il nome nudo del file
     .ass: su Windows i due punti di 'C:' rompono il filtro 'ass'.
     """
     cartella = os.path.dirname(sottotitoli)
     filtro = impaginazione.filtro_ffmpeg(scelta, riquadri,
                                          os.path.basename(sottotitoli))
+    taglio = ["-ss", f"{inizio:.2f}"]
+    if fine is not None:
+        taglio += ["-t", f"{fine - inizio:.2f}"]
     subprocess.run(
-        ["ffmpeg", "-y", "-v", "error", "-i", os.path.abspath(sorgente),
+        ["ffmpeg", "-y", "-v", "error", *taglio, "-i", os.path.abspath(sorgente),
          "-filter_complex", filtro, "-map", "[v]", "-map", "0:a?",
          "-af", "loudnorm=I=-14:TP=-1.5", "-c:v", "libx264", "-preset", "medium",
          "-crf", "21", "-pix_fmt", "yuv420p", "-r", "30", "-c:a", "aac",
          "-b:a", "160k", "-movflags", "+faststart", os.path.abspath(uscita)],
         cwd=cartella, check=True)
+    attesa = (fine if fine is not None else durata_video(sorgente)) - inizio
+    ottenuta = durata_video(uscita)
+    if ottenuta < attesa - 1.5:
+        raise ClipTronca(f"{os.path.basename(uscita)} dura {ottenuta:.1f}s invece di "
+                         f"{attesa:.1f}s (montaggio interrotto o grezzo incompleto)")
 
 
 # --------------------------------------------------------------------------
 # Titolo e descrizione
 # --------------------------------------------------------------------------
 
+def titolo_di_ripiego(trascritto, gioco):
+    """Senza Groq: la frase piu' "forte" del parlato (esclamazioni e domande
+    prima, poi la piu' lunga) seguita dal gioco, non piu' "dalla live"."""
+    frasi = [f.strip(" ,.;") for f in re.split(r"(?<=[.!?])\s+", trascritto or "")]
+    frasi = [f for f in frasi if len(f.split()) >= 3]
+    if not frasi:
+        return (gioco + " - " if gioco else "") + "dalla live"
+    frase = max(frasi, key=lambda f: (f[-1] in "!?", min(len(f), 60)))
+    if len(frase) > 60:
+        frase = frase[:60].rsplit(" ", 1)[0] + "…"
+    frase = frase[0].upper() + frase[1:]
+    return f"{frase} | {gioco}" if gioco else frase
+
+
 def proponi_testi(trascritto, gioco, titolo_live, piattaforma="youtube"):
     etichette = "#twitch #gaming #perte" if piattaforma == "tiktok" else "#shorts #twitch #gaming"
     base_desc = (f"Dalla live su Twitch: https://twitch.tv/{CANALE}\n"
                  f"{('Gioco: ' + gioco) if gioco else ''}\n\n{etichette}")
-    ripiego = {"titolo": (gioco + " - " if gioco else "") + "dalla live",
-               "descrizione": base_desc}
-    if not GROQ_KEY or not trascritto.strip():
+    ripiego = {"titolo": titolo_di_ripiego(trascritto, gioco), "descrizione": base_desc}
+    if not GROQ_KEY:
+        print("[Groq] GROQ_API_KEY mancante nel .env: titolo dalla frase migliore.")
+        return ripiego
+    if not trascritto.strip():
         return ripiego
     from groq import Groq
     client = Groq(api_key=GROQ_KEY)
@@ -434,61 +566,91 @@ def taglia(vod_id, prova=False):
     messaggi = chat_live(vod_id, cartella)
     volume, reazioni = punteggio.chat_per_secondo(messaggi, len(energia))
     valori = punteggio.segnale(energia, volume, reazioni)
-    scelti = punteggio.candidati(valori, quante=QUANTE)
+    # Si chiedono piu' momenti del necessario: i primi QUANTE vanno su YouTube,
+    # le versioni lunghe per TikTok si prendono dai successivi, cosi' le due
+    # piattaforme non ricevono lo stesso momento due volte.
+    scelti = punteggio.candidati(valori, quante=QUANTE + QUANTE_TIKTOK * 2)
     nomi_chat = sorted({m[1] for m in messaggi if m[1]})
     print(f"[Analisi] {len(energia) // 60} minuti, {len(messaggi)} messaggi, "
           f"{len(scelti)} momenti")
 
-    # Ai momenti migliori si aggiunge la versione lunga per TikTok, con un id
-    # suo: le due schede si approvano e si pubblicano separatamente.
     da_montare = [(f"{vod_id}_{inizio:05d}", inizio, fine, punti, "youtube")
-                  for inizio, fine, punti, _picco in scelti]
-    for _inizio, _fine, punti, picco in scelti[:QUANTE_TIKTOK]:
+                  for inizio, fine, punti, _picco in scelti[:QUANTE]]
+    for _inizio, _fine, punti, picco in scelti[QUANTE:]:
+        if sum(1 for c in da_montare if c[4] == "tiktok") >= QUANTE_TIKTOK:
+            break
         lunga = punteggio.finestra_tiktok(picco, len(energia))
-        if lunga:
+        if lunga and not any(punteggio.sovrapposte(lunga, (c[1], c[2])) for c in da_montare):
             da_montare.append((f"{vod_id}_{lunga[0]:05d}_tt", lunga[0], lunga[1],
                                punti, "tiktok"))
 
     release = None
     schede = []
     for cid, inizio, fine, punti, piattaforma in da_montare:
-        grezzo = os.path.join(cartella, f"{cid}_grezzo.mp4")
-        finale = os.path.join(cartella, f"{cid}.mp4")
-        ass = os.path.join(cartella, f"{cid}.ass")
-        print(f"[Clip] {cid}: {inizio // 60}:{inizio % 60:02d}, {fine - inizio}s, punti {punti}")
-
-        scarica_pezzo(vod_id, inizio, fine, grezzo)
-        parole = trascrivi(grezzo)
-        testo = " ".join(p[2] for p in parole)
-        scelta, riquadri = scegli_impaginazione(grezzo, fine - inizio)
-        scrivi_ass(parole, ass, margine=impaginazione.margine_sottotitoli(scelta))
-        monta_verticale(grezzo, ass, finale, scelta, riquadri)
-
-        avvisi = punteggio.controlla_testo(testo, nomi_chat)
-        punti = punteggio.applica_penalita(punti, avvisi)
-        gioco = gioco_al_secondo(info, inizio)
-        testi = proponi_testi(testo, gioco, titolo_live, piattaforma)
-
-        scheda = {
-            "id": cid, "titolo": testi["titolo"], "descrizione": testi["descrizione"],
-            "gioco": gioco, "data_live": data_live.date().isoformat(),
-            "secondo_inizio_vod": inizio, "durata": fine - inizio,
-            "punteggio": punti, "lingua": "it", "video_url": None,
-            "stato": "da_approvare", "voti": {}, "orario": None, "youtube_id": None,
-            "avvisi": avvisi, "trascrizione": testo[:1500], "impaginazione": scelta,
-            "piattaforma": piattaforma,
-        }
+        try:
+            scheda = monta_clip(vod_id, info, titolo_live, data_live, cartella, nomi_chat,
+                                cid, inizio, fine, punti, piattaforma)
+        except ClipTronca as e:
+            print(f"[Errore] Clip {cid} TRONCA, scartata: {e}")
+            continue
+        except Exception as e:
+            print(f"[Errore] Clip {cid} non montata, scartata: {type(e).__name__}: {e}")
+            continue
         if not prova:
             release = release or release_del_giorno()
-            scheda["video_url"] = carica_video(release, finale, f"{cid}.mp4")
+            scheda["video_url"] = carica_video(release, os.path.join(cartella, f"{cid}.mp4"),
+                                               f"{cid}.mp4")
             scrivi_scheda(scheda)
             print(f"[Consegna] {cid} -> {CARTELLA_REPO}/{cid}.json")
         else:
             with open(os.path.join(cartella, f"{cid}.json"), "w", encoding="utf-8") as f:
                 json.dump(scheda, f, ensure_ascii=False, indent=2)
-        os.remove(grezzo)
         schede.append(scheda)
     return schede
+
+
+def monta_clip(vod_id, info, titolo_live, data_live, cartella, nomi_chat,
+               cid, inizio, fine, punti, piattaforma):
+    """Scarica, trascrive, taglia all'hook e monta una clip; ritorna la scheda."""
+    grezzo = os.path.join(cartella, f"{cid}_grezzo.mp4")
+    finale = os.path.join(cartella, f"{cid}.mp4")
+    ass = os.path.join(cartella, f"{cid}.ass")
+    print(f"[Clip] {cid}: {inizio // 60}:{inizio % 60:02d}, {fine - inizio}s, punti {punti}")
+
+    scarica_pezzo(vod_id, inizio, fine, grezzo)
+    durata_grezzo = durata_video(grezzo)
+    if durata_grezzo < (fine - inizio) - 3:
+        raise ClipTronca(f"il pezzo scaricato dura {durata_grezzo:.1f}s "
+                         f"invece di {fine - inizio}s")
+    parole = trascrivi(grezzo)
+    minimo = 61 if piattaforma == "tiktok" else punteggio.DURATA_MIN
+    taglio = punteggio.taglio_hook(parole, durata_grezzo, minimo)
+    parole = [(a - taglio[0], b - taglio[0], t) for a, b, t in parole
+              if a >= taglio[0] and b <= taglio[1] + 0.5]
+    testo = " ".join(p[2] for p in parole)
+    print(f"[Hook] {cid}: tengo {taglio[0]:.1f}-{taglio[1]:.1f}s di {durata_grezzo:.0f}s, "
+          f"{len(parole)} parole")
+    scelta, riquadri = scegli_impaginazione(grezzo, durata_grezzo)
+    scrivi_ass(parole, ass, margine=impaginazione.margine_sottotitoli(scelta))
+    monta_verticale(grezzo, ass, finale, scelta, riquadri, taglio[0], taglio[1])
+    os.remove(grezzo)
+    inizio_vero = inizio + int(taglio[0])
+    durata = round(taglio[1] - taglio[0])
+
+    avvisi = punteggio.controlla_testo(testo, nomi_chat)
+    punti = punteggio.correggi_per_parlato(punti, len(parole))
+    punti = punteggio.applica_penalita(punti, avvisi)
+    gioco = gioco_al_secondo(info, inizio)
+    testi = proponi_testi(testo, gioco, titolo_live, piattaforma)
+    return {
+        "id": cid, "titolo": testi["titolo"], "descrizione": testi["descrizione"],
+        "gioco": gioco, "data_live": data_live.date().isoformat(),
+        "secondo_inizio_vod": inizio_vero, "durata": durata,
+        "punteggio": punti, "lingua": "it", "video_url": None,
+        "stato": "da_approvare", "voti": {}, "orario": None, "youtube_id": None,
+        "avvisi": avvisi, "trascrizione": testo[:1500], "impaginazione": scelta,
+        "piattaforma": piattaforma,
+    }
 
 
 def main():

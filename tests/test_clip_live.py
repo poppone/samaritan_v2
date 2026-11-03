@@ -296,3 +296,47 @@ def test_la_clip_caricata_porta_il_link(tmp_path, monkeypatch):
     # La scheda sul disco resta quella scritta da taglia_live.
     salvata = json.load(open(os.path.join(tmp_path, "a.json"), encoding="utf-8"))
     assert salvata["descrizione"] == "Ciao."
+
+
+# --- qualita' per gli streamer (prova del 3/11) --------------------------------
+
+def test_i_picchi_alti_non_finiscono_tutti_a_cento():
+    punti = [punteggio.punteggio_da_z(z) for z in (2, 5, 9, 15)]
+    assert punti == sorted(punti) and len(set(punti)) == 4 and max(punti) < 100
+    assert punteggio.punteggio_da_z(0) == 50
+
+
+def test_le_voci_inglesi_del_gioco_si_riconoscono():
+    assert punteggio.sembra_inglese("Our sex fist part cannot fail!".split())
+    assert punteggio.sembra_inglese("So man, you can't control your bloodlust".split())
+    assert not punteggio.sembra_inglese("ma non ha più stamina, perché non è stordito".split())
+    assert not punteggio.sembra_inglese("Ah, why smetti un secondo di menare le mani".split())
+
+
+def test_hook_taglia_il_silenzio_iniziale_senza_scendere_sotto_il_minimo():
+    parole = [(19.8, 20.5, "ma"), (20.5, 21.7, "stamina"), (24.0, 24.4, "dio")]
+    inizio, fine = punteggio.taglio_hook(parole, 34, minimo=15)
+    assert inizio == 18.8 and fine - inizio >= 14.99 and fine <= 34
+    assert punteggio.taglio_hook([], 34) == (0.0, 34.0)
+
+
+def test_finestre_sovrapposte():
+    assert punteggio.sovrapposte((100, 160), (150, 180))
+    assert not punteggio.sovrapposte((100, 160), (160, 200))
+
+
+def test_sottotitoli_brevi_e_senza_righe_ferme():
+    from taglia_live import taglia_live as tl
+    parole = [(0.0, 0.4, "attimo"), (0.4, 12.9, "come"), (13.0, 13.4, "fatto"),
+              (13.4, 13.8, "c'è")]
+    gruppi = tl.gruppi_sottotitoli(parole)
+    assert all(f - i <= tl.RIGA_MAX_SECONDI for i, f, _t in gruppi)
+    assert all(len(t) <= tl.RIGA_MAX_CARATTERI for _i, _f, t in gruppi)
+    assert "c'è" in " ".join(t for _i, _f, t in gruppi)
+
+
+def test_titolo_di_ripiego_usa_il_parlato():
+    from taglia_live import taglia_live as tl
+    titolo = tl.titolo_di_ripiego("ok vai. Ma non ha più stamina, perché non è stordito? poi", "Phantom Blade Zero")
+    assert titolo.startswith("Ma non ha più stamina") and titolo.endswith("| Phantom Blade Zero")
+    assert tl.titolo_di_ripiego("", "X") == "X - dalla live"
