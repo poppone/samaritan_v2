@@ -1,6 +1,6 @@
 {
-  "aggiornato": "2026-11-03",
-  "dati_fino_al": "2026-10-31",
+  "aggiornato": "2026-11-04",
+  "dati_fino_al": "2026-11-01",
   "video": {
     "W_LyppmTpT8": {
       "views": 1613,
@@ -43,7 +43,7 @@
       "subscribersGained": 2
     },
     "OWIbKkP_KsY": {
-      "views": 1175,
+      "views": 1179,
       "averageViewPercentage": 50.94,
       "averageViewDuration": 14,
       "likes": 27,
@@ -67,7 +67,7 @@
       "subscribersGained": 0
     },
     "Q6yF8Dx-tFA": {
-      "views": 1125,
+      "views": 1126,
       "averageViewPercentage": 56.41,
       "averageViewDuration": 11,
       "likes": 15,
@@ -99,8 +99,8 @@
       "subscribersGained": 1
     },
     "VcWzJ4-efkY": {
-      "views": 1104,
-      "averageViewPercentage": 37.92,
+      "views": 1105,
+      "averageViewPercentage": 37.9,
       "averageViewDuration": 10,
       "likes": 9,
       "comments": 0,
@@ -139,7 +139,7 @@
       "subscribersGained": 0
     },
     "ekOXQJlRNOM": {
-      "views": 1030,
+      "views": 1032,
       "averageViewPercentage": 49.78,
       "averageViewDuration": 11,
       "likes": 5,
@@ -155,7 +155,7 @@
       "subscribersGained": 1
     },
     "EN_5Db7E5V0": {
-      "views": 1026,
+      "views": 1027,
       "averageViewPercentage": 35.56,
       "averageViewDuration": 8,
       "likes": 11,
@@ -170,14 +170,6 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "LopJWpt8m9c": {
-      "views": 1006,
-      "averageViewPercentage": 39.37,
-      "averageViewDuration": 9,
-      "likes": 15,
-      "comments": 0,
-      "subscribersGained": 1
-    },
     "Hsw82cK6GAM": {
       "views": 1006,
       "averageViewPercentage": 62.68,
@@ -186,19 +178,19 @@
       "comments": 1,
       "subscribersGained": 0
     },
+    "LopJWpt8m9c": {
+      "views": 1006,
+      "averageViewPercentage": 39.37,
+      "averageViewDuration": 9,
+      "likes": 15,
+      "comments": 0,
+      "subscribersGained": 1
+    },
     "dT4jY5XLc7U": {
       "views": 1000,
       "averageViewPercentage": 43.41,
       "averageViewDuration": 12,
       "likes": 14,
-      "comments": 0,
-      "subscribersGained": 1
-    },
-    "qdgHNpV9hso": {
-      "views": 989,
-      "averageViewPercentage": 66.41,
-      "averageViewDuration": 17,
-      "likes": 9,
       "comments": 0,
       "subscribersGained": 1
     },
@@ -209,6 +201,14 @@
       "likes": 26,
       "comments": 0,
       "subscribersGained": 0
+    },
+    "qdgHNpV9hso": {
+      "views": 989,
+      "averageViewPercentage": 66.41,
+      "averageViewDuration": 17,
+      "likes": 9,
+      "comments": 0,
+      "subscribersGained": 1
     },
     "SmE3oRuEo3M": {
       "views": 978,
@@ -226,14 +226,6 @@
       "comments": 0,
       "subscribersGained": 2
     },
-    "8p52QJPpCwE": {
-      "views": 968,
-      "averageViewPercentage": 70.61,
-      "averageViewDuration": 12,
-      "likes": 19,
-      "comments": 0,
-      "subscribersGained": 5
-    },
     "GDgk5-0BOS0": {
       "views": 968,
       "averageViewPercentage": 48.53,
@@ -241,6 +233,14 @@
       "likes": 20,
       "comments": 0,
       "subscribersGained": 0
+    },
+    "8p52QJPpCwE": {
+      "views": 968,
+      "averageViewPercentage": 70.61,
+      "averageViewDuration": 12,
+      "likes": 19,
+      "comments": 0,
+      "subscribersGained": 5
     },
     "aUKgSfnwFR4": {
       "views": 967,
@@ -307,7 +307,7 @@
       "subscribersGained": 1
     },
     "_pA6gyZHr90": {
-      "views": 921,
+      "views": 922,
       "averageViewPercentage": 43.92,
       "averageViewDuration": 14,
       "likes": 9,
@@ -315,8 +315,8 @@
       "subscribersGained": 0
     },
     "L4agTom6nRE": {
-      "views": 874,
-      "averageViewPercentage": 64.44,
+      "views": 881,
+      "averageViewPercentage": 64.48,
       "averageViewDuration": 16,
       "likes": 3,
       "comments": 0,
@@ -387,7 +387,7 @@
       "subscribersGained": 0
     },
     "cw-FGyNrSws": {
-      "views": 731,
+      "views": 732,
       "averageViewPercentage": 44.09,
       "averageViewDuration": 10,
       "likes": 7,
@@ -419,16 +419,16 @@
       "subscribersGained": 0
     },
     "iu9jN-Cz-6M": {
-      "views": 615,
-      "averageViewPercentage": 60.39,
+      "views": 616,
+      "averageViewPercentage": 60.29,
       "averageViewDuration": 19,
       "likes": 4,
       "comments": 1,
       "subscribersGained": 2
     },
     "oF6C6PDqosI": {
-      "views": 610,
-      "averageViewPercentage": 73.5,
+      "views": 611,
+      "averageViewPercentage": 73.34,
       "averageViewDuration": 16,
       "likes": 10,
       "comments": 0,
@@ -443,8 +443,8 @@
       "subscribersGained": 1
     },
     "KvGNP5Hh3YA": {
-      "views": 536,
-      "averageViewPercentage": 46.87,
+      "views": 545,
+      "averageViewPercentage": 47.54,
       "averageViewDuration": 10,
       "likes": 8,
       "comments": 0,
@@ -499,8 +499,8 @@
       "subscribersGained": 0
     },
     "BFXpAQy7zhc": {
-      "views": 474,
-      "averageViewPercentage": 46.62,
+      "views": 475,
+      "averageViewPercentage": 47.05,
       "averageViewDuration": 10,
       "likes": 7,
       "comments": 0,
@@ -723,8 +723,8 @@
       "subscribersGained": 0
     },
     "RtlJ3NntkqI": {
-      "views": 162,
-      "averageViewPercentage": 72.57,
+      "views": 167,
+      "averageViewPercentage": 73.61,
       "averageViewDuration": 18,
       "likes": 2,
       "comments": 0,
@@ -738,19 +738,19 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "0_xbkfbQYgw": {
-      "views": 155,
-      "averageViewPercentage": 46.51,
-      "averageViewDuration": 12,
-      "likes": 2,
-      "comments": 0,
-      "subscribersGained": 0
-    },
     "ldH6OJBNMy8": {
       "views": 155,
       "averageViewPercentage": 55.35,
       "averageViewDuration": 11,
       "likes": 3,
+      "comments": 0,
+      "subscribersGained": 0
+    },
+    "0_xbkfbQYgw": {
+      "views": 155,
+      "averageViewPercentage": 46.51,
+      "averageViewDuration": 12,
+      "likes": 2,
       "comments": 0,
       "subscribersGained": 0
     },
@@ -770,19 +770,19 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "IrnA5Mnu5Fg": {
-      "views": 144,
-      "averageViewPercentage": 53.76,
-      "averageViewDuration": 13,
-      "likes": 3,
-      "comments": 0,
-      "subscribersGained": 0
-    },
     "TGV8xVWB6e8": {
       "views": 144,
       "averageViewPercentage": 36.21,
       "averageViewDuration": 10,
       "likes": 0,
+      "comments": 0,
+      "subscribersGained": 0
+    },
+    "IrnA5Mnu5Fg": {
+      "views": 144,
+      "averageViewPercentage": 53.76,
+      "averageViewDuration": 13,
+      "likes": 3,
       "comments": 0,
       "subscribersGained": 0
     },
@@ -834,19 +834,19 @@
       "comments": 0,
       "subscribersGained": 0
     },
+    "XGAcnsdiQWE": {
+      "views": 128,
+      "averageViewPercentage": 60.62,
+      "averageViewDuration": 16,
+      "likes": 0,
+      "comments": 0,
+      "subscribersGained": 0
+    },
     "IpqtvKkLR8s": {
       "views": 128,
       "averageViewPercentage": 32.77,
       "averageViewDuration": 8,
       "likes": 1,
-      "comments": 0,
-      "subscribersGained": 0
-    },
-    "XGAcnsdiQWE": {
-      "views": 127,
-      "averageViewPercentage": 60.96,
-      "averageViewDuration": 16,
-      "likes": 0,
       "comments": 0,
       "subscribersGained": 0
     },
@@ -882,19 +882,27 @@
       "comments": 0,
       "subscribersGained": 0
     },
+    "Owns_zy69r0": {
+      "views": 102,
+      "averageViewPercentage": 77.71,
+      "averageViewDuration": 17,
+      "likes": 0,
+      "comments": 0,
+      "subscribersGained": 0
+    },
+    "5wJGF3bA5iQ": {
+      "views": 102,
+      "averageViewPercentage": 32,
+      "averageViewDuration": 10,
+      "likes": 0,
+      "comments": 0,
+      "subscribersGained": 0
+    },
     "rxsfkBLeil0": {
       "views": 93,
       "averageViewPercentage": 57.78,
       "averageViewDuration": 12,
       "likes": 1,
-      "comments": 0,
-      "subscribersGained": 0
-    },
-    "_3gt-DL4ggM": {
-      "views": 86,
-      "averageViewPercentage": 61.88,
-      "averageViewDuration": 12,
-      "likes": 3,
       "comments": 0,
       "subscribersGained": 0
     },
@@ -906,8 +914,16 @@
       "comments": 0,
       "subscribersGained": 1
     },
+    "_3gt-DL4ggM": {
+      "views": 86,
+      "averageViewPercentage": 61.88,
+      "averageViewDuration": 12,
+      "likes": 3,
+      "comments": 0,
+      "subscribersGained": 0
+    },
     "kZOXnaGC3IE": {
-      "views": 84,
+      "views": 85,
       "averageViewPercentage": 61.39,
       "averageViewDuration": 14,
       "likes": 4,
@@ -930,14 +946,6 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "Owns_zy69r0": {
-      "views": 71,
-      "averageViewPercentage": 76.42,
-      "averageViewDuration": 17,
-      "likes": 0,
-      "comments": 0,
-      "subscribersGained": 0
-    },
     "R1TdHJG09V8": {
       "views": 71,
       "averageViewPercentage": 36.7,
@@ -953,6 +961,14 @@
       "likes": 1,
       "comments": 1,
       "subscribersGained": 1
+    },
+    "IXP_eYNAU5w": {
+      "views": 68,
+      "averageViewPercentage": 50.2,
+      "averageViewDuration": 13,
+      "likes": 1,
+      "comments": 0,
+      "subscribersGained": 0
     },
     "tO9HT-un5_U": {
       "views": 66,
@@ -970,6 +986,14 @@
       "comments": 0,
       "subscribersGained": 0
     },
+    "_29smtkaCSc": {
+      "views": 64,
+      "averageViewPercentage": 48.69,
+      "averageViewDuration": 13,
+      "likes": 1,
+      "comments": 0,
+      "subscribersGained": 0
+    },
     "sYK1gNzzOKo": {
       "views": 64,
       "averageViewPercentage": 62.08,
@@ -978,13 +1002,21 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "_29smtkaCSc": {
-      "views": 64,
-      "averageViewPercentage": 48.69,
-      "averageViewDuration": 13,
+    "olGTVB9MCwo": {
+      "views": 63,
+      "averageViewPercentage": 65.87,
+      "averageViewDuration": 15,
       "likes": 1,
       "comments": 0,
       "subscribersGained": 0
+    },
+    "IoulOcpZ6fo": {
+      "views": 63,
+      "averageViewPercentage": 60.01,
+      "averageViewDuration": 13,
+      "likes": 5,
+      "comments": 0,
+      "subscribersGained": 1
     },
     "N-0M_94pVQw": {
       "views": 61,
@@ -995,7 +1027,7 @@
       "subscribersGained": 0
     },
     "3o73KvoitIQ": {
-      "views": 60,
+      "views": 61,
       "averageViewPercentage": 30.130000000000003,
       "averageViewDuration": 6,
       "likes": 2,
@@ -1010,19 +1042,19 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "P0u24y3Jh0w": {
-      "views": 59,
-      "averageViewPercentage": 7.3,
-      "averageViewDuration": 6,
+    "o9xNrVs7qNA": {
+      "views": 56,
+      "averageViewPercentage": 48.17,
+      "averageViewDuration": 12,
       "likes": 0,
       "comments": 0,
       "subscribersGained": 0
     },
-    "IXP_eYNAU5w": {
-      "views": 59,
-      "averageViewPercentage": 52.300000000000004,
-      "averageViewDuration": 14,
-      "likes": 1,
+    "P0u24y3Jh0w": {
+      "views": 56,
+      "averageViewPercentage": 7.3,
+      "averageViewDuration": 6,
+      "likes": 0,
       "comments": 0,
       "subscribersGained": 0
     },
@@ -1041,22 +1073,6 @@
       "likes": 1,
       "comments": 0,
       "subscribersGained": 0
-    },
-    "o9xNrVs7qNA": {
-      "views": 56,
-      "averageViewPercentage": 48.17,
-      "averageViewDuration": 12,
-      "likes": 0,
-      "comments": 0,
-      "subscribersGained": 0
-    },
-    "IoulOcpZ6fo": {
-      "views": 55,
-      "averageViewPercentage": 58.63,
-      "averageViewDuration": 12,
-      "likes": 5,
-      "comments": 0,
-      "subscribersGained": 1
     },
     "ymZtQ_Twjgc": {
       "views": 51,
@@ -1098,18 +1114,10 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "HiIFJbOe6GE": {
-      "views": 43,
-      "averageViewPercentage": 23.5,
-      "averageViewDuration": 4,
-      "likes": 0,
-      "comments": 0,
-      "subscribersGained": 0
-    },
-    "a-cIcjRt-ko": {
-      "views": 43,
-      "averageViewPercentage": 62.7,
-      "averageViewDuration": 26,
+    "jP7VC2A_JD0": {
+      "views": 45,
+      "averageViewPercentage": 31.6,
+      "averageViewDuration": 62,
       "likes": 0,
       "comments": 0,
       "subscribersGained": 0
@@ -1122,10 +1130,26 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "jP7VC2A_JD0": {
-      "views": 42,
-      "averageViewPercentage": 31.980000000000004,
-      "averageViewDuration": 63,
+    "a-cIcjRt-ko": {
+      "views": 43,
+      "averageViewPercentage": 62.7,
+      "averageViewDuration": 26,
+      "likes": 0,
+      "comments": 0,
+      "subscribersGained": 0
+    },
+    "HiIFJbOe6GE": {
+      "views": 43,
+      "averageViewPercentage": 23.5,
+      "averageViewDuration": 4,
+      "likes": 0,
+      "comments": 0,
+      "subscribersGained": 0
+    },
+    "XEp6aZyabiM": {
+      "views": 41,
+      "averageViewPercentage": 105.52999999999999,
+      "averageViewDuration": 30,
       "likes": 0,
       "comments": 0,
       "subscribersGained": 0
@@ -1146,10 +1170,10 @@
       "comments": 0,
       "subscribersGained": 1
     },
-    "5wJGF3bA5iQ": {
-      "views": 41,
-      "averageViewPercentage": 23.81,
-      "averageViewDuration": 7,
+    "4mf9cmfLaYY": {
+      "views": 40,
+      "averageViewPercentage": 80.64,
+      "averageViewDuration": 20,
       "likes": 0,
       "comments": 0,
       "subscribersGained": 0
@@ -1162,14 +1186,6 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "4mf9cmfLaYY": {
-      "views": 40,
-      "averageViewPercentage": 80.64,
-      "averageViewDuration": 20,
-      "likes": 0,
-      "comments": 0,
-      "subscribersGained": 0
-    },
     "QKpdilxmOHU": {
       "views": 39,
       "averageViewPercentage": 17.13,
@@ -1178,10 +1194,10 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "XEp6aZyabiM": {
-      "views": 38,
-      "averageViewPercentage": 105.52999999999999,
-      "averageViewDuration": 30,
+    "9Sb6qwMa9rw": {
+      "views": 36,
+      "averageViewPercentage": 47.9,
+      "averageViewDuration": 11,
       "likes": 0,
       "comments": 0,
       "subscribersGained": 0
@@ -1190,14 +1206,6 @@
       "views": 36,
       "averageViewPercentage": 104.76,
       "averageViewDuration": 7,
-      "likes": 0,
-      "comments": 0,
-      "subscribersGained": 0
-    },
-    "9Sb6qwMa9rw": {
-      "views": 36,
-      "averageViewPercentage": 47.9,
-      "averageViewDuration": 11,
       "likes": 0,
       "comments": 0,
       "subscribersGained": 0
@@ -1218,19 +1226,19 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "SHmPQOzpkKQ": {
-      "views": 33,
-      "averageViewPercentage": 5.22,
-      "averageViewDuration": 27,
-      "likes": 0,
-      "comments": 0,
-      "subscribersGained": 0
-    },
     "kjSxYkGYahM": {
       "views": 33,
       "averageViewPercentage": 38.93,
       "averageViewDuration": 8,
       "likes": 3,
+      "comments": 0,
+      "subscribersGained": 0
+    },
+    "SHmPQOzpkKQ": {
+      "views": 33,
+      "averageViewPercentage": 5.22,
+      "averageViewDuration": 27,
+      "likes": 0,
       "comments": 0,
       "subscribersGained": 0
     },
@@ -1250,22 +1258,6 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "nAVmlAY5PUo": {
-      "views": 30,
-      "averageViewPercentage": 23.84,
-      "averageViewDuration": 13,
-      "likes": 0,
-      "comments": 0,
-      "subscribersGained": 0
-    },
-    "KquML5mY0vs": {
-      "views": 30,
-      "averageViewPercentage": 156.39,
-      "averageViewDuration": 42,
-      "likes": 1,
-      "comments": 0,
-      "subscribersGained": 0
-    },
     "Q73PxLLDQrU": {
       "views": 30,
       "averageViewPercentage": 56.88999999999999,
@@ -1274,10 +1266,26 @@
       "comments": 0,
       "subscribersGained": 0
     },
+    "nAVmlAY5PUo": {
+      "views": 30,
+      "averageViewPercentage": 23.84,
+      "averageViewDuration": 13,
+      "likes": 0,
+      "comments": 0,
+      "subscribersGained": 0
+    },
     "nXO9C6qwQus": {
       "views": 30,
       "averageViewPercentage": 56.45,
       "averageViewDuration": 13,
+      "likes": 1,
+      "comments": 0,
+      "subscribersGained": 0
+    },
+    "KquML5mY0vs": {
+      "views": 30,
+      "averageViewPercentage": 156.39,
+      "averageViewDuration": 42,
       "likes": 1,
       "comments": 0,
       "subscribersGained": 0
@@ -1298,14 +1306,6 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "FB4X18eY2nw": {
-      "views": 27,
-      "averageViewPercentage": 48.5,
-      "averageViewDuration": 15,
-      "likes": 1,
-      "comments": 0,
-      "subscribersGained": 0
-    },
     "c67mz-1PROg": {
       "views": 27,
       "averageViewPercentage": 61.49,
@@ -1313,6 +1313,14 @@
       "likes": 0,
       "comments": 0,
       "subscribersGained": 1
+    },
+    "FB4X18eY2nw": {
+      "views": 27,
+      "averageViewPercentage": 48.5,
+      "averageViewDuration": 15,
+      "likes": 1,
+      "comments": 0,
+      "subscribersGained": 0
     },
     "Vm_P0UcmPok": {
       "views": 27,
@@ -1322,17 +1330,17 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "huo8fRTwxXs": {
+    "uLnTXOAC8aI": {
       "views": 26,
-      "averageViewPercentage": 37.16,
+      "averageViewPercentage": 37.98,
       "averageViewDuration": 11,
       "likes": 1,
       "comments": 0,
       "subscribersGained": 0
     },
-    "uLnTXOAC8aI": {
+    "huo8fRTwxXs": {
       "views": 26,
-      "averageViewPercentage": 37.98,
+      "averageViewPercentage": 37.16,
       "averageViewDuration": 11,
       "likes": 1,
       "comments": 0,
@@ -1362,14 +1370,6 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "2jKKW3uQ3nk": {
-      "views": 24,
-      "averageViewPercentage": 64.79,
-      "averageViewDuration": 21,
-      "likes": 1,
-      "comments": 0,
-      "subscribersGained": 0
-    },
     "ns3Jjc0FDGs": {
       "views": 24,
       "averageViewPercentage": 33.65,
@@ -1378,18 +1378,34 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "pI8Ie8NcgrA": {
-      "views": 23,
-      "averageViewPercentage": 41.72,
-      "averageViewDuration": 11,
+    "l7SQPBn5zkQ": {
+      "views": 24,
+      "averageViewPercentage": 4.96,
+      "averageViewDuration": 30,
       "likes": 0,
       "comments": 0,
       "subscribersGained": 0
     },
-    "l7SQPBn5zkQ": {
+    "F3sP6uAzMJU": {
+      "views": 24,
+      "averageViewPercentage": 40.65,
+      "averageViewDuration": 12,
+      "likes": 1,
+      "comments": 0,
+      "subscribersGained": 0
+    },
+    "2jKKW3uQ3nk": {
+      "views": 24,
+      "averageViewPercentage": 64.79,
+      "averageViewDuration": 21,
+      "likes": 1,
+      "comments": 0,
+      "subscribersGained": 0
+    },
+    "pI8Ie8NcgrA": {
       "views": 23,
-      "averageViewPercentage": 4.96,
-      "averageViewDuration": 30,
+      "averageViewPercentage": 41.72,
+      "averageViewDuration": 11,
       "likes": 0,
       "comments": 0,
       "subscribersGained": 0
@@ -1402,18 +1418,18 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "F3sP6uAzMJU": {
-      "views": 23,
-      "averageViewPercentage": 40.65,
-      "averageViewDuration": 12,
-      "likes": 1,
-      "comments": 0,
-      "subscribersGained": 0
-    },
     "r1hS9EGO4HU": {
       "views": 22,
       "averageViewPercentage": 84.76,
       "averageViewDuration": 22,
+      "likes": 0,
+      "comments": 0,
+      "subscribersGained": 0
+    },
+    "tBz1B6plxvE": {
+      "views": 22,
+      "averageViewPercentage": 37.83,
+      "averageViewDuration": 12,
       "likes": 0,
       "comments": 0,
       "subscribersGained": 0
@@ -1426,26 +1442,18 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "tBz1B6plxvE": {
-      "views": 22,
-      "averageViewPercentage": 37.83,
+    "XzKyaniQ76U": {
+      "views": 21,
+      "averageViewPercentage": 49.78,
       "averageViewDuration": 12,
-      "likes": 0,
+      "likes": 1,
       "comments": 0,
       "subscribersGained": 0
     },
-    "OSj9UHKNZag": {
-      "views": 18,
-      "averageViewPercentage": 82.87,
-      "averageViewDuration": 27,
-      "likes": 0,
-      "comments": 0,
-      "subscribersGained": 0
-    },
-    "X8KJ4hsSWls": {
-      "views": 18,
-      "averageViewPercentage": 46.13,
-      "averageViewDuration": 8,
+    "f4Yao9XVqBQ": {
+      "views": 19,
+      "averageViewPercentage": 40.18,
+      "averageViewDuration": 12,
       "likes": 0,
       "comments": 0,
       "subscribersGained": 0
@@ -1466,11 +1474,43 @@
       "comments": 0,
       "subscribersGained": 0
     },
+    "OSj9UHKNZag": {
+      "views": 18,
+      "averageViewPercentage": 82.87,
+      "averageViewDuration": 27,
+      "likes": 0,
+      "comments": 0,
+      "subscribersGained": 0
+    },
+    "6uho7cDZqYo": {
+      "views": 18,
+      "averageViewPercentage": 66.39,
+      "averageViewDuration": 15,
+      "likes": 0,
+      "comments": 0,
+      "subscribersGained": 0
+    },
     "9AxBr0PukaY": {
       "views": 17,
       "averageViewPercentage": 76.31,
       "averageViewDuration": 6,
       "likes": 0,
+      "comments": 0,
+      "subscribersGained": 0
+    },
+    "0AZN5h6d_5w": {
+      "views": 17,
+      "averageViewPercentage": 62.91,
+      "averageViewDuration": 14,
+      "likes": 0,
+      "comments": 0,
+      "subscribersGained": 0
+    },
+    "kMbbHbqHdqA": {
+      "views": 17,
+      "averageViewPercentage": 46.6,
+      "averageViewDuration": 14,
+      "likes": 1,
       "comments": 0,
       "subscribersGained": 0
     },
@@ -1482,11 +1522,11 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "kMbbHbqHdqA": {
+    "X8KJ4hsSWls": {
       "views": 17,
-      "averageViewPercentage": 46.6,
-      "averageViewDuration": 14,
-      "likes": 1,
+      "averageViewPercentage": 49.96,
+      "averageViewDuration": 9,
+      "likes": 0,
       "comments": 0,
       "subscribersGained": 0
     },
@@ -1506,11 +1546,11 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "f4Yao9XVqBQ": {
+    "RtlDGLLzJ1I": {
       "views": 15,
-      "averageViewPercentage": 40.27,
-      "averageViewDuration": 12,
-      "likes": 0,
+      "averageViewPercentage": 104.90000000000002,
+      "averageViewDuration": 15,
+      "likes": -1,
       "comments": 0,
       "subscribersGained": 0
     },
@@ -1519,14 +1559,6 @@
       "averageViewPercentage": 45.64,
       "averageViewDuration": 17,
       "likes": 1,
-      "comments": 0,
-      "subscribersGained": 0
-    },
-    "RtlDGLLzJ1I": {
-      "views": 15,
-      "averageViewPercentage": 104.90000000000002,
-      "averageViewDuration": 15,
-      "likes": -1,
       "comments": 0,
       "subscribersGained": 0
     },
@@ -1569,38 +1601,6 @@
       "likes": 0,
       "comments": 0,
       "subscribersGained": 0
-    },
-    "i5xW94wgmVY": {
-      "views": 12,
-      "averageViewPercentage": 90.57,
-      "averageViewDuration": 11,
-      "likes": 0,
-      "comments": 0,
-      "subscribersGained": 0
-    },
-    "KTH-MdKQ3cc": {
-      "views": 12,
-      "averageViewPercentage": 52.01,
-      "averageViewDuration": 11,
-      "likes": 0,
-      "comments": 0,
-      "subscribersGained": 0
-    },
-    "KUsjUR1eLHo": {
-      "views": 12,
-      "averageViewPercentage": 60.79,
-      "averageViewDuration": 15,
-      "likes": 0,
-      "comments": 0,
-      "subscribersGained": 0
-    },
-    "TaJA6aKh9DE": {
-      "views": 11,
-      "averageViewPercentage": 64.05,
-      "averageViewDuration": 12,
-      "likes": 0,
-      "comments": 0,
-      "subscribersGained": 0
     }
   },
   "ricerche": [
@@ -1614,11 +1614,11 @@
     },
     {
       "termine": "pokemon ruby switch",
-      "views": 74
+      "views": 75
     },
     {
       "termine": "pokemon ruby and sapphire switch",
-      "views": 64
+      "views": 66
     },
     {
       "termine": "pokemon ruby sapphire switch",
@@ -1627,6 +1627,10 @@
     {
       "termine": "sandalo meme",
       "views": 53
+    },
+    {
+      "termine": "nba 2k27 arcade edition",
+      "views": 49
     },
     {
       "termine": "pokemon ruby and sapphire",
@@ -1654,10 +1658,6 @@
     },
     {
       "termine": "il pokémon leggendario",
-      "views": 24
-    },
-    {
-      "termine": "nba 2k27 arcade edition",
       "views": 24
     },
     {
@@ -1693,42 +1693,42 @@
       "views": 15
     },
     {
-      "termine": "pokémon ruby and sapphire",
+      "termine": "mario kart world pc",
+      "views": 14
+    },
+    {
+      "termine": "assassin's creed valhalla",
       "views": 13
     },
     {
-      "termine": "pokemon switch",
-      "views": 12
-    },
-    {
-      "termine": "mafia 3 definitive edition ps5",
-      "views": 11
+      "termine": "pokémon ruby and sapphire",
+      "views": 13
     }
   ],
   "sorgenti": [
     {
       "sorgente": "SHORTS",
-      "views": 64548
+      "views": 64633
     },
     {
       "sorgente": "YT_SEARCH",
-      "views": 5242
+      "views": 5415
     },
     {
       "sorgente": "YT_CHANNEL",
-      "views": 743
+      "views": 745
     },
     {
       "sorgente": "SUBSCRIBER",
-      "views": 616
+      "views": 618
     },
     {
       "sorgente": "YT_OTHER_PAGE",
-      "views": 495
+      "views": 499
     },
     {
       "sorgente": "EXT_URL",
-      "views": 198
+      "views": 202
     },
     {
       "sorgente": "RELATED_VIDEO",
@@ -1736,19 +1736,19 @@
     },
     {
       "sorgente": "HASHTAGS",
-      "views": 18
+      "views": 19
     },
     {
       "sorgente": "SOUND_PAGE",
       "views": 16
     },
     {
-      "sorgente": "NOTIFICATION",
+      "sorgente": "NO_LINK_OTHER",
       "views": 11
     },
     {
-      "sorgente": "NO_LINK_OTHER",
-      "views": 10
+      "sorgente": "NOTIFICATION",
+      "views": 11
     },
     {
       "sorgente": "PLAYLIST",
