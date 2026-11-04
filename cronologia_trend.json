@@ -1,18 +1,5 @@
 [
   {
-    "timestamp": 1789823604,
-    "data": "2026-09-19",
-    "titolo": "EA Sports FC 26: Maradona e Pelé gratis? 🎮",
-    "estratto_script": "Hai mai creduto che Maradona fosse un mito irraggiungibile? La verità è che EA Sports FC 2",
-    "stile": "MYTH_BUSTING_VIRAL",
-    "gioco": "EA Sports FC 26",
-    "query_video": " gameplay",
-    "fonte": "EA Sports FC 26 The World's Game: disponibile l'update con Maradona e Pelé gratis (Everyeye.it)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMitwFBVV95cUxQckRuOTA5ZU5JVkI2RFJUSXBha0d4VThFamtscVU0MEp3TTkxbnUzVG1sbGhMaFlPQWJoeWZSVnlSOUJ6blRiaEM2amZaT09QOEdSSHpMV0NaVTBKTGZvUm9mT19YcDBPZTJ3OF9jNEFpMXQtRzdGSnQwWmo5NklLNUlNelZNb3c4S2h3NnNjdFJBRVZIY0c3OUt4Tmo3THRwQ0JJTDRpU2xiRTc5dzZPdWY0T1VGQ2M?oc=5",
-    "video_id": "Va_15B-z8t4",
-    "veste": "notte"
-  },
-  {
     "timestamp": 1789830131,
     "data": "2026-09-19",
     "titolo": "League of Legends: ritorno classico 🎮",
@@ -3629,5 +3616,21 @@
     "veste": "ghiaccio",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/-hOLFefOHRk-x9HWTGnppWtXBdvaTWRprcUPjBdOgp.mp4",
     "didascalia_tiktok": "PS5: PS2 games hit 120 FPS 🎮\n\nThe PS5SX2 update brings PS2 games to 120 FPS with frame generation. How will this change your retro gaming experience? Let us know in the comments!\n\nMore on davidedurazzi.it\n\n#curiosita #gamingita #fyp"
+  },
+  {
+    "timestamp": 1793797494,
+    "data": "2026-11-04",
+    "titolo": "Grand Theft Auto VI: 90 FPS DLSS experiment 🤯",
+    "lingua": "en",
+    "slot": "20:00",
+    "uscita": 1793818800,
+    "formato": "short",
+    "estratto_script": "NVIDIA just cranked DLSS 5 and multi‑frame generation on GTA VI trailer footage, giving us",
+    "stile": "VIRAL_HOOK_NEWS",
+    "gioco": "Grand Theft Auto VI",
+    "query_video": "gta 6 dlss demo gameplay",
+    "fonte": "GTA 6 Still Has No PC Release Date, but an NVIDIA DLSS 5 and 90 FPS Multi-Frame Generation Experiment Shows How Realistic It Could Look (Wccftech)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMidkFVX3lxTE1qd0hZZk1wQ0FWR3J2WTU2RXhET1ZKN0FvQU1CZS1kNFNZRnB1TWtpcUNIend5cWZna2RTQjBjV25SdXRTQnNPNGVCVVQ5OUpDZVB0U08wTlNNSGNaUWY5SE43WkRuT19HRlE1Z2JodmU1RE5IaWfSAXtBVV95cUxNa3pVTjFndGRwWGpkVExqMTV2Y203OUh5bU5pWUo5SlpsSDFTYjNHblo3Q1VHU2ZHWDdEWUdvOUV3cGVxQjY2WnkzSzAtYjVod1dkTE5GbjNlQUQ3dDZ5QUFVWmMxaWFrM1k5c2RSYzZ6WmRjMjRpV1NxOTg?oc=5",
+    "video_id": null
   }
 ]
