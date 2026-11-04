@@ -1,18 +1,5 @@
 [
   {
-    "timestamp": 1789762170,
-    "data": "2026-09-18",
-    "titolo": "Game Pass: due giochi gratis ora 🎮",
-    "estratto_script": "Stai sbagliando tutto su Game Pass. Oggi aggiunge due titoli gratis, senza costi. Uno è un",
-    "stile": "SEAMLESS_LOOP_FACTS",
-    "gioco": "",
-    "query_video": "game pass free games gameplay",
-    "fonte": "Game Pass aggiunge due giochi gratis oggi, c'è anche un big (SpazioGames)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMilgFBVV95cUxQVmdueEpvU3JxVWZ0aUFicTZqTGw0LXFZbVlqazdtSUJ4U2VGcFRRTWxUdDJXblg1bC1EcHUzWGQ0b0sxb3ItU1lTNG9KMlk0aXlZR3dsNzdBc0lKZlVHSFhOUzlrRVlveEtWS3JJcjNTcE5wN3UyTTBSMzVGaldmbmp1YW5FaXN0cHpWbTFNSHl6Ny1LakE?oc=5",
-    "video_id": "IrnA5Mnu5Fg",
-    "voce": "Davide"
-  },
-  {
     "timestamp": 1789806898,
     "data": "2026-09-19",
     "titolo": "Stalker 2: DONT_DO_THIS - non spendere energia sbagliata ⚠",
@@ -3614,5 +3601,21 @@
     "veste": "arena",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/O61coctFeJg-DCWRb3Y8UG5ldp3cX428aLqfR2BBrn.mp4",
     "didascalia_tiktok": "PS5: Security patch before GTA 6 launch 🚀\n\nSony releases a fresh PS5 security update just before GTA 6's launch. How will this affect your gaming experience?\n\nMore on davidedurazzi.it\n\n#consigli #gamingita #fyp"
+  },
+  {
+    "timestamp": 1793777506,
+    "data": "2026-11-04",
+    "titolo": "GTA 6 su PC: teorie sulla data 🚀",
+    "lingua": "it",
+    "slot": "14:00",
+    "uscita": 1793797200,
+    "formato": "short",
+    "estratto_script": "Rockstar non ha ancora fissato una data per il PC. In realtà, nessuna data ufficiale. Alcu",
+    "stile": "EASTER_EGG_SECRET",
+    "gioco": "Grand Theft Auto VI",
+    "query_video": "gta 6 pc gameplay",
+    "fonte": "GTA 6 su PC: quando sarà finalmente disponibile? Ecco le teorie più intriganti (Everyeye.it)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMimAFBVV95cUxPRHptVDBOaUVoWHU2SDRMY0JKTTRvOElpZEo3Zl9NX2o3aUotRlZvdXZvV1NZTnZDX0EzWFBRdFR3aUw3Y2I4blVGb2RhN3V3cy1nSmc4anVkd2hlbFB6VjluLVVEclNFSmlwV1pydzdKSmF2a3lSeVFoak8xRjI1eEdJamc5Z2FvaWl2ZktTZ0Z4THNvcU1XeQ?oc=5",
+    "video_id": null
   }
 ]
