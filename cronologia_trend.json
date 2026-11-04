@@ -1,17 +1,5 @@
 [
   {
-    "timestamp": 1789806898,
-    "data": "2026-09-19",
-    "titolo": "Stalker 2: DONT_DO_THIS - non spendere energia sbagliata ⚠",
-    "estratto_script": "Stalker 2 ti ricorda: usare la torcia durante l'invasione di mutanti è un suicidio. Il tuo",
-    "stile": "DONT_DO_THIS",
-    "gioco": "Stalker 2",
-    "query_video": "stalker 2 gameplay",
-    "fonte": "STALKER 2 si evolve: le ricche novità dell'Update 2.0 che accompagna Cost of Hope (Everyeye.it)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMirgFBVV95cUxNSnhMLW9pdElfMDNQYktGWERma19xRHFnSUhpeDI5Zmd0TEhiVS04X2hWZlNRMEFVMzhCQ0pVSW15MXpXa1p1Snp4VmZmcFlEMG9PWmF4V1JYdjhja0pLSURzWnF5V0I1cUFRNUxzeHdKLU1hVXZVNm9oUldoMHZLb3ZKTmZkOVRMbDNrZFRQS3BuNXhpcENoMHg2aEg3RnVkNk9Gc241X3diNEFiNGc?oc=5",
-    "video_id": "paG3OyhfaIE"
-  },
-  {
     "timestamp": 1789823604,
     "data": "2026-09-19",
     "titolo": "EA Sports FC 26: Maradona e Pelé gratis? 🎮",
@@ -3621,5 +3609,21 @@
     "veste": "notte",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/Y2e8hF-tXqI-T6eaVmHglvYbW0THRjzHbhhK2ub4TT.mp4",
     "didascalia_tiktok": "GTA 6 su PC: teorie sulla data 🚀\n\nScopri le teorie più intriganti sulla data di uscita di GTA 6 su PC. Quando pensi arriverà? Commenta la tua previsione!\n\nAltre notizie su davidedurazzi.it\n\n#grandtheftautovi #easteregg #gamingita #perte"
+  },
+  {
+    "timestamp": 1793790410,
+    "data": "2026-11-04",
+    "titolo": "PS5: PS2 games hit 120 FPS 🎮",
+    "lingua": "en",
+    "slot": "18:00",
+    "uscita": 1793811600,
+    "formato": "short",
+    "estratto_script": "120 FPS on a 1997 console? Think again. The new PS5SX2 2.30 update unlocks PS2 classics on",
+    "stile": "SEAMLESS_LOOP_FACTS",
+    "gioco": "",
+    "query_video": "ps5 gameplay",
+    "fonte": "The PS5SX2 2.30 update brought the launch of PS2 games on PS5 with frame generation and 120 FPS. (GameGPU)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMivAFBVV95cUxPVnA3NkNwbXA5R1hMRGQ2YkNhMTdSS2xGVGlYMDBwSWoxalFRMkNQQlBpQjZ1UXVoTXhmclFGS0FyYzBkcFVRNTgwRnpuY0VUMVB5MlNTbUstZ0NWZ08zdHBLZGJELUx1a0Y2MG5NNlByRWd4cm01Nmxwc2hOZW8wbnZwcmV5YTFseE9tUS1POExRbjlOSm5YU0ZRT1M1eVJWd0VDV0dSZktzbU43bFFSTzVWT2lvM0xraWRoNQ?oc=5",
+    "video_id": null
   }
 ]
