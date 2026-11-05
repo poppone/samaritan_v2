@@ -60,6 +60,41 @@ class TestPulisciTitolo:
     def test_rispetta_il_limite_youtube(self):
         assert len(brain._pulisci_titolo("x" * 200)) == 100
 
+    def test_nome_breve_in_testa(self):
+        # "GTA 6" e' quello che la gente cerca, e lascia spazio all'aggancio.
+        assert brain._pulisci_titolo("Grand Theft Auto VI: Play 18 hours early? 🤯") \
+            == "GTA 6: Play 18 hours early? 🤯"
+        assert brain._pulisci_titolo("The Legend of Zelda: Midnight launch 🎮") \
+            == "Zelda: Midnight launch 🎮"
+
+    def test_un_solo_due_punti(self):
+        assert brain._pulisci_titolo(
+            "The Legend of Zelda: Ocarina of Time: 7 tracce extra 🎵") \
+            == "Zelda Ocarina of Time: 7 tracce extra 🎵"
+        assert brain._pulisci_titolo(
+            "Call of Duty: Modern Warfare 4: 20 new maps drop 🚀") \
+            == "Call of Duty Modern Warfare 4: 20 new maps drop 🚀"
+
+    def test_gli_orari_restano(self):
+        assert brain._pulisci_titolo("Halo: the 0:55 moment 🚀") \
+            == "Halo: the 0:55 moment 🚀"
+        assert brain._pulisci_titolo("Grand Theft Auto VI: mysterious 0:55 detail? 🤯") \
+            == "GTA 6: mysterious 0:55 detail? 🤯"
+
+    def test_il_nome_breve_resta_valido(self):
+        ok, _ = brain.valida_titolo(
+            brain._pulisci_titolo("Grand Theft Auto VI: map leak 🌍"),
+            "Grand Theft Auto VI")
+        assert ok
+        ok, _ = brain.valida_titolo(
+            brain._pulisci_titolo("The Legend of Zelda: Ocarina of Time: deal 🎮"),
+            "The Legend of Zelda: Ocarina of Time")
+        assert ok
+
+    def test_si_puo_tenere_il_nome_ufficiale(self):
+        assert brain._pulisci_titolo("Grand Theft Auto VI: leak 🌍",
+                                     nome_breve=False).startswith("Grand Theft")
+
 
 class TestPulisciNomeGioco:
     def test_accetta_un_titolo_vero(self):

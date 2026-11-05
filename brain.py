@@ -1145,7 +1145,36 @@ def scegli_formato(notizie_disponibili):
 # ===========================================================================
 # VALIDAZIONE
 # ===========================================================================
-def _pulisci_titolo(titolo):
+# Il nome che la gente digita, al posto di quello ufficiale, in testa al
+# titolo. Dal settembre 2026 gli Short inglesi che aprono con "GTA 6" hanno
+# una mediana di 181 visualizzazioni contro 34 di quelli che aprono con
+# "Grand Theft Auto VI" (18 video per parte), e "gta" e' la parola che il
+# pubblico cerca davvero. Il nome lungo occupa poi meta' dei caratteri che
+# il feed mostra. Il nome ufficiale resta nei tag e nella descrizione.
+_NOMI_IN_TESTA = (
+    (re.compile(r"^grand theft auto (?:vi|6)\b", re.IGNORECASE), "GTA 6"),
+    (re.compile(r"^the legend of zelda\b", re.IGNORECASE), "Zelda"),
+)
+
+
+def _titolo_con_nome_breve(t):
+    """Nome d'uso in testa e un solo due punti.
+
+    "The Legend of Zelda: Ocarina of Time: 7 tracce extra" diventa
+    "Zelda Ocarina of Time: 7 tracce extra": quando il nome del gioco ha gia'
+    i suoi due punti, il titolo ne aveva due di fila (16 titoli su 200 fino
+    al 5 novembre 2026), lungo e faticoso da leggere nel feed.
+    """
+    for schema, breve in _NOMI_IN_TESTA:
+        t = schema.sub(breve, t, count=1)
+    pezzi = t.split(":")
+    if len(pezzi) >= 3 and len((pezzi[0] + pezzi[1]).split()) <= 7 \
+            and not (re.search(r"\d$", pezzi[1]) and re.match(r"\d", pezzi[2])):
+        t = f"{pezzi[0].rstrip()} {pezzi[1].strip()}:{':'.join(pezzi[2:])}"
+    return t
+
+
+def _pulisci_titolo(titolo, nome_breve=True):
     """Normalizza il titolo prima della validazione.
 
     Sistema meccanicamente quello che si puo' sistemare senza rigenerare:
@@ -1171,6 +1200,8 @@ def _pulisci_titolo(titolo):
         t = f"{t} {emoji}"
 
     t = re.sub(r"\s+", " ", t).strip()
+    if nome_breve and not profilo.attivo().telegiornale:
+        t = _titolo_con_nome_breve(t)
     return t[:100]                        # limite duro YouTube
 
 
@@ -3111,7 +3142,11 @@ def genera_script_samaritan(tema=None):
                 descrizione = str(data.get("descrizione", "")).strip()
                 gioco = _pulisci_nome_gioco(str(data.get("gioco", "")))
                 if not gioco:
-                    gioco = _gioco_dal_titolo(titolo)
+                    # Dal titolo come l'ha scritto il modello: il nome
+                    # ufficiale ("Grand Theft Auto VI") trova il negozio meglio
+                    # di quello breve messo in testa per il feed.
+                    gioco = _gioco_dal_titolo(_pulisci_titolo(
+                        str(data.get("titolo", "")), nome_breve=False))
                     if gioco:
                         print(f"[Samaritan Brain] Gioco preso dal titolo: {gioco}")
 
