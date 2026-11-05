@@ -1,18 +1,5 @@
 [
   {
-    "timestamp": 1789834546,
-    "data": "2026-09-19",
-    "titolo": "Starfield: tier list lampo ⚡",
-    "estratto_script": "Starfield è l'unico gioco che ha rovinato il Game Awards 2025. Primo nella classifica: il ",
-    "stile": "TIER_LIST_LAMPO",
-    "gioco": "Starfield",
-    "query_video": "starfield gameplay",
-    "fonte": "The Game Awards 2025: tutti i giochi annunciati all’evento (Videogiochitalia)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMiZ0FVX3lxTE4yUVhuTm9XSzNCbnk3dFUtLThfa1dIeW9UTXdtcFh1SllBWld6YjlPaDNrbWc1NU83djFTdHpLYzJMUE4wcWF6LUR6VmRLRTE4T3plQWxJRnFPcVNjendWT3RxdDUycDA?oc=5",
-    "video_id": "8uRatSeuHUk",
-    "veste": "pulito"
-  },
-  {
     "timestamp": 1789847198,
     "data": "2026-09-19",
     "titolo": "No Man's Sky: il nuovo update Cosmos 🌌",
@@ -3650,5 +3637,21 @@
     "veste": "arena",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/5c0-pKgtMPg-e4Q8SRydNfSrQWRJalPz2BFUl4P059.mp4",
     "didascalia_tiktok": "The Legend of Zelda: Ocarina of Time: 7 tracce extra 🎵\n\nNintendo Music aggiunge 7 tracce di Ocarina of Time. Quale sarà la tua preferita? Commenta qui sotto!\n\nAltre notizie su davidedurazzi.it\n\n#thelegendofzeldaocarinaoftime #tierlist #gamingita #perte"
+  },
+  {
+    "timestamp": 1793876887,
+    "data": "2026-11-05",
+    "titolo": "Mario: Profit Surge Fuels New Film 🎬",
+    "lingua": "en",
+    "slot": "18:00",
+    "uscita": 1793898000,
+    "formato": "short",
+    "estratto_script": "Guess why Nintendo's profit jump matters to you. Their net profit rose 11% to $1.39 billio",
+    "stile": "DONT_DO_THIS",
+    "gioco": "Mario",
+    "query_video": "mario gameplay",
+    "fonte": "Nintendo’s First-Half Profit Rose on Stronger Software Sales, New ‘Mario’ Movie (WSJ)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMivwFBVV95cUxQcVpaUFZuM0c0Q3ZzaDg3SmJBdm1VUFlxRjh4dmFyalBNdHJHcXdmMEZDR0VhT25VWjVFdEJkaHlaempaSXZlSXE1c21lMnZwbnFPamVKbHVMOGhPY1ZhSVBUR01QM3FsQmtCMF9FbUdOcEVxTXExREQyVklQU0ZSUjZJRnBhMUVNT194eFJPdjEwQUM0WkVBMFpmQU5BdjAyMHgwSUdQbkNWb3pXYjloNTY1dFV4QlBjRXlLZWExTQ?oc=5",
+    "video_id": null
   }
 ]
