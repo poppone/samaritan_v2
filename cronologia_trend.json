@@ -1,18 +1,5 @@
 [
   {
-    "timestamp": 1789832466,
-    "data": "2026-09-19",
-    "titolo": "Luna: le novità di marzo che ti faranno cambiare idea 🎮",
-    "estratto_script": "Hai provato a giocare su Luna senza controllare le ultime aggiunte? Marzo ha portato tre g",
-    "stile": "DOMANDA_AL_PUBBLICO",
-    "gioco": "Luna",
-    "query_video": "luna march update gameplay",
-    "fonte": "Aggiornamento dei contenuti di Luna di marzo (Amazon Game Studios)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMieEFVX3lxTE84UGFId1VhdDVHWGQ0eUtaSHpzUEVTa2J6VlBRc012YV9CcnVSZ2xWcDlpOXhpV2FSTXNleVFEM01VRlJzZHlIb0NoT1ctQlpod1lhTkFFSWpyck5jN3VUNVVhMVJyckt4SUZHbTFUOXdLSlZrbUlYRQ?oc=5",
-    "video_id": "0GD4Sohn_XE",
-    "veste": "fuoco"
-  },
-  {
     "timestamp": 1789834546,
     "data": "2026-09-19",
     "titolo": "Starfield: tier list lampo ⚡",
@@ -3643,5 +3630,21 @@
     "veste": "pulito",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/_GQAas4rRJs-8nYsmgDdtblrMmbljHUr9cqlc0MNuA.mp4",
     "didascalia_tiktok": "The Legend of Zelda: Ocarina of Time: The Review Truth 🤔\n\nThe Ocarina of Time remake is getting massive scores—does the visual boost justify the hype? Comment below with your thoughts!\n\nMore on davidedurazzi.it\n\n#thelegendofzeldaocarinaoftime #rumor #gamingita #fyp"
+  },
+  {
+    "timestamp": 1793865404,
+    "data": "2026-11-05",
+    "titolo": "The Legend of Zelda: Ocarina of Time: 7 tracce extra 🎵",
+    "lingua": "it",
+    "slot": "14:00",
+    "uscita": 1793883600,
+    "formato": "short",
+    "estratto_script": "Sette tracce in più si uniscono alla leggenda di Ocarina of Time. Nintendo Music le ha app",
+    "stile": "TIER_LIST_LAMPO",
+    "gioco": "The Legend of Zelda: Ocarina of Time",
+    "query_video": "zelda ocarina gameplay",
+    "fonte": "Nintendo Music aggiunge sette tracce di The Legend of Zelda: Ocarina of Time (Pokémon Millennium)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMixAFBVV95cUxQM1B0RzhtNXhRR0ZpMXc1UGZEX3BSTFlOcmtHcUc3T0tBRDFQSkp3NFV1RFkybEQ4ZXkxbUdQelkyZU1IcG9TNzJPQTY1SWJaRnZ1dkJ4WWlpd1BXSkFFSGxQUkxKbGhYdXBtczRwM3N1czY3LXhfc0c3cWo5bjh6OWpya2x2SU9DZ2ZQV3k2SjFQZk9MT2JXY21mTTJiWGdSU044TzZGTHd6MC00QVRrYkVzQW5PcUdJMEhMNjFOWWhNVkRx?oc=5",
+    "video_id": null
   }
 ]
