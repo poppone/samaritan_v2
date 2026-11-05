@@ -1,18 +1,5 @@
 [
   {
-    "timestamp": 1789847198,
-    "data": "2026-09-19",
-    "titolo": "No Man's Sky: il nuovo update Cosmos 🌌",
-    "estratto_script": "Pensavi che No Man's Sky fosse finito? Dieci anni dopo, arriva l'update Cosmos. Nuovi pian",
-    "stile": "SEAMLESS_LOOP_FACTS",
-    "gioco": "No Mans Sky",
-    "query_video": "no mans sky gameplay",
-    "fonte": "10 anni di No Man's Sky: arriva l'update Cosmos (tomshw.it)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMinwFBVV95cUxNOGxBVUZNQUNWakFhQkk0angzWXhkU3ZZZkJnMTR6Smd1aHdiTEdjRkF0SWZFVTRmUzdOd19paDgydDllTzlBRmYwUHNHam82NG85ZkVCVDE3YUphN0lyNWxJNnZLdmJFLVp3YmVyVzZKZzJLVjRTSXJ2b1hhNXdQUlFjdzREYTE3NWtqN1ZQQjgwYlhXT1dKZmxGTHFLbzQ?oc=5",
-    "video_id": "4AD5dv7FQrA",
-    "veste": "arena"
-  },
-  {
     "timestamp": 1789899435,
     "data": "2026-09-20",
     "titolo": "EA Sports FC 26: Mondiali in game e Italia! ⚽",
@@ -3657,5 +3644,21 @@
     "veste": "notte",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/EGr1hhnIa2Q-8bjzH2FcguD5mRoM0YQ90Ej51XccIm.mp4",
     "didascalia_tiktok": "Mario: Profit Surge Fuels New Film 🎬\n\nNintendo's profit surge could mean bigger games and movies for fans. How will this affect your next Mario purchase? What do you think?\n\nMore on davidedurazzi.it\n\n#mario #consigli #gamingita #fyp"
+  },
+  {
+    "timestamp": 1793884726,
+    "data": "2026-11-05",
+    "titolo": "Zelda Ocarina of Time: Midnight line frenzy 🎮",
+    "lingua": "en",
+    "slot": "20:00",
+    "uscita": 1793905200,
+    "formato": "short",
+    "estratto_script": "Imagine waiting all night for a game that already existed. Fans camped outside stores, hop",
+    "stile": "DOMANDA_AL_PUBBLICO",
+    "gioco": "The Legend of Zelda: Ocarina of Time",
+    "query_video": "zelda ocarina of time gameplay",
+    "fonte": "‘Hey, listen!': Gamers line up for release of new Zelda game (NBC10 Philadelphia)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMiqwFBVV95cUxPMW92TDlHckVhS1YyN2JNR3FqM1c0NXlDR0NkYXo1UkQ1d3BSTkh0dHR5TWx3SzIyX0ttaTdfQnI0NGJFSjE2N2xpNjJhZC1qVGtmSTEtUTZqVXpzMVJhLWxMWFd1N3EzUUpCdERuZzUtVHRLY19sLVhxTFFHQ1plNDRnZDRTSUFmYTBvVWFXcWpfaXhiUE1iTEtjOVZIVnk3VjlVS0UyVXNnMmfSAbMBQVVfeXFMT2FfQXFrOElyWnlnZTYyOFk3a19YQ1VsRWpFRV9EQ1NjTjBSU25NZ2tEWk1oVDBxN2JwYmhqZl9COV9mbm9BYkFRalFtTVpod1JsclVhN0tvRno0RXdmSklyelF4LTEzQzZTNTJ3aGQ3QWltc251blNsT2xNZlc1cFlRN2g2SkxCdU5HQWdUbWZtZHpGb1d3bWl6WkFZVXgzUUtWdTdQRDhuYUc0SkwtbVk5SVE?oc=5",
+    "video_id": null
   }
 ]
