@@ -37,6 +37,26 @@ GitHub Actions: clip_live.yml
 
 Il primo giro fallo con `--prova` e guarda le clip in `taglia_live/lavoro/`.
 
+## GPU
+
+Whisper gira sulla GPU NVIDIA. All'avvio lo script la prova con un secondo di
+audio: se non risponde **si ferma** con un errore che dice cosa manca, invece
+di passare alla CPU (sulla CPU i sottotitoli uscivano confusi). cuBLAS e cuDNN
+arrivano dai pacchetti pip `nvidia-cublas-cu12` e `nvidia-cudnn-cu12`
+(in `requirements.txt`): lo script aggiunge da solo le loro cartelle `bin`,
+non serve copiare DLL dentro `ctranslate2`. Per usare apposta la CPU:
+`WHISPER_DISPOSITIVO=cpu` nel `.env`.
+
+## Ascolto prima del voto
+
+Con `--prova`, alla fine di ogni live `ascolta.py` riascolta l'audio vero di
+ogni clip (con i bip) con un Whisper piu' grande (`WHISPER_MODELLO_ASCOLTO`,
+default `large-v3-turbo`) e scrive `ascolto.md` nella cartella della live:
+silenzio prima della prima parola, parole al secondo, quanto i sottotitoli
+coincidono con quello che si sente, picchi di volume (reazioni). Le clip si
+votano dopo averlo letto, non dai soli fotogrammi. A mano:
+`python ascolta.py lavoro/<id della live>`.
+
 Per farlo partire da solo ogni notte: Utilita' di pianificazione di Windows,
 azione `taglia_live.bat`, e la variabile d'ambiente `CLIP_AUTO=1` cosi' la
 finestra si chiude da sola alla fine.
@@ -78,6 +98,12 @@ secondo, e soprattutto reazioni come "ahah", "LUL", "clip"), con la chat
 anticipata di 7 secondi perche' arriva in ritardo. Picchi distanti almeno
 90 secondi, clip da 15 a 60 secondi: 22 di contesto prima del picco, 12 dopo.
 
+Ogni segnale si misura rispetto ai 10 minuti attorno, non alla media della
+live: un'ora di chat fitta all'inizio (tutti salutano) non vince piu' sui
+picchi veri. I messaggi di saluto ("ciao", "buonasera", "eccomi") non
+contano. Nelle live oltre 90 minuti si saltano i primi 10 minuti e le clip
+si spargono: al primo giro poche per ogni mezz'ora, poi si riempie.
+
 ## Impaginazione
 
 La webcam cambia posto da gioco a gioco, quindi la si cerca clip per clip
@@ -85,8 +111,10 @@ La webcam cambia posto da gioco a gioco, quindi la si cerca clip per clip
 
 - **volto piccolo** in un angolo (si gioca): webcam ingrandita in alto, gioco
   ritagliato in basso, sottotitoli sulla giunta;
-- **volto grande** (Contraddittorio, chiacchiere) o **nessun volto**: scena
-  intera al centro su sfondo sfocato.
+- **volto grande** (Contraddittorio, chiacchiere): scena intera al centro su
+  sfondo sfocato;
+- **nessuna webcam** (alexdieci gioca senza facecam): il centro del gioco in
+  3:4, 1080x1440, su sfondo sfocato, invece della scena intera alta 607 pixel.
 
 La scelta finisce nella scheda (`"impaginazione": "divisa"` o `"centro"`).
 Il modello YuNet (`modelli/face_detection_yunet_2023mar.onnx`, 230 KB) viene

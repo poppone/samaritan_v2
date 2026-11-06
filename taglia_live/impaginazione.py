@@ -5,7 +5,8 @@ Come si dispone la clip nel 9:16, a seconda di dove sta la webcam.
 Logica pura (niente OpenCV, niente ffmpeg): riceve i riquadri dei volti
 trovati in qualche fotogramma e decide. Si testa in tests/test_clip_live.py.
 
-Due impaginazioni:
+Tre impaginazioni (la terza, "gioco", e' il centro del gioco ingrandito
+quando la webcam non c'e', vedi scegli()):
   - "centro": la scena intera al centro su sfondo sfocato. Va bene quando
     Davide e' il soggetto (Contraddittorio, chiacchiere: volto grande) e
     quando un volto non c'e' proprio.
@@ -28,6 +29,10 @@ QUOTA_FOTOGRAMMI = 0.5   # il volto deve esserci in almeno meta' dei fotogrammi
 # Il ritaglio e' largo sette volte il volto: testa intera, cappello e spalle.
 # Con 3.2 si vedeva mezza faccia sgranata (prova del 3/11 su Phantom Blade).
 ALLARGA_VOLTO = 7.0
+# Impaginazione "gioco" (nessuna webcam): il centro della scena in 3:4,
+# 1080x1440 nel 9:16, invece della scena intera larga 1080 e alta 607.
+ZOOM_LARGHEZZA = 1080
+ZOOM_ALTEZZA = 1440
 
 
 def _mediana(valori):
@@ -161,11 +166,22 @@ def riquadro_gioco(cam, w, h):
     return _pari(gx), 0, _pari(gw), _pari(gh)
 
 
-def scegli(volti_per_fotogramma, w, h, zona=None):
-    """("centro", None) oppure ("divisa", {"cam": (x,y,w,h), "gioco": (x,y,w,h)}).
+def riquadro_zoom(w, h):
+    """Senza webcam: il centro del gioco, alto quanto il video, in 3:4."""
+    zw = min(w, h * ZOOM_LARGHEZZA / ZOOM_ALTEZZA)
+    zh = zw * ZOOM_ALTEZZA / ZOOM_LARGHEZZA
+    return _pari((w - zw) / 2), _pari((h - zh) / 2), _pari(zw), _pari(zh)
+
+
+def scegli(volti_per_fotogramma, w, h, zona=None, senza_webcam="centro"):
+    """("centro", None), ("divisa", {"cam": (x,y,w,h), "gioco": (x,y,w,h)})
+    oppure ("gioco", {"gioco": (x,y,w,h)}).
 
     zona: il rettangolo di zona_webcam() se lo streamer ha detto dove sta la
     webcam; senza, si scartano solo i volti che non si muovono mai.
+    senza_webcam: cosa fare quando i volti si sono cercati ma una webcam non
+    c'e' (alexdieci gioca senza facecam): "centro" come prima, o "gioco",
+    il centro del gioco ingrandito invece della scena intera rimpicciolita.
     """
     if not volti_per_fotogramma:
         return "centro", None
@@ -175,6 +191,8 @@ def scegli(volti_per_fotogramma, w, h, zona=None):
         volti_per_fotogramma = senza_volti_fermi(volti_per_fotogramma)
     volto, quota = volto_tipico(volti_per_fotogramma)
     if volto is None or quota < QUOTA_FOTOGRAMMI:
+        if senza_webcam == "gioco" and w > h:
+            return "gioco", {"gioco": riquadro_zoom(w, h)}
         return "centro", None
     if volto[2] / w > VOLTO_GRANDE:
         return "centro", None
@@ -190,6 +208,13 @@ def filtro_ffmpeg(impaginazione, riquadri, file_ass):
         return (f"[0:v]crop={cw}:{ch}:{cx}:{cy},scale={LARGHEZZA}:{ALTEZZA_CAM}[cam];"
                 f"[0:v]crop={gw}:{gh}:{gx}:{gy},scale={LARGHEZZA}:{ALTEZZA_GIOCO}[gioco];"
                 f"[cam][gioco]vstack,ass={file_ass}[v]")
+    if impaginazione == "gioco":
+        gx, gy, gw, gh = riquadri["gioco"]
+        return ("[0:v]scale=1080:1920:force_original_aspect_ratio=increase,"
+                "crop=1080:1920,boxblur=25:2,eq=brightness=-0.08[sfondo];"
+                f"[0:v]crop={gw}:{gh}:{gx}:{gy},scale={LARGHEZZA}:{ZOOM_ALTEZZA}[primo];"
+                "[sfondo][primo]overlay=(W-w)/2:(H-h)/2,"
+                f"ass={file_ass}[v]")
     return ("[0:v]scale=1080:1920:force_original_aspect_ratio=increase,"
             "crop=1080:1920,boxblur=25:2,eq=brightness=-0.08[sfondo];"
             "[0:v]scale=1080:-2[primo];"
@@ -201,4 +226,6 @@ def margine_sottotitoli(impaginazione):
     """Distanza dal fondo: nel terzo basso del gioco per la divisa (sulla
     giunta coprivano la barra del boss, che sta in alto), sotto la scena per
     il centro."""
+    if impaginazione == "gioco":
+        return 360      # nel quarto basso del gioco ingrandito (che finisce a 240 dal fondo)
     return 480 if impaginazione == "divisa" else 520

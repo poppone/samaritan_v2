@@ -239,6 +239,70 @@ def _audio_16k(percorso):
     return np.frombuffer(grezzo, dtype=np.int16).astype(np.float32) / 32768.0
 
 
+def librerie_cuda():
+    """Rende visibili cuBLAS e cuDNN installati con pip (nvidia-cublas-cu12,
+    nvidia-cudnn-cu12) senza copiarne le DLL dentro ctranslate2.
+
+    Va chiamata PRIMA di importare ctranslate2/faster_whisper. Le cartelle
+    si aggiungono sia con os.add_dll_directory sia in testa al PATH:
+    ctranslate2 carica cublas solo alla prima trascrizione, con un
+    LoadLibrary che non sempre guarda le cartelle di add_dll_directory.
+    Ritorna le cartelle aggiunte (vuoto fuori da Windows o senza pacchetti).
+    """
+    if os.name != "nt":
+        return []
+    import site
+    basi = [p for p in site.getsitepackages() + [site.getusersitepackages()] if p]
+    aggiunte = []
+    for base in basi:
+        for pezzo in (("nvidia", "cublas", "bin"), ("nvidia", "cudnn", "bin")):
+            cartella = os.path.join(base, *pezzo)
+            if os.path.isdir(cartella) and cartella not in aggiunte:
+                os.add_dll_directory(cartella)
+                aggiunte.append(cartella)
+    if aggiunte:
+        os.environ["PATH"] = os.pathsep.join(aggiunte + [os.environ.get("PATH", "")])
+    return aggiunte
+
+
+class GpuNonDisponibile(Exception):
+    """Whisper doveva girare sulla GPU ma la GPU non risponde."""
+
+
+def controlla_gpu():
+    """All'avvio: carica Whisper sulla GPU e trascrive un secondo di prova.
+
+    Sulla CPU le trascrizioni escono confuse (sottotitoli senza senso, prova
+    del 5/11), quindi se la GPU non va ci si ferma qui con un errore chiaro
+    invece di passare alla CPU. WHISPER_DISPOSITIVO=cpu nel .env la salta
+    apposta.
+    """
+    global _modello, _dispositivo
+    if DISPOSITIVO == "cpu":
+        print("[Whisper] WHISPER_DISPOSITIVO=cpu: trascrizione sulla CPU (piu' lenta e meno precisa).")
+        return
+    cartelle = librerie_cuda()
+    try:
+        import numpy as np
+        modello = _carica_modello("cuda")
+        # Senza vad_filter, cosi' l'encoder gira davvero e cuBLAS si carica.
+        segmenti, _ = modello.transcribe(np.zeros(16000, dtype=np.float32),
+                                         language="it", vad_filter=False)
+        list(segmenti)
+    except Exception as e:
+        aiuto = ("Le DLL di CUDA non si trovano: nella .venv servono i pacchetti "
+                 "nvidia-cublas-cu12 e nvidia-cudnn-cu12 "
+                 "(.venv\\Scripts\\pip install nvidia-cublas-cu12 nvidia-cudnn-cu12)."
+                 if not cartelle or "dll" in str(e).lower() else
+                 "Controlla il driver NVIDIA (nvidia-smi).")
+        raise GpuNonDisponibile(
+            f"Whisper non riesce a usare la GPU: {type(e).__name__}: {e}\n{aiuto}\n"
+            "Mi fermo invece di passare alla CPU (sottotitoli confusi). Per usare "
+            "comunque la CPU metti WHISPER_DISPOSITIVO=cpu nel .env.") from e
+    _modello, _dispositivo = modello, "cuda"
+    print("[Whisper] Trascrizione su GPU: OK")
+
+
 def _carica_modello(dispositivo):
     from faster_whisper import WhisperModel
     if dispositivo == "cuda":
@@ -274,12 +338,10 @@ def _parole(audio):
 
 
 def trascrivi(percorso):
-    """Parole con i tempi. GPU se funziona davvero, altrimenti CPU.
+    """Parole con i tempi, sul dispositivo scelto da controlla_gpu().
 
-    WHISPER_DISPOSITIVO=cpu nel .env salta del tutto la prova della GPU.
-    Su Windows la GPU NVIDIA spesso si carica ma poi manca cublas64_12.dll
-    (le librerie CUDA non sono installate): l'errore arriva alla prima
-    trascrizione, e a quel punto si passa alla CPU e si riprova.
+    Niente ripiego silenzioso sulla CPU: se la GPU smette di andare a meta'
+    lavoro l'errore sale e la clip viene scartata (lo si vede nel log).
     """
     global _modello, _dispositivo
     # L'audio lo decodifica ffmpeg e non faster-whisper: dalla 15 PyAV ha
@@ -287,20 +349,11 @@ def trascrivi(percorso):
     # av.open(), e la trascrizione si fermava con "unexpected keyword".
     audio = _audio_16k(percorso)
     if _modello is None:
-        dispositivo = DISPOSITIVO if DISPOSITIVO in ("cpu", "cuda") else "cuda"
-        try:
-            _modello, _dispositivo = _carica_modello(dispositivo), dispositivo
-        except Exception:
-            print("[Whisper] GPU non disponibile, uso la CPU.")
+        if DISPOSITIVO == "cpu":
             _modello, _dispositivo = _carica_modello("cpu"), "cpu"
-    try:
-        return _parole(audio)
-    except Exception as e:
-        if _dispositivo == "cpu":
-            raise
-        print(f"[Whisper] La GPU non va ({e}): passo alla CPU.")
-        _modello, _dispositivo = _carica_modello("cpu"), "cpu"
-        return _parole(audio)
+        else:
+            controlla_gpu()
+    return _parole(audio)
 
 
 def _tempo_ass(t):
@@ -414,8 +467,10 @@ def scegli_impaginazione(percorso, durata):
     zona = impaginazione.zona_webcam(WEBCAM_ZONA, w, h)
     if WEBCAM_ZONA and not zona:
         print(f"[Webcam] zona '{WEBCAM_ZONA}' non capita: cerco la webcam da solo.")
-    scelta, riquadri = impaginazione.scegli(volti_nei_fotogrammi(percorso, durata), w, h, zona)
-    print(f"[Webcam] impaginazione: {scelta}" + (f" (zona {WEBCAM_ZONA})" if zona else ""))
+    scelta, riquadri = impaginazione.scegli(volti_nei_fotogrammi(percorso, durata), w, h, zona,
+                                            senza_webcam="gioco")
+    nota = " (nessuna webcam nei fotogrammi: gioco ingrandito)" if scelta == "gioco" else ""
+    print(f"[Webcam] impaginazione: {scelta}{nota}" + (f" (zona {WEBCAM_ZONA})" if zona else ""))
     return scelta, riquadri
 
 
@@ -674,6 +729,13 @@ def taglia(vod_id, prova=False):
             with open(os.path.join(cartella, f"{cid}.json"), "w", encoding="utf-8") as f:
                 json.dump(scheda, f, ensure_ascii=False, indent=2)
         schede.append(scheda)
+    if prova and schede:
+        # Prima di votare le clip si ascoltano (ascolta.py): ascolto.md.
+        try:
+            from taglia_live import ascolta
+            ascolta.ascolta_cartella(cartella)
+        except Exception as e:
+            print(f"[Ascolto] non fatto: {type(e).__name__}: {e}")
     return schede
 
 
@@ -769,6 +831,11 @@ def main():
             sys.exit(f"Manca {programma}: installalo e aggiungilo al PATH.")
     if not args.prova and not TOKEN:
         sys.exit("Manca GITHUB_TOKEN_CLIP nel .env (vedi taglia_live/README.md).")
+    # La GPU si prova subito, prima di scaricare ore di audio.
+    try:
+        controlla_gpu()
+    except GpuNonDisponibile as e:
+        sys.exit(f"[Whisper] ERRORE: {e}")
 
     stato = leggi_stato()
     if args.vod:

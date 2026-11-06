@@ -33,6 +33,17 @@ DURATA_MIN = 15
 DURATA_MAX = 60
 SALTA_INIZIO = 120        # i primi minuti di una live sono "ciao a tutti"
 SALTA_FINE = 180          # gli ultimi sono saluti, raid e musica di chiusura
+# Nelle live lunghe i saluti, il menu e i caricamenti durano di piu': haytano
+# il 4/11 ha avuto 6 clip su 6 nei primi 90 minuti, tutte di saluti.
+LIVE_LUNGA = 90 * 60
+SALTA_INIZIO_LUNGA = 600
+# Il segnale si misura rispetto ai dieci minuti attorno, non a tutta la live:
+# un'ora di chat fitta (l'inizio, quando tutti salutano) non e' un momento,
+# un picco improvviso si'.
+BASE_LOCALE = 600
+# Nelle live lunghe le clip si spargono: al massimo tante per mezz'ora,
+# poi, se non bastano, si riempie con i migliori rimasti.
+BLOCCO = 1800
 
 # Versione TikTok: il Creator Rewards Program paga solo video di oltre un
 # minuto, quindi attorno ai picchi migliori si taglia anche un pezzo piu' lungo
@@ -99,19 +110,60 @@ def anticipa(valori, secondi):
     return list(valori[secondi:]) + [0.0] * min(secondi, len(valori))
 
 
+_RE_SALUTO = re.compile(
+    r"\b(?:ciao+|ciaone|buonasera|buona\s*sera|buongiorno|buon\s*giorno|salve|"
+    r"bentornat[oaie]|benvenut[oaie]|eccomi|presente|hola|hello|hi|hey|sera|"
+    r"buonanotte|notte|a\s+domani|bella\s+raga|we+|ue+)\b", re.IGNORECASE)
+
+
+def e_saluto(testo):
+    """"ciao a tutti", "buonasera!", "eccomi": la chat che saluta non e' un
+    momento da clip. Con una reazione dentro ("ciao ahahah") conta lo stesso."""
+    basso = (testo or "").lower()
+    if any(p in basso for p in PAROLE_REAZIONE):
+        return False
+    return bool(_RE_SALUTO.search(basso)) and len(basso.split()) <= 6
+
+
 def chat_per_secondo(messaggi, durata):
-    """Da [(secondo, autore, testo), ...] a due serie: volume e reazioni."""
+    """Da [(secondo, autore, testo), ...] a due serie: volume e reazioni.
+
+    I saluti non contano: all'inizio e alla fine della live la chat e'
+    fitta solo di "ciao" e "buonanotte".
+    """
     volume = [0.0] * durata
     reazioni = [0.0] * durata
     for secondo, _autore, testo in messaggi:
         s = int(secondo)
-        if not 0 <= s < durata:
+        if not 0 <= s < durata or e_saluto(testo):
             continue
         volume[s] += 1
         basso = (testo or "").lower()
         if any(p in basso for p in PAROLE_REAZIONE):
             reazioni[s] += 1
     return volume, reazioni
+
+
+def togli_base(valori, finestra=BASE_LOCALE):
+    """Ogni valore meno la media dei `finestra` secondi attorno.
+
+    Cosi' conta quanto un momento spicca rispetto a quello che succede in
+    quel pezzo di live, non rispetto alla media di tutta la live: un'ora di
+    chat fitta resta piatta, un picco improvviso resta un picco.
+    """
+    n = len(valori)
+    if n == 0 or finestra <= 1 or n <= finestra:
+        media = _media(valori)
+        return [v - media for v in valori]
+    somme = [0.0]
+    for v in valori:
+        somme.append(somme[-1] + v)
+    meta = finestra // 2
+    risultato = []
+    for i, v in enumerate(valori):
+        a, b = max(0, i - meta), min(n, i + meta + 1)
+        risultato.append(v - (somme[b] - somme[a]) / (b - a))
+    return risultato
 
 
 def segnale(energia, volume_chat=None, reazioni_chat=None):
@@ -121,12 +173,14 @@ def segnale(energia, volume_chat=None, reazioni_chat=None):
     dentro la chat le reazioni pesano il doppio del semplice volume.
     """
     durata = len(energia)
-    audio = smussa(zscore(energia))
+    # Ogni segnale si confronta con i dieci minuti attorno (togli_base),
+    # poi si normalizza: vedi BASE_LOCALE.
+    audio = smussa(zscore(togli_base(energia)))
     if not volume_chat or not any(volume_chat):
         return audio
-    volume = smussa(zscore(anticipa(volume_chat[:durata], RITARDO_CHAT)))
-    reaz = smussa(zscore(anticipa((reazioni_chat or [0.0] * durata)[:durata],
-                                  RITARDO_CHAT)))
+    volume = smussa(zscore(togli_base(anticipa(volume_chat[:durata], RITARDO_CHAT))))
+    reaz = smussa(zscore(togli_base(anticipa((reazioni_chat or [0.0] * durata)[:durata],
+                                             RITARDO_CHAT))))
     chat = [(v + 2 * r) / 3 for v, r in zip(volume, reaz)]
     return [0.5 * a + 0.5 * c for a, c in zip(audio, chat)]
 
@@ -246,26 +300,40 @@ def correggi_per_parlato(punti, n_parole):
     return max(0, punti - PENALITA_MUTA) if n_parole < POCO_PARLATO else punti
 
 
+def per_blocco(quante, durata_live):
+    """Quanti momenti al massimo in ogni mezz'ora al primo giro; None se la
+    live non e' lunga (li' si prendono semplicemente i migliori)."""
+    if durata_live <= LIVE_LUNGA:
+        return None
+    return max(1, math.ceil(1.5 * quante * BLOCCO / durata_live))
+
+
 def candidati(valori, quante=5, durata_live=None):
     """I momenti migliori: [(inizio, fine, punteggio, picco), ...] per punteggio.
 
     Greedy: prende il secondo piu' alto, esclude i DISTANZA_MINIMA attorno,
-    ripete. I primi SALTA_INIZIO e gli ultimi SALTA_FINE secondi non contano.
+    ripete. I primi SALTA_INIZIO (SALTA_INIZIO_LUNGA nelle live lunghe) e gli
+    ultimi SALTA_FINE secondi non contano. Nelle live lunghe un primo giro
+    prende al massimo per_blocco() momenti ogni BLOCCO secondi, cosi' le
+    clip non vengono tutte dalla stessa ora; un secondo giro riempie.
     """
     durata_live = durata_live or len(valori)
     ordine = sorted(range(len(valori)), key=lambda i: valori[i], reverse=True)
+    lunga = durata_live > (SALTA_INIZIO + SALTA_FINE) * 3
+    salta = SALTA_INIZIO_LUNGA if durata_live > LIVE_LUNGA else SALTA_INIZIO
+    tetto = per_blocco(quante, durata_live)
     presi = []
-    for i in ordine:
-        if len(presi) >= quante:
-            break
-        lunga = durata_live > (SALTA_INIZIO + SALTA_FINE) * 3
-        if lunga and (i < SALTA_INIZIO or i > durata_live - SALTA_FINE):
-            continue
-        if valori[i] <= 0:
-            break
-        if any(abs(i - p) < DISTANZA_MINIMA for p in presi):
-            continue
-        presi.append(i)
+    for limite in ((tetto, None) if tetto else (None,)):
+        for i in ordine:
+            if len(presi) >= quante or valori[i] <= 0:
+                break
+            if lunga and (i < salta or i > durata_live - SALTA_FINE):
+                continue
+            if any(abs(i - p) < DISTANZA_MINIMA for p in presi):
+                continue
+            if limite and sum(1 for p in presi if p // BLOCCO == i // BLOCCO) >= limite:
+                continue
+            presi.append(i)
     risultato = []
     for picco in presi:
         inizio, fine = finestra(picco, durata_live)
