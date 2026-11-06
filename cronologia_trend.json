@@ -1,19 +1,5 @@
 [
   {
-    "timestamp": 1789977061,
-    "data": "2026-09-21",
-    "titolo": "GTA 6: Release date sparks employee revolt 😱",
-    "lingua": "en",
-    "estratto_script": "Did Rockstar just force their staff to quit over GTA 6's release date? Employees are filin",
-    "stile": "DOMANDA_AL_PUBBLICO",
-    "gioco": "Grand Theft Auto VI",
-    "query_video": "gta 6 news gameplay",
-    "fonte": "‘GTA 6’ Release Date Triggers Mass Leave Requests and HR Pushback (Man of Many)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMifEFVX3lxTE9vakRLQmhIcTUwbF82NTZVejRCRENUdlpidkREN0ItenNPd1V2VEtSMTJHZmNHV1oyLUlPcjlrLUpvWElnNy1ucy12aG84anl3aFB5NEpuLW9kX3B3MlA4QzVHREltUjFmVFlyd1FPSHZCNk1iTFBvYUE5S0I?oc=5",
-    "video_id": "SG2JNwUxipY",
-    "veste": "fuoco"
-  },
-  {
     "timestamp": 1790000911,
     "data": "2026-09-21",
     "titolo": "Professor Layton: il trailer che rompe il mito 😲",
@@ -3678,5 +3664,21 @@
     "veste": "pulito",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/w915G7Tg_jY-Oty4H4t5QdOEJD24AfEThdivaOBYDb.mp4",
     "didascalia_tiktok": "GTA 6: i preordini superano 7,7 milioni 😲\n\nI preordini di GTA 6 hanno appena rotto ogni record. Ti sorprende? Diccelo nei commenti!\n\nAltre notizie su davidedurazzi.it\n\n#gta6 #newsgaming #gamingita #perte"
+  },
+  {
+    "timestamp": 1793963057,
+    "data": "2026-11-06",
+    "titolo": "GTA 6: New Screenshots Flood the Net 🚀",
+    "lingua": "en",
+    "slot": "18:00",
+    "uscita": 1793984400,
+    "formato": "short",
+    "estratto_script": "Two weeks until launch and Rockstar just released a massive new batch of GTA 6 screenshots",
+    "stile": "EASTER_EGG_SECRET",
+    "gioco": "Grand Theft Auto VI",
+    "query_video": "gta 6 gameplay",
+    "fonte": "Here’s a massive new batch of GTA 6 screenshots to mark two weeks to launch (Top Gear)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMiqAFBVV95cUxQbUJGcDFKOFRvdGJhMnNIUHVtTVQxYWh6MEdGYmV2YTFrODFTWVF2S2pGb1NJa1Y0bHV0TW8xeUl0Y0xORHA1UENDWEZiWlVyMTVoQjRRaHR0LW9RSkVKWTZSRzhHR0ZUY0pIWlhkaXZ5aVkzdFNzdW5FRFcwcms3aGI5dGNnbzNYQUczRnkwUnFBRkpXXzNRODFjcTI1NU1aNFZ5S01nbkQ?oc=5",
+    "video_id": null
   }
 ]
