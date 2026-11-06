@@ -1,20 +1,5 @@
 [
   {
-    "timestamp": 1790000911,
-    "data": "2026-09-21",
-    "titolo": "Professor Layton: il trailer che rompe il mito 😲",
-    "lingua": "it",
-    "estratto_script": "7 secondi di silenzio, e poi il nuovo trailer di Professor Layton esplode. La musica class",
-    "stile": "MYTH_BUSTING_VIRAL",
-    "gioco": "Professor Layton",
-    "query_video": " gameplay",
-    "fonte": "Il Professor Layton su Nintendo Switch svelato in un nuovissimo trailer (sortiraparis.com)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMiiAJBVV95cUxOTzdnN2I3MWRVNWlIbzNDOHZ0bzg5bGpxeE41WnF6R1FZbUFqVkpQNUZDY0V0LWNKOWcwZU5xM1NfMzFVVk93S2wxUEVsZkNpRXRhUlFyZWNJWjF2dFpVSWJ0UXBMRkNuWEh5TXhNUEJIbjI3dFZ5TXhMcXI1SHVEWWtUb3F6MVlTUjVTWHFPTzNQU0g1YUFzNXI0T3NkZTRkVXNVYmJhOFdVeHZKOVhkRkUxWFhhQWVUY0ZSRWZtakw1TXFBSzJYaEJrMEJZREw0bzdraXFUTHo3SVBpR3lZbktybHpDNGpXTklGV3VoY3JfQlZYc1dWUkQxX1VQWEdtR0M3bU5pT1U?oc=5",
-    "video_id": "EN_5Db7E5V0",
-    "veste": "pulito",
-    "slot": "14:00"
-  },
-  {
     "timestamp": 1790010750,
     "data": "2026-09-21",
     "titolo": "The Alighieri Circle: Dante's Bloodline 🎮",
@@ -3684,5 +3669,21 @@
     "veste": "arena",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/laLW10pRxSI-zCnoZyA3pI8rVXdW0XW8cYYnUQUnzL.mp4",
     "didascalia_tiktok": "GTA 6: New Screenshots Flood the Net 🚀\n\nRockstar just unleashed a wave of new GTA 6 screenshots. Which detail catches your eye the most?\n\nMore on davidedurazzi.it\n\n#grandtheftautovi #easteregg #gamingita #fyp"
+  },
+  {
+    "timestamp": 1793970114,
+    "data": "2026-11-06",
+    "titolo": "Assassin's Creed Valhalla: 1 Update Changes Everything 🚀",
+    "lingua": "en",
+    "slot": "20:00",
+    "uscita": 1793991600,
+    "formato": "short",
+    "estratto_script": "One hundred hours of Viking loot, and they just dropped a massive free update for Assassin",
+    "stile": "DONT_DO_THIS",
+    "gioco": "Assassins Creed Valhalla",
+    "query_video": "Assassin's Creed Valhalla gameplay",
+    "fonte": "PlayStation Plus 100-hour RPG lands huge free update with over 10 new features (GAMINGbible)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMiqwFBVV95cUxOaGYzSGtLVGZ4MjVzWVhkWEM1TzEtZGdTSVBtaVl2MjdUR0FkRmJlZXVwSVd4cDBsenJGSDZhWDRuTTBsbmtJX2xzbzJSeVZuSXp5YlI5d0FrcnJwSWF0VEZxN3p6OVVZWnNsbmlnSVd6WEdyTVRHbFpxcXFRNXRLdElfUWlQY2ZIRFQ4UFhpQkEyZWZINUNjQjNSdE1zNnh0dFM5MlA1SVpMNm8?oc=5",
+    "video_id": null
   }
 ]
