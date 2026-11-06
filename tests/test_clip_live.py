@@ -237,6 +237,18 @@ def test_i_saluti_della_chat_non_contano():
     assert volume[5] == 1
 
 
+def test_bot_e_abbonamenti_regalati_non_sono_reazioni():
+    """haytano 5/11: i picchi di chat erano sub regalate e StreamElements."""
+    assert punteggio.e_avviso("tano92m", "tano92m gifted a Tier 1 sub to roxyyy93!")
+    assert punteggio.e_avviso("StreamElements", "roxyyy93 just subscribed PogChamp")
+    assert punteggio.e_avviso("france881", "Cheer1 Cheer1 Cheer1")
+    assert punteggio.e_avviso("x", "!discord")
+    assert not punteggio.e_avviso("walter_98_", "Porcoooooooo ahahah")
+    volume, _ = punteggio.chat_per_secondo(
+        [(1, "StreamElements", "a just cheered 5 bits"), (1, "b", "LUL")], 3)
+    assert volume[1] == 1
+
+
 def test_un_ora_di_chat_fitta_all_inizio_non_si_prende_tutte_le_clip():
     """haytano 4/11: chat fitta per la prima ora, picchi veri piu' avanti."""
     durata = 4 * 3600

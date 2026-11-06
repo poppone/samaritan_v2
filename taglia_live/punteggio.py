@@ -125,21 +125,41 @@ def e_saluto(testo):
     return bool(_RE_SALUTO.search(basso)) and len(basso.split()) <= 6
 
 
+BOT_CHAT = {"streamelements", "nightbot", "streamlabs", "moobot", "fossabot",
+            "wizebot", "sery_bot", "botrixoficial", "kofistreambot", "soundalerts"}
+_RE_AVVISO = re.compile(
+    r"(?:\bgift(?:ed|ing)\b|\bjust (?:subscribed|cheered|followed)\b|\bsubscribed (?:at|with)\b|"
+    r"\bconsecutive streams\b|\bwatch streak\b|^\s*(?:cheer|showlove|corgo|biblethump|pride)\d+|"
+    r"\braid(?:ing|ed)?\b|\bhanno? regalato\b|\bsi e' abbonat|\bsi è abbonat)", re.IGNORECASE)
+
+
+def e_avviso(autore, testo):
+    """Messaggi che non sono reazioni a quello che succede: bot, abbonamenti
+    regalati, cheer, serie di visioni, comandi ("!discord"). Haytano il 5/11:
+    i picchi di chat erano tutti "gifted a Tier 1 sub" e StreamElements."""
+    if (autore or "").lower() in BOT_CHAT:
+        return True
+    testo = (testo or "").strip()
+    return testo.startswith("!") or bool(_RE_AVVISO.search(testo))
+
+
 def chat_per_secondo(messaggi, durata):
     """Da [(secondo, autore, testo), ...] a due serie: volume e reazioni.
 
     I saluti non contano: all'inizio e alla fine della live la chat e'
-    fitta solo di "ciao" e "buonanotte".
+    fitta solo di "ciao" e "buonanotte". Nemmeno bot e avvisi (e_avviso).
     """
     volume = [0.0] * durata
     reazioni = [0.0] * durata
-    for secondo, _autore, testo in messaggi:
+    for secondo, autore, testo in messaggi:
         s = int(secondo)
-        if not 0 <= s < durata or e_saluto(testo):
+        if not 0 <= s < durata or e_saluto(testo) or e_avviso(autore, testo):
             continue
         volume[s] += 1
         basso = (testo or "").lower()
-        if any(p in basso for p in PAROLE_REAZIONE):
+        # "@marco ahahah" e' una battuta fra spettatori, non una reazione
+        # alla live: conta nel volume ma non fra le reazioni.
+        if not basso.lstrip().startswith("@") and any(p in basso for p in PAROLE_REAZIONE):
             reazioni[s] += 1
     return volume, reazioni
 
@@ -305,7 +325,7 @@ def per_blocco(quante, durata_live):
     live non e' lunga (li' si prendono semplicemente i migliori)."""
     if durata_live <= LIVE_LUNGA:
         return None
-    return max(1, math.ceil(1.5 * quante * BLOCCO / durata_live))
+    return max(1, math.ceil(quante * BLOCCO / durata_live))
 
 
 def candidati(valori, quante=5, durata_live=None):
