@@ -160,10 +160,7 @@ def test_salta_i_saluti_finali():
     assert picchi and picchi[0] < 9000 - punteggio.SALTA_FINE
 
 
-def test_whisper_passa_alla_cpu_se_la_gpu_fallisce(monkeypatch):
-    """Su Windows la GPU si carica ma la trascrizione esplode (cublas64_12.dll)."""
-    from taglia_live import taglia_live as tl
-
+def _modello_finto(caricati, gpu_rotta):
     class Parola:
         start, end, word = 0.0, 0.5, " ciao"
 
@@ -176,27 +173,124 @@ def test_whisper_passa_alla_cpu_se_la_gpu_fallisce(monkeypatch):
 
         def transcribe(self, audio, **kw):
             def segmenti():
-                if self.dispositivo == "cuda":
+                if self.dispositivo == "cuda" and gpu_rotta:
                     raise RuntimeError("Library cublas64_12.dll is not found")
                 yield Segmento()
             return segmenti(), None
 
-    caricati = []
-
     def carica(dispositivo):
         caricati.append(dispositivo)
         return Modello(dispositivo)
+    return carica
 
+
+def test_whisper_si_ferma_se_la_gpu_non_va(monkeypatch):
+    """Su Windows la GPU si carica ma la trascrizione esplode (cublas64_12.dll):
+    niente ripiego sulla CPU (sottotitoli confusi), errore chiaro."""
+    import pytest
+    from taglia_live import taglia_live as tl
+    caricati = []
+    monkeypatch.setattr(tl, "_carica_modello", _modello_finto(caricati, gpu_rotta=True))
+    monkeypatch.setattr(tl, "librerie_cuda", lambda: [])
+    monkeypatch.setattr(tl, "_modello", None)
+    monkeypatch.setattr(tl, "DISPOSITIVO", "")
+    with pytest.raises(tl.GpuNonDisponibile, match="nvidia-cublas-cu12"):
+        tl.controlla_gpu()
+    assert caricati == ["cuda"]
+    assert tl._modello is None
+
+
+def test_whisper_usa_la_gpu_controllata(monkeypatch):
+    from taglia_live import taglia_live as tl
+    caricati = []
+    monkeypatch.setattr(tl, "_carica_modello", _modello_finto(caricati, gpu_rotta=False))
+    monkeypatch.setattr(tl, "librerie_cuda", lambda: [])
     monkeypatch.setattr(tl, "_audio_16k", lambda p: [0.0])
-    monkeypatch.setattr(tl, "_carica_modello", carica)
     monkeypatch.setattr(tl, "_modello", None)
     monkeypatch.setattr(tl, "_dispositivo", None)
     monkeypatch.setattr(tl, "DISPOSITIVO", "")
+    tl.controlla_gpu()
     assert tl.trascrivi("x.mp4") == [(0.0, 0.5, "ciao")]
-    assert caricati == ["cuda", "cpu"]
-    # la clip dopo resta sulla CPU, senza riprovare la GPU
-    assert tl.trascrivi("y.mp4") == [(0.0, 0.5, "ciao")]
-    assert caricati == ["cuda", "cpu"]
+    assert caricati == ["cuda"] and tl._dispositivo == "cuda"
+
+
+def test_whisper_cpu_solo_se_chiesta(monkeypatch):
+    from taglia_live import taglia_live as tl
+    caricati = []
+    monkeypatch.setattr(tl, "_carica_modello", _modello_finto(caricati, gpu_rotta=True))
+    monkeypatch.setattr(tl, "_audio_16k", lambda p: [0.0])
+    monkeypatch.setattr(tl, "_modello", None)
+    monkeypatch.setattr(tl, "DISPOSITIVO", "cpu")
+    tl.controlla_gpu()
+    assert tl.trascrivi("x.mp4") == [(0.0, 0.5, "ciao")]
+    assert caricati == ["cpu"]
+
+
+# --- momenti sparsi per la live, non solo l'inizio -------------------------
+
+def test_i_saluti_della_chat_non_contano():
+    assert punteggio.e_saluto("ciao a tutti!")
+    assert punteggio.e_saluto("Buonasera Hay")
+    assert not punteggio.e_saluto("ciao ahahahah")
+    assert not punteggio.e_saluto("ma che ha fatto")
+    volume, _ = punteggio.chat_per_secondo([(5, "a", "ciao"), (5, "b", "noo")], 10)
+    assert volume[5] == 1
+
+
+def test_bot_e_abbonamenti_regalati_non_sono_reazioni():
+    """haytano 5/11: i picchi di chat erano sub regalate e StreamElements."""
+    assert punteggio.e_avviso("tano92m", "tano92m gifted a Tier 1 sub to roxyyy93!")
+    assert punteggio.e_avviso("StreamElements", "roxyyy93 just subscribed PogChamp")
+    assert punteggio.e_avviso("france881", "Cheer1 Cheer1 Cheer1")
+    assert punteggio.e_avviso("x", "!discord")
+    assert not punteggio.e_avviso("walter_98_", "Porcoooooooo ahahah")
+    volume, _ = punteggio.chat_per_secondo(
+        [(1, "StreamElements", "a just cheered 5 bits"), (1, "b", "LUL")], 3)
+    assert volume[1] == 1
+
+
+def test_un_ora_di_chat_fitta_all_inizio_non_si_prende_tutte_le_clip():
+    """haytano 4/11: chat fitta per la prima ora, picchi veri piu' avanti."""
+    durata = 4 * 3600
+    energia = [1.0] * durata
+    volume = [0.0] * durata
+    for s in range(600, 3600):
+        volume[s] = 3.0 + (s % 97 == 0) * 2       # chat fitta e un po' mossa
+    for picco in (6000, 9000, 12000):
+        for s in range(picco, picco + 8):
+            volume[s] = 12.0
+            energia[s] = 6.0
+    valori = punteggio.segnale(energia, volume, [0.0] * durata)
+    picchi = sorted(c[3] for c in punteggio.candidati(valori, quante=5))
+    assert sum(1 for p in picchi if p < 3600) <= 2
+    for picco in (6000, 9000, 12000):
+        assert any(abs(p - picco) < 30 for p in picchi)
+
+
+def test_live_lunga_salta_dieci_minuti_e_si_sparge():
+    durata = 4 * 3600
+    energia = [1.0] * durata
+    for s in (200, 400) + tuple(range(1000, 1700, 100)):
+        energia[s] = 40.0
+    energia[10000] = 20.0
+    picchi = [c[3] for c in punteggio.candidati(punteggio.segnale(energia), quante=4)]
+    assert all(p >= punteggio.SALTA_INIZIO_LUNGA for p in picchi)
+    assert any(abs(p - 10000) < 5 for p in picchi)
+
+
+# --- ascolto ------------------------------------------------------------------
+
+def test_ascolto_accordo_e_note():
+    from taglia_live import ascolta
+    assert ascolta.accordo("CHE CURVA RAGAZZI C****", "che curva ragazzi cazzo") == 1.0
+    assert ascolta.accordo("PAROLE INVENTATE QUI", "tutt'altro discorso") == 0.0
+    assert ascolta.accordo("", "x") is None
+    stacco, muto = ascolta.stacco_e_silenzio([-30, -30, -30, -10, -60])
+    assert stacco == 20 and muto == 0.2
+    m = {"prima_parola": 4.0, "parole_al_secondo": 0.5, "accordo_sottotitoli": 0.3,
+         "stacco_db": 3, "silenzio": 0.0}
+    testo = " ".join(ascolta.note(m))
+    assert "parte muta" in testo and "poco" in testo and "sottotitoli" in testo
 
 
 # --- impaginazione ----------------------------------------------------------
@@ -223,6 +317,18 @@ def test_volto_grande_resta_al_centro():
 def test_senza_volti_o_volti_sporadici_resta_al_centro():
     assert imp.scegli([], 1920, 1080) == ("centro", None)
     assert imp.scegli([[], [], [], [], [], [(10, 10, 40, 40)]], 1920, 1080)[0] == "centro"
+
+
+def test_senza_webcam_il_gioco_si_ingrandisce():
+    """alexdieci gioca senza facecam: non la scena intera alta 607 pixel."""
+    scelta, r = imp.scegli([[], [], [], [], [], []], 1920, 1080, senza_webcam="gioco")
+    assert scelta == "gioco"
+    gx, gy, gw, gh = r["gioco"]
+    assert gh == 1080 and gw == 810 and gx == 554
+    filtro = imp.filtro_ffmpeg("gioco", r, "x.ass")
+    assert "crop=810:1080:554:0" in filtro and "ass=x.ass" in filtro
+    # OpenCV non ha guardato (nessun fotogramma): resta al centro
+    assert imp.scegli([], 1920, 1080, senza_webcam="gioco")[0] == "centro"
 
 
 def test_il_gioco_si_sposta_via_dalla_webcam_a_destra():
