@@ -1,21 +1,5 @@
 [
   {
-    "timestamp": 1790051138,
-    "data": "2026-09-22",
-    "titolo": "Grand Theft Auto VI: la colonna sonora che trasforma il gioco",
-    "lingua": "it",
-    "slot": "",
-    "formato": "lungo",
-    "estratto_script": "La colonna sonora di Grand Theft Auto VI è stata finalmente svelata, e subito si percepisc",
-    "stile": "VIDEO_LUNGO",
-    "gioco": "Grand Theft Auto VI",
-    "query_video": "Grand Theft Auto VI soundtrack gameplay",
-    "fonte": "Grand Theft Auto VI, arriva l'album con la soundtrack del videogame (Sky TG24)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMif0FVX3lxTFBabWVNTHBjdEZ4aDloVXpIVld3TWpyUDdNbFdzZGNMUUhCaFhiYUpHZ2JTQ1dJa3Axb0FFaEtJUEJqeVkyWk5Objk4SlpJWlRCVldSU0JkcHF0dTNzczBkR1hranJpRUl2Vm1yTVRTTDRGSnhHbmNJb0VETUJITzQ?oc=5",
-    "video_id": "SHmPQOzpkKQ",
-    "veste": "fuoco"
-  },
-  {
     "timestamp": 1790081312,
     "data": "2026-09-22",
     "titolo": "Assassin's Creed Black Flag: New Game Plus confermato 🎮",
@@ -3705,5 +3689,21 @@
     "veste": "pulito",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/GgTH0AD9qO8-wYcIGzjIz1xPulU9UBwdIueJ14Ht4i.mp4",
     "didascalia_tiktok": "GTA 6: Physical Edition Poster Revealed 🖼\n\nA mysterious GTA 6 Physical Edition poster surfaces, sparking debate among fans. Is it legit or just hype? What do you think?\n\nMore on davidedurazzi.it\n\n#grandtheftautovi #newsgaming #gamingita #fyp"
+  },
+  {
+    "timestamp": 1794052103,
+    "data": "2026-11-07",
+    "titolo": "Hard West 2: Supernatural Western on PS5? 🤠",
+    "lingua": "en",
+    "slot": "20:00",
+    "uscita": 1794078000,
+    "formato": "short",
+    "estratto_script": "Hard West 2 lands on PS5 this year, while medieval knights still dominate. Turn‑based tact",
+    "stile": "DOMANDA_AL_PUBBLICO",
+    "gioco": "Hard West 2",
+    "query_video": "hard west 2 gameplay",
+    "fonte": "Supernatural PS5 Western RPG Finally Gets Console Release Date (PlayStation LifeStyle)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMiggFBVV95cUxPYXQ5dFczRWdBSEo3WkNFZFFrSHFrRjFLbmtFaTFHS1lBenlsZ21vdVctNmFwUmhCWnFESG9UR2JFOVJIaFNJdFRKWnFtdTYtWHdJbjJ4LTlPNDNHTFVkVmZ4UU9pZkZneUpWNnp3QmNUY2pVS3V2ZE1RdHpkdUhFTlBB?oc=5",
+    "video_id": null
   }
 ]
