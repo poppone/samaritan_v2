@@ -269,6 +269,13 @@ class GpuNonDisponibile(Exception):
     """Whisper doveva girare sulla GPU ma la GPU non risponde."""
 
 
+def _silenzio_di_prova():
+    """Un secondo di silenzio a 16 kHz per la prova di avvio. A parte, cosi' i
+    test lo sostituiscono senza bisogno di numpy."""
+    import numpy as np
+    return np.zeros(16000, dtype=np.float32)
+
+
 def controlla_gpu():
     """All'avvio: carica Whisper sulla GPU e trascrive un secondo di prova.
 
@@ -283,10 +290,9 @@ def controlla_gpu():
         return
     cartelle = librerie_cuda()
     try:
-        import numpy as np
         modello = _carica_modello("cuda")
         # Senza vad_filter, cosi' l'encoder gira davvero e cuBLAS si carica.
-        segmenti, _ = modello.transcribe(np.zeros(16000, dtype=np.float32),
+        segmenti, _ = modello.transcribe(_silenzio_di_prova(),
                                          language="it", vad_filter=False)
         list(segmenti)
     except Exception as e:

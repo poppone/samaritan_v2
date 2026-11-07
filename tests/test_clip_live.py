@@ -192,6 +192,7 @@ def test_whisper_si_ferma_se_la_gpu_non_va(monkeypatch):
     caricati = []
     monkeypatch.setattr(tl, "_carica_modello", _modello_finto(caricati, gpu_rotta=True))
     monkeypatch.setattr(tl, "librerie_cuda", lambda: [])
+    monkeypatch.setattr(tl, "_silenzio_di_prova", lambda: [0.0] * 16000)
     monkeypatch.setattr(tl, "_modello", None)
     monkeypatch.setattr(tl, "DISPOSITIVO", "")
     with pytest.raises(tl.GpuNonDisponibile, match="nvidia-cublas-cu12"):
@@ -205,6 +206,7 @@ def test_whisper_usa_la_gpu_controllata(monkeypatch):
     caricati = []
     monkeypatch.setattr(tl, "_carica_modello", _modello_finto(caricati, gpu_rotta=False))
     monkeypatch.setattr(tl, "librerie_cuda", lambda: [])
+    monkeypatch.setattr(tl, "_silenzio_di_prova", lambda: [0.0] * 16000)
     monkeypatch.setattr(tl, "_audio_16k", lambda p: [0.0])
     monkeypatch.setattr(tl, "_modello", None)
     monkeypatch.setattr(tl, "_dispositivo", None)
