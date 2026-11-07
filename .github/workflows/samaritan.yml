@@ -16,13 +16,13 @@ on:
     # partenza senza uscita si ferma in pochi secondi (job 'uscita' qui
     # sotto). Questi cron sono copiati in profilo.CRON_USCITE, che li usa per
     # controllare i margini: un test tiene allineate le due copie.
-    # Per Poppone TV, senza canale.json: 14:00, 18:00 in italiano e 20:00,
-    # 21:00 in inglese (fino al 27 settembre 2026 alle 20:00 usciva il video
-    # lungo 16:9, che ora si lancia solo a mano).
+    # Per Poppone TV, senza canale.json, dal 7 novembre 2026: 14:00 e 20:00
+    # in italiano (le partenze 2 e 4 si fermano subito). Gli Short inglesi
+    # sono stati tolti: 56 visualizzazioni di mediana contro 211.
     - cron: '17 1 * * *'          # partenza 1 (Poppone TV: 14:00 italiane)
-    - cron: '17 3 * * *'          # partenza 2 (Poppone TV: 18:00 italiane)
-    - cron: '17 5 * * *'          # partenza 3 (Poppone TV: 20:00, in inglese)
-    - cron: '17 6 * * *'          # partenza 4 (Poppone TV: 21:00, in inglese)
+    - cron: '17 3 * * *'          # partenza 2 (Poppone TV: 20:00 italiane)
+    - cron: '17 5 * * *'          # partenza 3 (Poppone TV: libera)
+    - cron: '17 6 * * *'          # partenza 4 (Poppone TV: libera)
     # La riserva di fine giornata. Non produce un video suo: guarda quali
     # delle quattro uscite di oggi sono rimaste scoperte e rifa' la piu'
     # vecchia, una sola, nel formato che quell'uscita voleva. Se sono tutte a
@@ -65,11 +65,11 @@ on:
 permissions:
   contents: write
 
-# La partenza 3 (per Poppone TV l'uscita delle 20:00) e il video lungo lanciato
+# La partenza 2 (per Poppone TV l'uscita delle 20:00) e il video lungo lanciato
 # a mano hanno una coda loro.
 # Non e' un capriccio: GitHub tiene UNA sola lavorazione in attesa per coda e
 # cancella la precedente, e con partenze in ritardo di ore le uscite delle
-# 18:00, 20:00 e 21:00 si ritrovano spesso in attesa insieme: in una coda sola
+# 14:00 e 20:00 si ritroverebbero in attesa insieme: in una coda sola
 # se ne perderebbe una. Il montaggio del lungo dura poi decine di minuti e
 # bloccherebbe gli Short dietro di se'. I due passi finali che
 # scrivono sul repository sopportano di girare in parallelo: il push viene
@@ -78,7 +78,7 @@ permissions:
 # stanno ciascuno in una coda propria: in coda con gli altri, un comando
 # arrivato mentre un'uscita programmata aspetta il suo turno la cancellerebbe.
 concurrency:
-  group: ${{ (github.event_name == 'workflow_dispatch' && !inputs.recupero) && format('samaritan-manuale-{0}', github.run_id) || (((github.event.schedule == '17 5 * * *') || inputs.lungo) && 'samaritan-lungo' || 'samaritan-publish') }}
+  group: ${{ (github.event_name == 'workflow_dispatch' && !inputs.recupero) && format('samaritan-manuale-{0}', github.run_id) || (((github.event.schedule == '17 3 * * *') || inputs.lungo) && 'samaritan-lungo' || 'samaritan-publish') }}
   cancel-in-progress: false
 
 jobs:

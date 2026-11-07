@@ -150,13 +150,16 @@ class TestWorkflowCollegato:
     delle quattro partenze notturne e' (USCITA_CRON), e orario, SLOT, lingua
     e voce li ricava config dal profilo del canale. Questi test controllano
     tutti e due i pezzi, e che senza canale.json Poppone TV esca come deciso
-    il 5 ottobre 2026: 14:00 in italiano, 18:00, 20:00 e 21:00 in inglese.
+    il 7 novembre 2026: 14:00 e 20:00 in italiano, le altre due partenze
+    libere (dal 5 ottobre al 6 novembre erano 14:00 in italiano e 18:00,
+    20:00, 21:00 in inglese: 56 visualizzazioni di mediana contro 211).
     """
 
-    # Le uscite di Poppone TV, partenza per partenza, com'erano scritte nel
-    # workflow prima del profilo.
-    POPPONE = {1: ("14:00", "it"), 2: ("18:00", "en"),
-               3: ("20:00", "en"), 4: ("21:00", "en")}
+    # Le uscite di Poppone TV, partenza per partenza: abbina_cron da' le
+    # 20:00 alla seconda partenza (03:17 UTC, margine entro le 16 ore); la
+    # 3 e la 4 si fermano subito.
+    POPPONE = {1: ("14:00", "it"), 2: ("20:00", "it")}
+    PARTENZE_LIBERE = (3, 4)
     CRON = {1: "17 1 * * *", 2: "17 3 * * *", 3: "17 5 * * *", 4: "17 6 * * *"}
 
     def _workflow(self):
@@ -216,11 +219,16 @@ class TestWorkflowCollegato:
             assert c.VOCE_TTS == f"voce-{lingua}"
             assert c.NESSUNA_USCITA is False
 
-    def test_il_video_delle_21_esce_in_inglese(self, monkeypatch):
-        """Il terzo slot e' l'esperimento sull'inglese: se la lingua non
-        arriva, esce un altro video italiano e la prova non esiste."""
-        c = self._risolvi(monkeypatch, USCITA_CRON="4")
-        assert c.LINGUA == "en" and c.VOCE_TTS == "voce-en"
+    def test_le_partenze_senza_uscita_si_fermano(self, monkeypatch):
+        """Dal 7 novembre 2026 gli Short inglesi non escono piu': la
+        seconda e la quarta partenza non hanno un'uscita e non pubblicano."""
+        for numero in self.PARTENZE_LIBERE:
+            c = self._risolvi(monkeypatch, USCITA_CRON=str(numero))
+            assert c.NESSUNA_USCITA is True, numero
+
+    def test_il_video_delle_20_esce_in_italiano(self, monkeypatch):
+        c = self._risolvi(monkeypatch, USCITA_CRON="2")
+        assert c.LINGUA == "it" and c.VOCE_TTS == "voce-it"
 
     def test_i_cron_partono_con_almeno_dieci_ore_di_margine(self):
         """Il 28 settembre 2026 GitHub ha fatto partire le quattro
@@ -239,19 +247,20 @@ class TestWorkflowCollegato:
             assert uscita_utc + 1 - partenza <= orari.ANTICIPO_PARTENZA_ORE, (
                 ora, minuto, uscita_utc)
         p = profilo.predefinito()
-        assert profilo.abbina_cron(p.uscite, p.fuso) == [0, 1, 2, 3]
+        assert profilo.abbina_cron(p.uscite, p.fuso) == [0, 1]
 
     def test_il_workflow_e_l_elenco_delle_uscite_dicono_la_stessa_cosa(self):
         """orari.slot_giornalieri() e le partenze del workflow sono due facce
         della stessa informazione: se divergono, la riserva va a cercare
         un'uscita che non esiste, o non si accorge di quella che manca."""
         assert orari.slot_giornalieri() == (
-            ("14:00", "it", "short"), ("18:00", "en", "short"),
-            ("20:00", "en", "short"), ("21:00", "en", "short"))
+            ("14:00", "it", "short"), ("20:00", "it", "short"))
         p = profilo.attivo()
         for numero, (orario, lingua) in self.POPPONE.items():
             assert profilo.uscita_del_cron(p, numero) == {
                 "orario": orario, "lingua": lingua}
+        for numero in self.PARTENZE_LIBERE:
+            assert profilo.uscita_del_cron(p, numero) is None
 
     def test_la_riserva_di_fine_giornata_e_collegata(self):
         testo = self._workflow()
@@ -300,10 +309,10 @@ class TestWorkflowCollegato:
         # La lingua del menu conta solo se la run non copre un'uscita: e'
         # l'uscita a decidere, come prima facevano le 20:00 e le 21:00.
         assert "!inputs.slot" in self._righe("LINGUA:")[0]
-        for richiesta in ("20:00", "3"):
+        for richiesta in ("20:00", "2"):
             c = self._risolvi(monkeypatch, USCITA_RICHIESTA=richiesta)
             assert (c.ORARIO_USCITA, c.SLOT) == ("20:00", "20:00"), richiesta
-            assert (c.LINGUA, c.VOCE_TTS) == ("en", "voce-en"), richiesta
+            assert (c.LINGUA, c.VOCE_TTS) == ("it", "voce-it"), richiesta
         c = self._risolvi(monkeypatch, USCITA_RICHIESTA="14:00")
         assert (c.LINGUA, c.VOCE_TTS) == ("it", "voce-it")
         with pytest.raises(profilo.ProfiloNonValido, match="non c'e'"):
@@ -312,7 +321,9 @@ class TestWorkflowCollegato:
     def test_una_run_a_mano_senza_uscita_esce_subito(self, monkeypatch):
         c = self._risolvi(monkeypatch, LINGUA="en")
         assert (c.ORARIO_USCITA, c.SLOT) == ("", "")
-        assert (c.LINGUA, c.VOCE_TTS) == ("en", "voce-en")
+        # Dal 7 novembre 2026 il canale non pubblica in inglese: la run a
+        # mano torna all'italiano (vedi test_una_run_a_mano_parla_una_lingua_del_canale).
+        assert (c.LINGUA, c.VOCE_TTS) == ("it", "voce-it")
         c = self._risolvi(monkeypatch)
         assert (c.LINGUA, c.VOCE_TTS) == ("it", "voce-it")
 
@@ -456,7 +467,7 @@ class TestUscitaGiaCoperta:
         dopo = datetime(2026, 9, 29, 11, 0, tzinfo=ROMA)
         assert orari.gia_pubblicato("14:00", [voce], dopo) is True
         assert orari.slot_da_recuperare([voce], ADESSO.replace(day=29)) == (
-            "18:00", "en", "short")
+            "20:00", "it", "short")
 
     def test_la_riserva_scrive_l_uscita_passata(self):
         ora = datetime(2026, 9, 29, 0, 10, tzinfo=ROMA)
@@ -486,40 +497,26 @@ class TestQualeUscitaRecuperare:
     def test_se_sono_tutte_a_posto_non_si_recupera_niente(self):
         cronologia = [
             _voce("14:00", ADESSO.replace(hour=15)),
-            _voce("18:00", ADESSO.replace(hour=19)),
             _voce("20:00", ADESSO.replace(hour=20, minute=30)),
-            _voce("21:00", ADESSO.replace(hour=21, minute=30)),
         ]
         assert orari.slot_da_recuperare(cronologia, ADESSO) is None
 
     def test_recupera_quella_che_manca(self):
         cronologia = [
             _voce("14:00", ADESSO.replace(hour=15)),
-            _voce("20:00", ADESSO.replace(hour=20, minute=30)),
-            _voce("21:00", ADESSO.replace(hour=21, minute=30)),
         ]
         assert orari.slot_da_recuperare(cronologia, ADESSO) == (
-            "18:00", "en", "short")
+            "20:00", "it", "short")
 
-    def test_le_20_si_recuperano_in_inglese(self):
+    def test_l_uscita_si_recupera_nella_sua_lingua(self, monkeypatch):
         """Lingua e formato viaggiano insieme all'orario: la riserva rifa'
         l'uscita come l'uscita la voleva."""
-        cronologia = [
-            _voce("14:00", ADESSO.replace(hour=15)),
-            _voce("18:00", ADESSO.replace(hour=19)),
-            _voce("21:00", ADESSO.replace(hour=21, minute=30)),
-        ]
+        monkeypatch.setattr(profilo, "_attivo", profilo.da_dizionario(
+            {"uscite": [{"orario": "14:00", "lingua": "it"},
+                        {"orario": "18:00", "lingua": "en"}]}))
+        cronologia = [_voce("14:00", ADESSO.replace(hour=15))]
         assert orari.slot_da_recuperare(cronologia, ADESSO) == (
-            "20:00", "en", "short")
-
-    def test_l_uscita_inglese_si_recupera_in_inglese(self):
-        cronologia = [
-            _voce("14:00", ADESSO.replace(hour=15)),
-            _voce("18:00", ADESSO.replace(hour=19)),
-            _voce("20:00", ADESSO.replace(hour=20, minute=30)),
-        ]
-        assert orari.slot_da_recuperare(cronologia, ADESSO) == (
-            "21:00", "en", "short")
+            "18:00", "en", "short")
 
     def test_se_ne_mancano_due_si_recupera_la_piu_vecchia(self):
         """Una per volta: nel caso peggiore esce un video in piu', mai tre
@@ -538,17 +535,15 @@ class TestQualeUscitaRecuperare:
         dire pubblicare una notizia vecchia di un giorno."""
         mattina = ADESSO.replace(day=22, hour=8, minute=0)
         # Alle 8 del 22 nessuna uscita del 22 e' ancora passata, e quelle del
-        # 21 sono tutte oltre le dodici ore tranne le 20:00 e le 21:00: si
-        # recupera la piu' vecchia delle due.
-        assert orari.slot_da_recuperare([], mattina) == ("20:00", "en", "short")
+        # 21 sono oltre le dodici ore tranne le 20:00: si recupera quella.
+        assert orari.slot_da_recuperare([], mattina) == ("20:00", "it", "short")
 
     def test_la_riserva_non_confonde_un_uscita_di_ieri_con_quella_di_oggi(self):
         """La riserva guarda solo uscite passate. Se parte cosi' tardi che
         l'uscita delle 14:00 di oggi e' vicina, deve comunque giudicare quella
         di ieri sera per quello che e'."""
         mattina = ADESSO.replace(day=22, hour=8, minute=0)
-        coperte = [_voce("20:00", ADESSO.replace(hour=19, minute=50)),
-                   _voce("21:00", ADESSO.replace(hour=20, minute=40))]
+        coperte = [_voce("20:00", ADESSO.replace(hour=19, minute=50))]
         assert orari.slot_da_recuperare(coperte, mattina) is None
 
     def test_a_meta_mattina_non_c_e_piu_niente_da_recuperare(self):
