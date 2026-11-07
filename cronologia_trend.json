@@ -1,19 +1,5 @@
 [
   {
-    "timestamp": 1790016086,
-    "data": "2026-09-21",
-    "titolo": "Fortnite: la classifica segreta dei loot più rari 🎯",
-    "lingua": "it",
-    "estratto_script": "100 minuti di battaglia e ancora ti chiedi perché non trovi il loot leggendario. Il nuovo ",
-    "stile": "TIER_LIST_LAMPO",
-    "gioco": "Fortnite",
-    "query_video": "fortnite gameplay",
-    "fonte": "",
-    "fonte_url": "",
-    "video_id": "XaU2hP-SWpM",
-    "veste": "notte"
-  },
-  {
     "timestamp": 1790019741,
     "data": "2026-09-21",
     "titolo": "PlayStation 5: the PS1 classics you can't miss 🎮",
@@ -3694,5 +3680,21 @@
     "veste": "ghiaccio",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/bJQhpcd82rM-U7LXTaoGFUNjNtJ8QFYWo0wOrRrWcH.mp4",
     "didascalia_tiktok": "God of War: Release Date Delayed, Official Statement 🎮\n\nGod of War's launch got postponed—what does this mean for fans? Comment your thoughts below!\n\nMore on davidedurazzi.it\n\n#godofwar #rumor #gamingita #fyp"
+  },
+  {
+    "timestamp": 1794035478,
+    "data": "2026-11-07",
+    "titolo": "EA Sports FC 26: l'update gratuito con Maradona e Pelé ⚽",
+    "lingua": "it",
+    "slot": "14:00",
+    "uscita": 1794056400,
+    "formato": "short",
+    "estratto_script": "3 minuti per scoprire l'update più pazzo di EA Sports FC 26. È arrivato l'aggiornamento \"T",
+    "stile": "SEAMLESS_LOOP_FACTS",
+    "gioco": "EA Sports FC 26",
+    "query_video": "ea sports fc 26 update gameplay",
+    "fonte": "EA Sports FC 26 The World's Game: disponibile l'update con Maradona e Pelé gratis (Everyeye.it)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMitwFBVV95cUxQckRuOTA5ZU5JVkI2RFJUSXBha0d4VThFamtscVU0MEp3TTkxbnUzVG1sbGhMaFlPQWJoeWZSVnlSOUJ6blRiaEM2amZaT09QOEdSSHpMV0NaVTBKTGZvUm9mT19YcDBPZTJ3OF9jNEFpMXQtRzdGSnQwWmo5NklLNUlNelZNb3c4S2h3NnNjdFJBRVZIY0c3OUt4Tmo3THRwQ0JJTDRpU2xiRTc5dzZPdWY0T1VGQ2M?oc=5",
+    "video_id": null
   }
 ]
