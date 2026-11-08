@@ -103,12 +103,16 @@ LINK_GAMING = {
         "https://www.instant-gaming.com/it/?igr=poppone",
         "VPN per giocare e navigare protetto, NordVPN (link affiliato): "
         "https://go.nordvpn.net/aff_c?offer_id=15&aff_id=159138&url_id=858",
+        "Mouse, tastiere e cuffie da gaming Razer (link affiliato): "
+        "https://razer.a9yw.net/c/8122182/642901/10229",
     ],
     "en": [
         "Cheaper game keys on Instant Gaming (affiliate link): "
         "https://www.instant-gaming.com/en/?igr=poppone",
         "Play and browse safer with NordVPN (affiliate link): "
         "https://go.nordvpn.net/aff_c?offer_id=15&aff_id=159138&url_id=858",
+        "Razer gaming mice, keyboards and headsets (affiliate link): "
+        "https://razer.a9yw.net/c/8122182/642901/10229",
     ],
 }
 
