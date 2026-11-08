@@ -1,21 +1,5 @@
 [
   {
-    "timestamp": 1790118900,
-    "data": "2026-09-22",
-    "titolo": "WWE 2K23: la lotta contro Vice City ⚔",
-    "lingua": "it",
-    "slot": "18:00",
-    "formato": "short",
-    "estratto_script": "Zero credi che WWE possa girare a Vice City? La WWE ha appena annunciato che Vice City non",
-    "stile": "DONT_DO_THIS",
-    "gioco": "WWE 2K23",
-    "query_video": "wwe 2k23 gameplay",
-    "fonte": "WWE rinuncia a Vice City: la città di GTA 6 resta fuori dal ring (Everyeye.it)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMikwFBVV95cUxPRUtXbTBvUEZDMVJfOWtCREdzdGthOWFqQS00ZXozam1xZGs1ZDh2VDFnZWt0bUhWU3NYSHpMRVZaMnJpeU5LTEpGdWdxMFo0LWxiUFlTbHhVR1V4MHdENEN1Vk5yU25kdklibEpzVHFKY3lxSG5uTVkyb3o2bFdIUTZkMkJrUk1qZjEwZjdJc251WE0?oc=5",
-    "video_id": "ZSzx3sz4aRM",
-    "veste": "notte"
-  },
-  {
     "timestamp": 1790168189,
     "data": "2026-09-23",
     "titolo": "GTA 6: un cartello da quasi un milione a Miami 🌆",
@@ -3717,5 +3701,21 @@
     "veste": "ghiaccio",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/rZaM1sFwSWc-fNTdWUg7AE5Zsp4aXbbukgHMMJECt6.mp4",
     "didascalia_tiktok": "GTA 6: pre‑download inizia, ma la PS5 Pro è sparita 😱\n\nLa PS5 Pro è esaurita e il pre‑download di GTA 6 inizia il 10 novembre. Hai già i 212 GB liberi? Commenta qui sotto!\n\nAltre notizie su davidedurazzi.it\n\n#gta6 #consigli #gamingita #perte"
+  },
+  {
+    "timestamp": 1794133946,
+    "data": "2026-11-08",
+    "titolo": "LEGO Mario Kart: Bowser mini‑figura arriva! 🧱",
+    "lingua": "it",
+    "slot": "20:00",
+    "uscita": 1794164400,
+    "formato": "short",
+    "estratto_script": "Bowser in mini‑figura? Solo 59,99€! Il 1° gennaio 2027 esce la LEGO Mario Kart con quattro",
+    "stile": "SEAMLESS_LOOP_FACTS",
+    "gioco": "LEGO Mario Kart",
+    "query_video": "lego mario kart gameplay",
+    "fonte": "LEGO Mario Kart: Bowser e Toad in scala minifigure dal 1° gennaio 2027 (SpazioGames)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMioAFBVV95cUxPY29CR3BRN2lLNnZvWmRXTTdKeHh0YnROVmJBRGd2VXRGZE5sTFB2TXBGVTlMWkhJWC11eUVOS2ZrTEFCdHdsT0Y2OU5EVFQyM1lDWDVvX3h5VjkzZDJ1dE0xbk9LS204RnZmOTE1RnNraE1WLXFndXFlNVU5TkZxMFNlVTYzU25xNFNaQzd3RzNVamRJWlRIQTlyaHh1V2gy?oc=5",
+    "video_id": null
   }
 ]
