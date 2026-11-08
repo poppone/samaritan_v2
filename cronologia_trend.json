@@ -1,21 +1,5 @@
 [
   {
-    "timestamp": 1790099048,
-    "data": "2026-09-22",
-    "titolo": "Pokémon Scarlet: tutti i segreti nascosti nella nuova regione",
-    "lingua": "it",
-    "slot": "20:00",
-    "formato": "lungo",
-    "estratto_script": "La mappa di Pokémon Scarlet è davvero aperta, ma non è una semplice distesa statica: ogni ",
-    "stile": "VIDEO_LUNGO",
-    "gioco": "Pokémon Scarlet",
-    "query_video": "Pokemon Scarlet secrets gameplay",
-    "fonte": "Novità e aggiornamenti dal Pokémon Presents del Pokémon Day 2026 (Pokemon.com)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMinwFBVV95cUxNVTdqeVNxbEZacF9xVEFqMjlBWjBiS0U1Nk1DVV9fTHY1QVZRV2ZoeDNSbVJhQUtlVjh4Sk9ScHljZGRySjNqNFZXZk5jWldUQVpIeGs1V3pBajJsdDg1NmJyeVZ4cGkzNFpzSEQxUEFJUXNDNEpNb3hWa0o3RHVZOUd5WDNIZnljV3pMT1Fod1pMb2JaN0NjTlc1MWdEbDg?oc=5",
-    "video_id": "xMTglrGmpYc",
-    "veste": "arena"
-  },
-  {
     "timestamp": 1790118900,
     "data": "2026-09-22",
     "titolo": "WWE 2K23: la lotta contro Vice City ⚔",
@@ -3713,5 +3697,21 @@
     "veste": "notte",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/lJ8vVyrpDGI-LcHLIG49zbZEyJTva3TNpf5sD00v93.mp4",
     "didascalia_tiktok": "GTA 6: PC launch race against AI 🚀\n\nRockstar may launch GTA VI on PC sooner to dodge AI rip‑offs. What does this mean for gamers?\n\nMore on davidedurazzi.it\n\n#grandtheftautovi #easteregg #gamingita #fyp"
+  },
+  {
+    "timestamp": 1794122415,
+    "data": "2026-11-08",
+    "titolo": "GTA 6: pre‑download inizia, ma la PS5 Pro è sparita 😱",
+    "lingua": "it",
+    "slot": "14:00",
+    "uscita": 1794142800,
+    "formato": "short",
+    "estratto_script": "212 GB di dati per un gioco, un peso sorprendente. E la PS5 Pro è già finita. La console d",
+    "stile": "DONT_DO_THIS",
+    "gioco": "GTA 6",
+    "query_video": "gta 6 pre download gameplay",
+    "fonte": "La PS5 Pro è esaurita ovunque, mentre il pre-caricamento di GTA VI inizia la prossima settimana (Yahoo Finanza)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMihAFBVV95cUxPbWdscXU1aTI3YmtlNXUzTnBYQ1VSekhJS3RKZ2tidnVzN01JZFRBN0xOc0pydUJERVZJcDFqcTFpVGV5V1BSLXNQSTBjLWY2RXdWSEtzcGlZS2RBUDJoQk1BdjM3ZW40dWVlcVJLS21Rc1l6RzhCVDQ0YXNwbzJDcjg3TGg?oc=5",
+    "video_id": null
   }
 ]
