@@ -62,16 +62,17 @@ export function interpreta(testo) {
 // non subito. Il secondo giro, due ore dopo, e' la riprova per chi e' caduto
 // al primo: chi ha gia' il suo video si ferma col freno anti-doppioni, e
 // anche le partenze di GitHub, quando arrivano.
-// Uscite di Poppone TV: 1 = 14:00 (italiano), 2 = 18:00, 3 = 20:00 e
-// 4 = 21:00 (inglese).
+// Uscite di Poppone TV dal 7 novembre 2026: 1 = 14:00 e 2 = 20:00, tutte e
+// due in italiano. Le partenze 3 e 4 non esistono piu': lanciarle fa fallire
+// la lavorazione ("L'uscita richiesta non c'e' nel profilo").
 // Dal 5 ottobre 2026 ogni uscita parte circa tre ore prima del suo orario e
 // non tutte alle 6 del mattino: la notizia si sceglie poche ore prima di
 // uscire, quando e' ancora fresca. Il secondo giro e' un'ora e mezza dopo,
 // sempre prima dell'uscita, anche con l'ora solare (dal 26 ottobre le
 // uscite sono un'ora piu' tardi in UTC, quindi il margine cresce).
 export const PARTENZE_PUNTUALI = {
-  "09:00": "1", "13:00": "2", "15:00": "3", "16:00": "4",
-  "10:30": "1", "14:30": "2", "16:30": "3", "17:30": "4",
+  "09:00": "1", "15:00": "2",
+  "10:30": "1", "16:30": "2",
 };
 
 export function uscitaDaLanciare(quando) {
