@@ -1,21 +1,5 @@
 [
   {
-    "timestamp": 1790168189,
-    "data": "2026-09-23",
-    "titolo": "GTA 6: un cartello da quasi un milione a Miami 🌆",
-    "lingua": "it",
-    "slot": "14:00",
-    "formato": "short",
-    "estratto_script": "Un cartello da 999.999 dollari in una città fittizia? No, è reale. GTA 6 ha trasformato Mi",
-    "stile": "VIRAL_HOOK_NEWS",
-    "gioco": "Grand Theft Auto VI",
-    "query_video": "gta 6 news gameplay",
-    "fonte": "GTA 6 trasforma Miami in Vice City con un cartello che è costato quasi un milione di dollari (Multiplayer)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMirgFBVV95cUxNXzFyeEpIaG0tQ2tqeEYybkhxVXpISzl1VG9MV2ZzazBGQmFKQ0ZYQXFfV2FxZmV0TThuM2ZhYmZLbmlsSXhWdG83Rk5XbExoVzZNOW5kNVR2S05oLVBOcUFEemNMQ3pGNURGQ2ZxRXdiQ3Z0Tk91UldTbGZPZEIxYU5Udy1wUGlqNTNVd1ZsckEzbHpuZGNOUnpzOWJNLXVZd1dMa0VyQmFmb1Excmc?oc=5",
-    "video_id": "Ca5aoZz9bIA",
-    "veste": "ghiaccio"
-  },
-  {
     "timestamp": 1790188501,
     "data": "2026-09-23",
     "titolo": "GTA 6: The game that isn’t arriving… yet 😮",
@@ -3721,5 +3705,21 @@
     "veste": "fuoco",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/b-SKv5OZQdQ-SXGMTU7rcJlRo9ZxFzFwJ2LUXt9Ha1.mp4",
     "didascalia_tiktok": "LEGO Mario Kart: Bowser mini‑figura arriva! 🧱\n\nIl nuovo set LEGO Mario Kart sbarca con Bowser e Toad in mini‑figura. Cosa ne pensi di questa aggiunta alla collezione? Commenta!\n\nAltre notizie su davidedurazzi.it\n\n#legomariokart #curiosita #gamingita #perte"
+  },
+  {
+    "timestamp": 1794211273,
+    "data": "2026-11-09",
+    "titolo": "GTA 6 pesa oltre 200 GB: spazio su PS5?",
+    "lingua": "it",
+    "slot": "14:00",
+    "uscita": 1794229200,
+    "formato": "short",
+    "estratto_script": "200 GB, un peso che sorprende anche la PS5. GTA 6 pesa oltre 200 GB. Ma quanto spazio libe",
+    "stile": "MYTH_BUSTING_VIRAL",
+    "gioco": "GTA 6",
+    "query_video": "gta 6 space requirement gameplay",
+    "fonte": "GTA 6 pesa oltre 200 GB: quanto spazio libero serve davvero su PS5 per installarlo? (Everyeye.it)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMiqAFBVV95cUxON1FRdE1hcG9SRm9YZnFDM2haODU2RldJb2JJV18zR184b0hXTncyUktTVGVXTG03VF9mVFQzRnhiZHZTQUs3VWMtdjkzYVl1M1FTbm1mR0o2ZjBzRWFBNDI5Zk1IUFZoMmI1TVZoQ19KVFd0d2s1Rlc5V0plYUpCbXRvNFcwRGNJX214NHNuZEtVUGRxaXViMDcwMlZpbnlqd2VUNmw0QkQ?oc=5",
+    "video_id": null
   }
 ]
