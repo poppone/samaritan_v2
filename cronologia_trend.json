@@ -1,21 +1,5 @@
 [
   {
-    "timestamp": 1790188501,
-    "data": "2026-09-23",
-    "titolo": "GTA 6: The game that isn’t arriving… yet 😮",
-    "lingua": "en",
-    "slot": "21:00",
-    "formato": "short",
-    "estratto_script": "The game that isn’t arriving… yet. Take‑Two’s CEO just whispered hope: a big update is on ",
-    "stile": "EASTER_EGG_SECRET",
-    "gioco": "Grand Theft Auto VI",
-    "query_video": "grand theft auto vi gameplay",
-    "fonte": "GTA 6 still has no release date on PC, but Take-Two’s CEO sends a message of hope to players: “It is becoming (Diario AS)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMimgJBVV95cUxNMm83aDZJb0hqYVpsRHpOYThXTTVKWWxrbk82N3VHdzBXWnBRUzlONWZfTHZ3X1BiYUYtZlhmaUt4ckR2TWVrZGQ4MVVSZGx0RDk4ZmN0TTAxMGw1MVZtMUxXZ0xCM2pVTFA4OFhUdmxfMmx6d1Z2b1pWb1FzdjRZcGp2TzdPRnFWLW92SGZhRkdHREhWQVU1enBtRTRUODdDSXgwbU8wWHhPN0tUU2xXQnZzRzU1UnB1TXRQT0JqcG9Hc0hOY21lTlVnMVc3Yk1Sbm0tZmhRWlB4aHFLMXpYdXpMWGJZTmo5OEVZUjl6OGdNb0huSk5uWjNVb1pPaTRuT3Y5LUxMeC1LY1NFN1VucjJxa0tseHlqeGfSAa4CQVVfeXFMTllaWF9SZEEzTncxSWtqRlNrTmsyUk83OTJRRUVNNi14bHptY2YwNXRwSWtZc2JGUzJRb21JTkRGTkdEeUZSOTUzRGFSSEFwQ1FPUEEzbUNibDdxcGxSc2lHQThscTBXRkxfdGVhZFB4NHBRUGJqSmF2VWZFSF9kOHNBamstandWdzZlU1h0aWlDeEROM1dnUmxrSllqakdCRkg5MTlsenBZR2ZOdzd2VlNPZTdkcWtlSUZ5QmJfMmF2X2FnbU5uLVZzRThTQy1fWUh6MGp6SFdvQ1N5NlZjbFkwWTBYTGxHUW50OUxZdkd5ZGNiYnFjUldUelZ3cmo1S2tIQ3dPUFFPTXRlMzZ1cEVvdGR4Z1FyazFWRGlQWVE4RXhkU280LXlYR3c5ZVE?oc=5",
-    "video_id": "ldH6OJBNMy8",
-    "veste": "fuoco"
-  },
-  {
     "timestamp": 1790265363,
     "data": "2026-09-24",
     "titolo": "GTA 6: La Collector's Box è arrivata 🎮",
@@ -3725,5 +3709,21 @@
     "veste": "pulito",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/7PXar1Y9fgY-NFeBY8U8bGoyVvEQ8IV29dNWF64NtS.mp4",
     "didascalia_tiktok": "GTA 6 pesa oltre 200 GB: spazio su PS5?\n\nScopri perché GTA 6 pesa così tanto e quanto spazio davvero serve.\n\nAltre notizie su davidedurazzi.it\n\n#gta6 #rumor #gamingita #perte"
+  },
+  {
+    "timestamp": 1794224762,
+    "data": "2026-11-09",
+    "titolo": "Zelda Ocarina of Time: muscoli su Switch 2 😲",
+    "lingua": "it",
+    "slot": "20:00",
+    "uscita": 1794250800,
+    "formato": "short",
+    "estratto_script": "Scopri perché il remake di Ocarina of Time sta mettendo alla prova la nuova Switch 2. Il t",
+    "stile": "VIRAL_HOOK_NEWS",
+    "gioco": "The Legend of Zelda: Ocarina of Time",
+    "query_video": "zelda ocarina gameplay",
+    "fonte": "Il remake di Ocarina of Time mostra i muscoli di Switch 2, ma la vera sorpresa è un'altra (Libero)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMioAFBVV95cUxNclNpdVJiaGw2RkNkdDlDZzZaQXZ1d0VHZTVXMGJNMGJ4R1BrYURRZ1VaQVJMZ3BiYVZuWjE3SVFXWFM1Y1Y4XzZQU1FOdXlXUFVneFRoS1RmaUI2RE1mMkZpM1c0ZEZ6MnE5ZUc3cXJlNHA4QVlORF9tQ0U3ekdSTEtnSFQ5SzRxS20xTFlQT0FOXzUyd1NTOS1rRUZIajh60gGmAUFVX3lxTE1SZm9hUXBVTDZSWnlCdDdmVHlKRmgtbUpxczlkSTVUWU9fVVlxaGZPU1o2YlRPM08tam85WHNLOHc4VktGM21UTXZVYW5nU2MzMF91S3NkWkt4OTFQa1A5UjFBMU1XVGNZY0xKX3VMZlhCbjZZOElZc1JMVzBkWDZXUXF3dlZub0pKR251bklha21fSENEVm1US3BaMGljZFFyRnBiQXc?oc=5",
+    "video_id": null
   }
 ]
