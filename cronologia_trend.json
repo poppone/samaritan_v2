@@ -1,21 +1,5 @@
 [
   {
-    "timestamp": 1790265363,
-    "data": "2026-09-24",
-    "titolo": "GTA 6: La Collector's Box è arrivata 🎮",
-    "lingua": "it",
-    "slot": "18:00",
-    "formato": "short",
-    "estratto_script": "10 minuti di curiosità: la Collector's Box di GTA 6 è qui. La data d'uscita è prevista per",
-    "stile": "DOMANDA_AL_PUBBLICO",
-    "gioco": "GTA 6",
-    "query_video": "gta 6 collector box gameplay",
-    "fonte": "La Collector's Box di GTA 6 è ufficiale: data d'uscita, prezzo e contenuti... no, il gioco non è incluso (Everyeye.it)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMiwwFBVV95cUxOZVM1NmUtTkdBWi1aREw3N3FlZnowc3QzdGYxMnhMdkd3QVlWV29Wdmg3dm9FaWROXzZsWjJqWjFIMUM1UGRPcGp0UTRqZ01ydnJ4SkVnQ0ZUaTJGeDVvbmlYNWVUM1JRelB5ZWZNNV9nMTFMSHJZSzlkYlhmQzV0UWpzcDllbEdFNWVpWmNkMVgtSWlacnUwQ0trV29BQXBYWXFkZ2dRWDVnNDZZWTZ6Q0dTODByZUtDSEVlZXJyN0VHV0E?oc=5",
-    "video_id": "CB5keS4Um9E",
-    "veste": "pulito"
-  },
-  {
     "timestamp": 1790272607,
     "data": "2026-09-24",
     "titolo": "Dead Space: tutti i segreti nascosti nella versione remake",
@@ -3729,5 +3713,21 @@
     "veste": "arena",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/12yMzeOhrVU-J1yreUxKNr6VEr4MT45g4nFKPhCpUy.mp4",
     "didascalia_tiktok": "Zelda Ocarina of Time: muscoli su Switch 2 😲\n\nIl remake di Ocarina di Zelda mette alla prova Switch 2. Cosa pensi della sorpresa nascosta? Lascia il tuo commento!\n\nAltre notizie su davidedurazzi.it\n\n#thelegendofzeldaocarinaoftime #newsgaming #gamingita #perte"
+  },
+  {
+    "timestamp": 1794299203,
+    "data": "2026-11-10",
+    "titolo": "GTA 6: il pre‑download è qui 🚀",
+    "lingua": "it",
+    "slot": "14:00",
+    "uscita": 1794315600,
+    "formato": "short",
+    "estratto_script": "Il preload di GTA 6 è finalmente in Italia! 212 GB da scaricare su PS5 e Xbox. Se ti resta",
+    "stile": "DOMANDA_AL_PUBBLICO",
+    "gioco": "Grand Theft Auto VI",
+    "query_video": "gta 6 preload gameplay",
+    "fonte": "GTA 6: il grande giorno è arrivato, preload finalmente disponibile anche in Italia! (Everyeye.it)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMijgFBVV95cUxOYWZ1UXdfd2hYYWF5QVpWX2JXQ0xDa0s2X1ozWmtXRU1pb251R1ozQzhyX3dHLWdwa2VCNjc0dW5UakZTb0tDZWViTUh0NTEwUE5SQUkxQ1Z3V3lHTTloSFY1NVF4b1V1OTFoRkZvazUwWDZSazZHTVJwcUhqci1uUnBhZXQ0d2VqYjdfN0ZB?oc=5",
+    "video_id": null
   }
 ]
