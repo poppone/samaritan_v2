@@ -1,21 +1,5 @@
 [
   {
-    "timestamp": 1790272607,
-    "data": "2026-09-24",
-    "titolo": "Dead Space: tutti i segreti nascosti nella versione remake",
-    "lingua": "it",
-    "slot": "20:00",
-    "formato": "lungo",
-    "estratto_script": "Il remake di Dead Space riesce a ricreare la claustrofobia dell’originale con una precisio",
-    "stile": "VIDEO_LUNGO",
-    "gioco": "Dead Space",
-    "query_video": "Dead Space gameplay",
-    "fonte": "Un survival tratto da una saga cult arriva gratis su Game Pass (SpazioGames)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMihgFBVV95cUxNTDhlVGVvLTJvMnM3MlNOZGU0OVNSSS1WRXhIMG50WUIyckE4RkZEempuLVBSYU1rZ1R0dmlGZWtrOHFQSUJETjlJRkNPSC1DWXFBcVItOUd3RnlhNzBybkM0eFFTaW1pNC1Zc3RuNWNMajRlZFduenFsc2I1NE9tRUtBSEh1QQ?oc=5",
-    "video_id": "l7SQPBn5zkQ",
-    "veste": "arena"
-  },
-  {
     "timestamp": 1790292204,
     "data": "2026-09-24",
     "titolo": "Elden Ring: l'errore che ti uccide subito 🗡",
@@ -3733,5 +3717,21 @@
     "veste": "notte",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/RfP24N2R2Pc-1C6jmyqeX0jM3vo2ukADEPihtux8m2.mp4",
     "didascalia_tiktok": "GTA 6: il pre‑download è qui 🚀\n\nIl preload di GTA 6 è ora disponibile in Italia. Scopri se il tuo hard disk regge i 212 GB e quando potrai giocare. Quanto tempo pensi ci metterai a scaricare?\n\nAltre notizie su davidedurazzi.it\n\n#grandtheftautovi #gamingita #perte"
+  },
+  {
+    "timestamp": 1794309777,
+    "data": "2026-11-10",
+    "titolo": "Zelda: record vendite Switch 2 🚀",
+    "lingua": "it",
+    "slot": "20:00",
+    "uscita": 1794337200,
+    "formato": "short",
+    "estratto_script": "Pensavi che Zelda fosse solo nostalgia? L'edizione 40° anniversario di The Legend of Zelda",
+    "stile": "DONT_DO_THIS",
+    "gioco": "The Legend of Zelda",
+    "query_video": "zelda switch 2 gameplay",
+    "fonte": "Nintendo Switch 2 da record grazie all'edizione speciale di Zelda (Multiplayer)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMipAFBVV95cUxOTXhDM3hNS1hsbXpSbTd0dEhSTVI4ZE9QVkM0QnJmS3lYN2lOamZObmFVTDFoak5QYm5WdGRFT0swaUlIMTUwQ2g4V2F0THpCNVZKMHo3djB5SXdIbzEyUFNEZGFMa29PUlY4d2pyWFNCSFV1emxBQzBpNFJBQ1Z0SXN4VF8zbjd5R185Zm1QMVF2MVpHcm8zTzdaZU5Qdk9ERXdseg?oc=5",
+    "video_id": null
   }
 ]
