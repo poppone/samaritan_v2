@@ -1,21 +1,5 @@
 [
   {
-    "timestamp": 1790340892,
-    "data": "2026-09-25",
-    "titolo": "GTA 6: i preordini battono record su PS5 🚀",
-    "lingua": "it",
-    "slot": "14:00",
-    "formato": "short",
-    "estratto_script": "Sbagliato: la PS5 sta facendo impazzire gli Xbox fan. Preordini in crescita esponenziale, ",
-    "stile": "TIER_LIST_LAMPO",
-    "gioco": "Grand Theft Auto VI",
-    "query_video": " gameplay",
-    "fonte": "GTA 6 vola su PS5? XBOX rompe il silenzio: “I preordini stanno battendo record anche da noi” (Gametimers)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMisAFBVV95cUxPWjZITUdpT2ctdjRfV1VuTC00Tk9FVGNOMl9CUnM1UWtCN1RRSGFFcm5BMGF6NGRiVUVkZUhKMlJGZl9wc2wzazRuVWJGM0J1N3BvQ2gyTnpyUDY3blVDX18xbmtBS1lUX0Znc29pQWhWdW9jUlFycWw2WTlFVXJEdFdWWENfM3RQWDh1eGRmNFRYdi1COHY3bm9JaVlkazQtblBGdTY3dVdvTlFUTGlDRw?oc=5",
-    "video_id": null,
-    "veste": "ghiaccio"
-  },
-  {
     "timestamp": 1790362258,
     "data": "2026-09-25",
     "titolo": "Cyberpunk 2077: hidden night city secret 🌃",
@@ -3741,5 +3725,21 @@
     "veste": "fuoco",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/7hLX8HbT914-giNCn0rvv8iXNP1yUZm8YLa4M7nigi.mp4",
     "didascalia_tiktok": "GTA 6: i nuovi dettagli del trailer 🚀\n\nScopri i primi dettagli del trailer di GTA 6, pubblicato a soli nove giorni dal lancio. Quale scena ti ha lasciato senza parole?\n\nAltre notizie su davidedurazzi.it\n\n#grandtheftautovi #easteregg #gamingita #perte"
+  },
+  {
+    "timestamp": 1794395463,
+    "data": "2026-11-11",
+    "titolo": "Minecraft: il trucco per scoprire la tua miniera segreta 🪓",
+    "lingua": "it",
+    "slot": "20:00",
+    "uscita": 1794423600,
+    "formato": "short",
+    "estratto_script": "Scavare al contrario rivela blocchi nascosti. Premi SHIFT mentre ti muovi verso il basso e",
+    "stile": "SEAMLESS_LOOP_FACTS",
+    "gioco": "Minecraft",
+    "query_video": "minecraft gameplay",
+    "fonte": "",
+    "fonte_url": "",
+    "video_id": null
   }
 ]
