@@ -194,14 +194,6 @@
       "comments": 0,
       "subscribersGained": 1
     },
-    "qdgHNpV9hso": {
-      "views": 989,
-      "averageViewPercentage": 66.41,
-      "averageViewDuration": 17,
-      "likes": 9,
-      "comments": 0,
-      "subscribersGained": 1
-    },
     "fKANwJ0D-Rg": {
       "views": 989,
       "averageViewPercentage": 65.45,
@@ -209,6 +201,14 @@
       "likes": 26,
       "comments": 0,
       "subscribersGained": 0
+    },
+    "qdgHNpV9hso": {
+      "views": 989,
+      "averageViewPercentage": 66.41,
+      "averageViewDuration": 17,
+      "likes": 9,
+      "comments": 0,
+      "subscribersGained": 1
     },
     "SmE3oRuEo3M": {
       "views": 978,
@@ -834,14 +834,6 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "KnQcxDsfEFA": {
-      "views": 143,
-      "averageViewPercentage": 81.62,
-      "averageViewDuration": 23,
-      "likes": 1,
-      "comments": 0,
-      "subscribersGained": 0
-    },
     "4NMsfG-CsYY": {
       "views": 143,
       "averageViewPercentage": 81.33,
@@ -849,6 +841,14 @@
       "likes": -1,
       "comments": 0,
       "subscribersGained": 1
+    },
+    "KnQcxDsfEFA": {
+      "views": 143,
+      "averageViewPercentage": 81.62,
+      "averageViewDuration": 23,
+      "likes": 1,
+      "comments": 0,
+      "subscribersGained": 0
     },
     "5wJGF3bA5iQ": {
       "views": 143,
@@ -1042,6 +1042,14 @@
       "comments": 0,
       "subscribersGained": 1
     },
+    "p3V5VCPA-iA": {
+      "views": 66,
+      "averageViewPercentage": 58.39,
+      "averageViewDuration": 15,
+      "likes": 1,
+      "comments": 0,
+      "subscribersGained": 0
+    },
     "tO9HT-un5_U": {
       "views": 66,
       "averageViewPercentage": 76.5,
@@ -1050,10 +1058,10 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "p3V5VCPA-iA": {
-      "views": 66,
-      "averageViewPercentage": 58.39,
-      "averageViewDuration": 15,
+    "_29smtkaCSc": {
+      "views": 64,
+      "averageViewPercentage": 48.69,
+      "averageViewDuration": 13,
       "likes": 1,
       "comments": 0,
       "subscribersGained": 0
@@ -1063,14 +1071,6 @@
       "averageViewPercentage": 62.08,
       "averageViewDuration": 14,
       "likes": 0,
-      "comments": 0,
-      "subscribersGained": 0
-    },
-    "_29smtkaCSc": {
-      "views": 64,
-      "averageViewPercentage": 48.69,
-      "averageViewDuration": 13,
-      "likes": 1,
       "comments": 0,
       "subscribersGained": 0
     },
@@ -1210,18 +1210,18 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "HiIFJbOe6GE": {
-      "views": 43,
-      "averageViewPercentage": 23.5,
-      "averageViewDuration": 4,
-      "likes": 0,
-      "comments": 0,
-      "subscribersGained": 0
-    },
     "lJ8vVyrpDGI": {
       "views": 43,
       "averageViewPercentage": 35.2,
       "averageViewDuration": 12,
+      "likes": 0,
+      "comments": 0,
+      "subscribersGained": 0
+    },
+    "HiIFJbOe6GE": {
+      "views": 43,
+      "averageViewPercentage": 23.5,
+      "averageViewDuration": 4,
       "likes": 0,
       "comments": 0,
       "subscribersGained": 0
@@ -1338,19 +1338,19 @@
       "comments": 0,
       "subscribersGained": 1
     },
-    "Q73PxLLDQrU": {
-      "views": 31,
-      "averageViewPercentage": 60.06,
-      "averageViewDuration": 15,
-      "likes": 1,
-      "comments": 0,
-      "subscribersGained": 0
-    },
     "tW4icnFXtEs": {
       "views": 31,
       "averageViewPercentage": 55.19,
       "averageViewDuration": 11,
       "likes": 2,
+      "comments": 0,
+      "subscribersGained": 0
+    },
+    "Q73PxLLDQrU": {
+      "views": 31,
+      "averageViewPercentage": 60.06,
+      "averageViewDuration": 15,
+      "likes": 1,
       "comments": 0,
       "subscribersGained": 0
     },
@@ -1708,11 +1708,11 @@
   "sorgenti": [
     {
       "sorgente": "SHORTS",
-      "views": 66486
+      "views": 66488
     },
     {
       "sorgente": "YT_SEARCH",
-      "views": 6291
+      "views": 6292
     },
     {
       "sorgente": "YT_CHANNEL",
@@ -1724,7 +1724,7 @@
     },
     {
       "sorgente": "YT_OTHER_PAGE",
-      "views": 516
+      "views": 517
     },
     {
       "sorgente": "EXT_URL",
