@@ -1,21 +1,5 @@
 [
   {
-    "timestamp": 1790292204,
-    "data": "2026-09-24",
-    "titolo": "Elden Ring: l'errore che ti uccide subito 🗡",
-    "lingua": "it",
-    "slot": "14:00",
-    "formato": "short",
-    "estratto_script": "Credi che correre in zona sicura ti salvi? In Elden Ring la maggior parte dei nuovi giocat",
-    "stile": "DONT_DO_THIS",
-    "gioco": "Elden Ring",
-    "query_video": "elden ring gameplay",
-    "fonte": "",
-    "fonte_url": "",
-    "video_id": "y-z9DtEYqMM",
-    "veste": "notte"
-  },
-  {
     "timestamp": 1790340892,
     "data": "2026-09-25",
     "titolo": "GTA 6: i preordini battono record su PS5 🚀",
@@ -3737,5 +3721,21 @@
     "veste": "ghiaccio",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/QZhVNVt_n18-sBdRJnb8Hy006cTp8waSwQjXNZzcFT.mp4",
     "didascalia_tiktok": "Zelda: record vendite Switch 2 🚀\n\nL'edizione 40° di Zelda rompe i record di vendita per Switch 2. Scopri perché è importante per i gamer. Hai già la tua copia? 🎮\n\nAltre notizie su davidedurazzi.it\n\n#thelegendofzelda #consigli #gamingita #perte"
+  },
+  {
+    "timestamp": 1794383213,
+    "data": "2026-11-11",
+    "titolo": "GTA 6: i nuovi dettagli del trailer 🚀",
+    "lingua": "it",
+    "slot": "14:00",
+    "uscita": 1794402000,
+    "formato": "short",
+    "estratto_script": "Impossibile credere che a soli nove giorni dal lancio già ci siano nuovi spezzoni del trai",
+    "stile": "EASTER_EGG_SECRET",
+    "gioco": "Grand Theft Auto VI",
+    "query_video": "gta 6 trailer gameplay",
+    "fonte": "GTA 6 torna in video a nove giorni dal lancio, ecco i nuovi dettagli che si intravedono nel trailer (StartupItalia)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMiekFVX3lxTE9XWW1VSWZPbTNxbFl5NlhJTFNwQnMyVmdCaHgzQkp5MHN2U1RtNkxmS1gzdUNPc1RpbGF2S3cwODNNZVZMY29uU0k1dm1rQWxIcU5tT0t3c01jTlJ6S054T3F4MTY2dGM5dDhzZmxDTXZ6bFB3QUQzeWln?oc=5",
+    "video_id": null
   }
 ]
