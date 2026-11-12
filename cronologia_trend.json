@@ -1,21 +1,5 @@
 [
   {
-    "timestamp": 1790362258,
-    "data": "2026-09-25",
-    "titolo": "Cyberpunk 2077: hidden night city secret 🌃",
-    "lingua": "en",
-    "slot": "21:00",
-    "formato": "short",
-    "estratto_script": "What if I told you the neon lights are lying? In Night City, every billboard hides a glitc",
-    "stile": "EASTER_EGG_SECRET",
-    "gioco": "Cyberpunk 2077",
-    "query_video": "cyberpunk hidden glitch gameplay",
-    "fonte": "",
-    "fonte_url": "",
-    "video_id": null,
-    "veste": "fuoco"
-  },
-  {
     "timestamp": 1790378962,
     "data": "2026-09-25",
     "titolo": "Elden Ring: la trappola che ti fa cadere 30 volte ⚔",
@@ -3745,5 +3729,21 @@
     "veste": "pulito",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/4KJDBHDbdUQ-o0OQh8IHs0W6CXUpIo8FdGZVfQEk55.mp4",
     "didascalia_tiktok": "Minecraft: il trucco per scoprire la tua miniera segreta 🪓\n\nScopri come usare SHIFT per esplorare le profondità senza distruggere tutto. Hai già provato questa tecnica? Diccelo nei commenti!\n\nAltre notizie su davidedurazzi.it\n\n#minecraft #curiosita #gamingita #perte"
+  },
+  {
+    "timestamp": 1794471668,
+    "data": "2026-11-12",
+    "titolo": "GTA 6: PS5 vs PS5 Pro – le vere differenze? 🎮",
+    "lingua": "it",
+    "slot": "14:00",
+    "uscita": 1794488400,
+    "formato": "short",
+    "estratto_script": "Pensavi che la PS5 Pro fosse solo una PS5 più costosa? Scopriamo insieme le differenze tec",
+    "stile": "MYTH_BUSTING_VIRAL",
+    "gioco": "Grand Theft Auto VI",
+    "query_video": "gta 6 gameplay",
+    "fonte": "GTA 6 PS5 vs PS5 Pro: quali sono le differenze e cosa cambia davvero a livello tecnico? (Everyeye.it)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMisAFBVV95cUxPVjY0cTdldXRUWnI4bjN2bE94eEROX083QmtZdy1hRmkzMWVTaEJzbTFySmlOQjNTX2xCZ1lmTWFCMFE1SG1wSTVjUWRqUVRzNWVHV1NIYmktaEFIelBRRjJ4ZnptRDV4TmRidFNiQ3RlZFJDZ3FOUmRlZ0JJeWhhMmo2WUtIT0Y2Z3RiUEN6S0ZhaC1VbF82bzNURDVoQkluTVpneVRVV0llQ1BTUlMxQw?oc=5",
+    "video_id": null
   }
 ]
