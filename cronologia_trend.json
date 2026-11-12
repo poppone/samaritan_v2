@@ -1,21 +1,5 @@
 [
   {
-    "timestamp": 1790378962,
-    "data": "2026-09-25",
-    "titolo": "Elden Ring: la trappola che ti fa cadere 30 volte ⚔",
-    "lingua": "it",
-    "slot": "14:00",
-    "formato": "short",
-    "estratto_script": "Ecco la scena: un mostro gigante, ti senti al sicuro, poi scoppia…\nLa trappola è nascosta ",
-    "stile": "DOMANDA_AL_PUBBLICO",
-    "gioco": "Elden Ring",
-    "query_video": "elden ring gameplay",
-    "fonte": "",
-    "fonte_url": "",
-    "video_id": null,
-    "veste": "pulito"
-  },
-  {
     "timestamp": 1790425352,
     "data": "2026-09-26",
     "titolo": "Grand Theft Auto VI: la sfida hacker più costosa 🤯",
@@ -3749,5 +3733,21 @@
     "veste": "arena",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/3jlPUNPH4YA-c4yTBCa55hl5mWx6y0nVq8IwTdMR50.mp4",
     "didascalia_tiktok": "GTA 6: PS5 vs PS5 Pro – le vere differenze? 🎮\n\nConfrontiamo PS5 e PS5 Pro per GTA 6. Qual è la differenza che conta di più per te?\n\nAltre notizie su davidedurazzi.it\n\n#grandtheftautovi #rumor #gamingita #perte"
+  },
+  {
+    "timestamp": 1794482966,
+    "data": "2026-11-12",
+    "titolo": "Assassin's Creed Shadows: l'aggiornamento che spacca 🎮",
+    "lingua": "it",
+    "slot": "20:00",
+    "uscita": 1794510000,
+    "formato": "short",
+    "estratto_script": "Un minuto e ti svelo il cambiamento più strano di Assassin's Creed Shadows. L'ultimo aggio",
+    "stile": "VIRAL_HOOK_NEWS",
+    "gioco": "Assassins Creed Shadows",
+    "query_video": "assassin's creed shadows gameplay",
+    "fonte": "Assassin's Creed Shadows, cosa cambia con il nuovo aggiornamento? (tomshw.it)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMijwFBVV95cUxPM0wxVDFlX0lnemdzQmpFaUFYd0VhVXZSUC1nSXJvY3VOOFR5NnBFUHZWNmtXWDVEbHc2eURpSnBTYnYtWGVJWDFkUEVsRnRPc0NRakRTY1l2Z25hQTZwU2NqeW8td1dPZjNpSHUxT1MyUllTczdHc0YtbVg0NnM5LThUWTR5ejR3SEtQclNtYw?oc=5",
+    "video_id": null
   }
 ]
