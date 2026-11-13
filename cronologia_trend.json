@@ -1,21 +1,5 @@
 [
   {
-    "timestamp": 1790444539,
-    "data": "2026-09-26",
-    "titolo": "Cyberpunk 2077: la vera sorpresa 🚀",
-    "lingua": "it",
-    "slot": "",
-    "formato": "short",
-    "estratto_script": "Un nuovo aggiornamento ti farà perdere il respiro. Il sistema di scelte non è solo un menu",
-    "stile": "DONT_DO_THIS",
-    "gioco": "Cyberpunk 2077",
-    "query_video": "cyberpunk gameplay",
-    "fonte": "",
-    "fonte_url": "",
-    "video_id": "PlQ-A12UlFY",
-    "veste": "notte"
-  },
-  {
     "timestamp": 1790445431,
     "data": "2026-09-26",
     "titolo": "GTA 6: The Album goes vinyl 🎧",
@@ -3757,5 +3741,21 @@
     "veste": "ghiaccio",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/Zt0IAY0H1Dw-fMnHCOd2KanFRx1RlXwEC0oi4nCoII.mp4",
     "didascalia_tiktok": "GTA 6: il meme che ha cambiato la meccanica 😲\n\nScopri la meccanica di GTA 6 ispirata a un meme storico. Ti sorprende? Commenta quale meme ti è piaciuto di più!\n\nAltre notizie su davidedurazzi.it\n\n#gta6 #tierlist #gamingita #perte"
+  },
+  {
+    "timestamp": 1794568334,
+    "data": "2026-11-13",
+    "titolo": "Xbox Playback: l'errore da non commettere ⚠",
+    "lingua": "it",
+    "slot": "20:00",
+    "uscita": 1794596400,
+    "formato": "short",
+    "estratto_script": "Hai mai pensato di rivivere i tuoi 25 anni di avventure su Xbox? La notizia conferma che X",
+    "stile": "DONT_DO_THIS",
+    "gioco": "Xbox Playback",
+    "query_video": "xbox playback tutorial gameplay",
+    "fonte": "XBOX Playback è ufficiale: Microsoft permette di rivivere 25 anni di videogiochi e statistiche personali (Gametimers)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMixAFBVV95cUxPMG5QWEVJYUtYV0RZZjFVR1VScjJYS3l5MTN1aGE2ZkR6NG9fRlpqVVpWeWlaWDFEcFZDZmRnSzl2alduZXNKRWVVSmtYUDhXa0xsRUtYVzZ4OTNIU0xhUTJlcTc2YTh5ZnhDdEZWdlNRSjRXN1g5Zl9VWktMdld5c3FacVQ0MzRlZ2xSMGFYeXlXZ3Y4ZDNXU2NPS0RpU3d6TU1wYkdXUmdlSjA3VkxJRmFPZ1ViVjc0OEtTc0pnNXdNWXZ2?oc=5",
+    "video_id": null
   }
 ]
