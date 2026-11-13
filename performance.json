@@ -202,14 +202,6 @@
       "comments": 0,
       "subscribersGained": 1
     },
-    "qdgHNpV9hso": {
-      "views": 989,
-      "averageViewPercentage": 66.41,
-      "averageViewDuration": 17,
-      "likes": 9,
-      "comments": 0,
-      "subscribersGained": 1
-    },
     "fKANwJ0D-Rg": {
       "views": 989,
       "averageViewPercentage": 65.45,
@@ -217,6 +209,14 @@
       "likes": 26,
       "comments": 0,
       "subscribersGained": 0
+    },
+    "qdgHNpV9hso": {
+      "views": 989,
+      "averageViewPercentage": 66.41,
+      "averageViewDuration": 17,
+      "likes": 9,
+      "comments": 0,
+      "subscribersGained": 1
     },
     "SmE3oRuEo3M": {
       "views": 978,
@@ -1394,19 +1394,19 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "bOsABhTftFs": {
-      "views": 31,
-      "averageViewPercentage": 48.29,
-      "averageViewDuration": 13,
-      "likes": 0,
-      "comments": 0,
-      "subscribersGained": 0
-    },
     "Q73PxLLDQrU": {
       "views": 31,
       "averageViewPercentage": 60.06,
       "averageViewDuration": 15,
       "likes": 1,
+      "comments": 0,
+      "subscribersGained": 0
+    },
+    "bOsABhTftFs": {
+      "views": 31,
+      "averageViewPercentage": 48.29,
+      "averageViewDuration": 13,
+      "likes": 0,
       "comments": 0,
       "subscribersGained": 0
     },
@@ -1708,11 +1708,11 @@
   "sorgenti": [
     {
       "sorgente": "SHORTS",
-      "views": 69527
+      "views": 69525
     },
     {
       "sorgente": "YT_SEARCH",
-      "views": 6477
+      "views": 6476
     },
     {
       "sorgente": "SUBSCRIBER",
@@ -1724,7 +1724,7 @@
     },
     {
       "sorgente": "YT_OTHER_PAGE",
-      "views": 525
+      "views": 524
     },
     {
       "sorgente": "EXT_URL",
