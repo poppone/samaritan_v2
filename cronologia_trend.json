@@ -1,21 +1,5 @@
 [
   {
-    "timestamp": 1790445431,
-    "data": "2026-09-26",
-    "titolo": "GTA 6: The Album goes vinyl 🎧",
-    "lingua": "en",
-    "slot": "21:00",
-    "formato": "short",
-    "estratto_script": "While vinyl feels retro, GTA 6’s soundtrack hits the shelves. Three months after the game,",
-    "stile": "SEAMLESS_LOOP_FACTS",
-    "gioco": "GTA 6",
-    "query_video": "GTA 6 soundtrack gameplay",
-    "fonte": "'GTA 6: The Album' soundtrack will get vinyl and CD release (Mashable)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMilgFBVV95cUxPelJ4Qkl2cGNJNWdob29OOW5DSGFxLTl2TjRpNWl3ZEhwQjI4ZlkzYVhydU1mUjZSbjJOZENMdW5ZeUVkMERGakpQWDhQeUtoVUFLUUd3TzdZWlg1X1pyQzE4QkFRM0Q1M2lzUUJEMnJROEtQZ25KbDRXSTQzTUlLWEE3Qm5OcW93aV9Nd2hzYTVaX2tMVFE?oc=5",
-    "video_id": "9nm_lcwVaLU",
-    "veste": "ghiaccio"
-  },
-  {
     "timestamp": 1790447108,
     "data": "2026-09-26",
     "titolo": "Grand Theft Auto VI: 400€ stampato, nessun gioco? 🎮",
@@ -3761,5 +3745,21 @@
     "veste": "fuoco",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/W74rRBbnYIY-j0bXEzifkHyjGzr87ewyLVHdhrg8Uj.mp4",
     "didascalia_tiktok": "Xbox Playback: l'errore da non commettere ⚠\n\nScopri perché è cruciale verificare la data prima di attivare Xbox Playback. Hai mai avuto problemi simili? Commenta la tua esperienza!\n\nAltre notizie su davidedurazzi.it\n\n#xboxplayback #consigli #gamingita #perte"
+  },
+  {
+    "timestamp": 1794641924,
+    "data": "2026-11-14",
+    "titolo": "Elden Ring: il segreto che nessuno trova 🗝",
+    "lingua": "it",
+    "slot": "14:00",
+    "uscita": 1794661200,
+    "formato": "short",
+    "estratto_script": "Mai credi che un boss possa essere più debole quando è più forte. In realtà, il primo nemi",
+    "stile": "EASTER_EGG_SECRET",
+    "gioco": "Elden Ring",
+    "query_video": "elden ring gameplay",
+    "fonte": "",
+    "fonte_url": "",
+    "video_id": null
   }
 ]
