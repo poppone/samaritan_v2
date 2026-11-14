@@ -1,21 +1,5 @@
 [
   {
-    "timestamp": 1790447108,
-    "data": "2026-09-26",
-    "titolo": "Grand Theft Auto VI: 400€ stampato, nessun gioco? 🎮",
-    "lingua": "it",
-    "slot": "14:00",
-    "formato": "short",
-    "estratto_script": "Stampa 3D, 400€ di valore, e niente GTA 6. Qual è la vera collezione? La statuetta ricreat",
-    "stile": "TIER_LIST_LAMPO",
-    "gioco": "Grand Theft Auto VI",
-    "query_video": "gta 6 3d print gameplay",
-    "fonte": "GTA 6: qualcuno ha ricreato gratis con la stampante 3D la statuetta dell'edizione da collezione da 400 euro (Everyeye.it)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMiuAFBVV95cUxPeE9aaUNuYlY2eFpTOFEzUWttdm5LVHJlLWtfMEFDSWh6TkMzWHB6eGV0OGZpU2NxOHBrUWw1bm5obF9UN1EycngwTTBpTUFPZ0RvQ2FmeHZjMkZPUzJTclpXMXVmSHRQZnNPUXJyTjFoeTJaRGZUSURSOE4zVXROdUhZTWlMNWp1THowUmY2Y0hvTUJ5RnJ1ZjNZZ1JDbXZ2SkRuQmpxZ01NSHo0RDJTSHExX08xWW5o?oc=5",
-    "video_id": "ekOXQJlRNOM",
-    "veste": "fuoco"
-  },
-  {
     "timestamp": 1790464098,
     "data": "2026-09-26",
     "titolo": "The Last of Us: il giorno che ha cambiato i fan 🎮",
@@ -3765,5 +3749,21 @@
     "veste": "pulito",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/3Wyw3Xtcg2o-GA0vzWV4VDAHyAzmd8LmYjtTMBbo5x.mp4",
     "didascalia_tiktok": "Elden Ring: il segreto che nessuno trova 🗝\n\nScopri il trucco per ottenere l'arma leggendaria di Elden Ring senza spendere anime. Hai mai provato a cercare la zona invisibile?\n\nAltre notizie su davidedurazzi.it\n\n#eldenring #easteregg #gamingita #perte"
+  },
+  {
+    "timestamp": 1794652726,
+    "data": "2026-11-14",
+    "titolo": "GTA 6: 80 dollari giustificano il prezzo? 💸",
+    "lingua": "it",
+    "slot": "20:00",
+    "uscita": 1794682800,
+    "formato": "short",
+    "estratto_script": "Ottanta dollari per un videogioco: un prezzo che fa parlare. Il lancio di GTA 6 a 80 $, se",
+    "stile": "MYTH_BUSTING_VIRAL",
+    "gioco": "GTA 6",
+    "query_video": "gta 6 gameplay",
+    "fonte": "Solo videogiochi come GTA 6 possono giustificare un prezzo di 80 dollari (Multiplayer)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMirAFBVV95cUxQNEExNHB1eUdDbHFaNlFESmp4Q0hYOERNdVRVY3dkWWV2bEZna3lzWHd4eklOOG1VaXJRSlNObnNGekNmQnV4eFlLN1lhak9xSm5makFKeVVZTE9uVGFGckFVYzBXVzJVTks4TU5kWUliR0ptelNqNmUzdG92aXRjdHZ3SlBYMnd4SzBZbFZzY1VBOG13M0pHX3dBMDZGWmc4Uk5uZnkyVEJBempD?oc=5",
+    "video_id": null
   }
 ]
