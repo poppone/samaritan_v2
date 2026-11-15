@@ -1,21 +1,5 @@
 [
   {
-    "timestamp": 1790464098,
-    "data": "2026-09-26",
-    "titolo": "The Last of Us: il giorno che ha cambiato i fan 🎮",
-    "lingua": "it",
-    "slot": "18:00",
-    "formato": "short",
-    "estratto_script": "100 milioni di fan in una sola notte. È il The Last of Us Day, l’unico evento che spezza i",
-    "stile": "EASTER_EGG_SECRET",
-    "gioco": "The Last of Us",
-    "query_video": "the last of us gameplay",
-    "fonte": "È il \"The Last of Us Day\": che cos'è e perché riunisce milioni di persone (La Fedeltà)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMivwFBVV95cUxNWm9lWXB5bnQtcVo5aVFmb0VJdzI5SmZwNWZZNlFLM1F6aFQzeS1IVHBCWC1GSzM4a05FUjA4SWFrSlpVX3kyT0ZZekN4QzNOVF9kVF9qa1I4ZUJKNzltNGRxRjNmOTVVQ2tZeUsteElYRHZDQmJYUk9NaDAyd1RzYWwzRWotRkxqb18weEJPWlhKM0U4TGs2UnFWN1l0eS1yblN3eXkwX3U5aFdpWkY4RU44dnpkQ1ExaG5ITHYyVQ?oc=5",
-    "video_id": "9Sb6qwMa9rw",
-    "veste": "pulito"
-  },
-  {
     "timestamp": 1790502145,
     "data": "2026-09-27",
     "titolo": "GTA 6: i videogiochi dovrebbero costare di più? 🚀",
@@ -3769,5 +3753,21 @@
     "veste": "arena",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/HxRgDveyrBw-nbixVlm0TSudfIsJ3iT9Jkx0J3BCuR.mp4",
     "didascalia_tiktok": "GTA 6: 80 dollari giustificano il prezzo? 💸\n\nScopri perché il prezzo di 80 $ per GTA 6 sta facendo parlare tutti. È davvero giustificato?\n\nAltre notizie su davidedurazzi.it\n\n#gta6 #rumor #gamingita #perte"
+  },
+  {
+    "timestamp": 1794729172,
+    "data": "2026-11-15",
+    "titolo": "Zelda: A Link Between Worlds su Switch Online? 🤔",
+    "lingua": "it",
+    "slot": "14:00",
+    "uscita": 1794747600,
+    "formato": "short",
+    "estratto_script": "Una pagina dice sì, ma il bollino è sparito. È davvero disponibile su Switch Online o è so",
+    "stile": "SEAMLESS_LOOP_FACTS",
+    "gioco": "The Legend of Zelda: A Link Between Worlds",
+    "query_video": "zelda a link between worlds gameplay",
+    "fonte": "Zelda: A Link Between Worlds spunta su Nintendo Switch Online sul sito ufficiale, ma potrebbe essere un errore (Multiplayer)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMiywFBVV95cUxNMmhhR1VvZDBCVFdlTVIwZTF1a19GQnVvdTFuN095R1hlZG1nX0x6eU5RVnRJN0xtUW5UQTNfSHBQUFlFWGZKZ3IzVUhTeGVrV0dyUUJxcmtvM0pRSGhYck5UYWVUVW51ZjN0U2czcmpsbUVQamloQ1ZBY2hfaE1vMUQycXNxY1M0S2tKSVBxdTY4R0I3ZFV5WFpRVGRPR2t4VGhJZ3lsM0V2aXkyYk4tZGtzR2NpYjJpamU0NTNUQlh6QUJ2cGVkX3E3WQ?oc=5",
+    "video_id": null
   }
 ]
