@@ -1,21 +1,5 @@
 [
   {
-    "timestamp": 1790524179,
-    "data": "2026-09-27",
-    "titolo": "Grand Theft Auto VI: la box da 400€ senza gioco 🎮",
-    "lingua": "it",
-    "slot": "18:00",
-    "formato": "short",
-    "estratto_script": "Grand. Rockstar ti propone una collector da 400 euro e non include il gioco. Un cofanetto ",
-    "stile": "DOMANDA_AL_PUBBLICO",
-    "gioco": "Grand Theft Auto VI",
-    "query_video": "gta 6 collector box gameplay",
-    "fonte": "Rockstar Games svela un box da collezione di GTA 6 da 400 euro con tanto merchandise ma senza gioco (Multiplayer)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMi0AFBVV95cUxNSUIxU24tTzdsbVZrTEVvMmxaMEd1S18yS0tUb0pOdW95TGxMbW9oQ281N1VSQXRzT0l2eE03SHAzUlVGenJvSTBFcV82U2lENHpHc2QxT2NQRnJzajg5WlBOd2xVZ1JpZWl5WVFIaXdFQmlzY1NrLWh4NzQyZUhCRjkwWmYxLW5xTUt0UnRPT3V5NkhVc3lSTnViVW5qVTAwYlFKYWg2Vmp1bWh4MTdkMUk0Z2dGVFBPTmhkbDhGVm5NQmhXU3BfZE55aVJfSnUw?oc=5",
-    "video_id": "QTXfv3FWOhE",
-    "veste": "ghiaccio"
-  },
-  {
     "timestamp": 1790531632,
     "data": "2026-09-27",
     "titolo": "Grand Theft Auto VI: Xbox players got it for free 😲",
@@ -3781,5 +3765,21 @@
     "veste": "fuoco",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/LZ0hKyvXBq8-pIl8GTaoJ3Gn14imdSLWd5hdIrDrOk.mp4",
     "didascalia_tiktok": "Assassin's Creed: Black Flag Resynced NG+ in arrivo 😲\n\nAssassin's Creed: Black Flag Resynced avrà una modalità New Game Plus, ma Ubisoft non ha ancora rivelato quando arriverà. Sei pronto a riprendere le avventure pirata subito o aspetti il prossimo aggiornamento? Commenta la tua scelta!\n\nAltre notizie su davidedurazzi.it\n\n#assassinscreedblackflagresynced #gamingita #perte"
+  },
+  {
+    "timestamp": 1794829114,
+    "data": "2026-11-16",
+    "titolo": "GTA VI: il conto alla rovescia è quasi finito 🚀",
+    "lingua": "it",
+    "slot": "20:00",
+    "uscita": 1794855600,
+    "formato": "short",
+    "estratto_script": "Giovedì 19 novembre milioni di gamer accenderanno per la prima volta le console di nuova g",
+    "stile": "TIER_LIST_LAMPO",
+    "gioco": "GTA VI",
+    "query_video": "gta vi gameplay",
+    "fonte": "Gta VI, il kolossal da record che può fermare il mondo: la data di uscita e cosa sapere (Il Messaggero)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMisgFBVV95cUxOZ1BXWE1Hbmw2aTlkYmNIQXJqU1JxMk5DOEVVbFFib3AyNFdTRlNZR2NXLVo3Q2YzT3hvazVaVWVwWFBKMWMzT0dqSFQzWW9JbE84YkJjd3kzU3BfS1ZyWHVScDhSWWxaQ0t3OUkwSXhxb0F6eEpXYXRpRlhRM1N3TVNTc3dWdWozR0pLRXFUalRIeW9hVnR4Nk92OU5zSVdsZWhhUG42R0oxLVE0Mm52dG5n0gGwAUFVX3lxTE9STm9seGpyUDgyLVZGRVI3NHJKQ1RrQTRtb1lJV0J2Q2VOcTZudWMwOUxkenJHUnZfOWRIT1lrMnBXeUdGMkljN1ZQd1lVbkFLdDIyQUFialhJUjBVUTZGbHVuaXkyNDVqNll2STNrMGFKWjVPY2gwd1RGb0ZyM1lJMUstSWdURGdPbEVBYTBiRkhUeUpzSktMLWtyUU9maGNJT0xON2R6d1c2VEhwZWJC?oc=5",
+    "video_id": null
   }
 ]
