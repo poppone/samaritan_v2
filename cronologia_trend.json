@@ -1,21 +1,5 @@
 [
   {
-    "timestamp": 1790531632,
-    "data": "2026-09-27",
-    "titolo": "Grand Theft Auto VI: Xbox players got it for free 😲",
-    "lingua": "en",
-    "slot": "20:00",
-    "formato": "short",
-    "estratto_script": "Only two Xbox gamers cracked the system and scored GTA VI without paying. They used a glit",
-    "stile": "SEAMLESS_LOOP_FACTS",
-    "gioco": "Grand Theft Auto VI",
-    "query_video": "grand theft auto vi gameplay",
-    "fonte": "These Xbox Players Got GTA 6 For Free The Hard Way (Engadget)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMif0FVX3lxTE82X2ZRRm5WVllxbUpFYk9EZ2FfS21aUzhWa0d4NnBFVW5xU09WX2RtVVVBLS1TNWZjLUtsSkVzY19wU1hnMzFqcUZfVzN1YXdhSC1KWS0xNnJOVjNVTnhrZTZ6S3pnaEhENUhla3hDTW8xWjVOT2cxZElIdExYU2c?oc=5",
-    "video_id": "OjY8whkcDuc",
-    "veste": "fuoco"
-  },
-  {
     "timestamp": 1790534286,
     "data": "2026-09-27",
     "titolo": "Fortnite: FNAF Collab Confirmed 🤯",
@@ -3785,5 +3769,21 @@
     "veste": "pulito",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/bQ87Vu5QzhI-x9JUFIwCHtg4W3uO4EWSUOi0mgMpcx.mp4",
     "didascalia_tiktok": "GTA VI: il conto alla rovescia è quasi finito 🚀\n\nScopri cosa rende il lancio di GTA VI un evento imperdibile. Qual è la tua aspettativa per la città di gioco? Commenta qui sotto!\n\nAltre notizie su davidedurazzi.it\n\n#gtavi #tierlist #gamingita #perte"
+  },
+  {
+    "timestamp": 1794906191,
+    "data": "2026-11-17",
+    "titolo": "Zelda Ocarina of Time: il remake che spacca 🎮",
+    "lingua": "it",
+    "slot": "14:00",
+    "uscita": 1794920400,
+    "formato": "short",
+    "estratto_script": "Pensate che un remake di 30 anni sia solo nostalgia? La versione per Switch 2 è più fluida",
+    "stile": "DONT_DO_THIS",
+    "gioco": "The Legend of Zelda: Ocarina of Time",
+    "query_video": "zelda ocarina of time remake gameplay",
+    "fonte": "Il miglior videogioco per Nintendo Switch 2 è uno di trent’anni fa (SmartWorld)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMinAFBVV95cUxOaERqN2plY3k1LWtyUnVQdmktaVJ5UlBsQ3A0MXBnUEUwWjFUak10Zm00dXpNYTVBNVpvQUVocDBxNFhhUlZlRHhIUTA5Ylo2ZjE0LW5pRlZMeHBMWGRlWEt0c1ZiS2hjME55ZjB6YU1NbTlNYWZ2VlJOVmNJZjNsWDBLUmZOZFhSRG5GS2xpaDgtYXh3UU5kWWNNbGs?oc=5",
+    "video_id": null
   }
 ]
