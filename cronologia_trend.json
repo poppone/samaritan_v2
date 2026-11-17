@@ -1,21 +1,5 @@
 [
   {
-    "timestamp": 1790534286,
-    "data": "2026-09-27",
-    "titolo": "Fortnite: FNAF Collab Confirmed 🤯",
-    "lingua": "en",
-    "slot": "21:00",
-    "formato": "short",
-    "estratto_script": "Fortnite just stole Five Nights’ soul—yes, it’s real. Epic Games dropped the official anno",
-    "stile": "MYTH_BUSTING_VIRAL",
-    "gioco": "Fortnite",
-    "query_video": "fortnite fnaf collab gameplay",
-    "fonte": "FNAF Fortnite Collab Confirmed by Epic Games – Release Date, Skins and Mode Revealed (VICE)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMitAFBVV95cUxQS1laUG5LNm9iY2o3UHBvNVBKdmx2TFBJM2o4dzgtWHkxZFhoT1VfdWhsb0pQdWV1TVpGQmJWQW9rb0JFLWJGVHFpWHo5Sy1LOUNJZndjSF9vdzk4NWlCWnBxcFNHZ2JEQkE5eVBmTWxXSVNHbHVwTXpLWTJYLTlnVy11N25la3IxRVltRld5ajRCazBmOEdjREtRYTVhSmM1ZjZaZHZhQVJjd3MtNW9FZkE5cnU?oc=5",
-    "video_id": "C3lSQlahk3E",
-    "veste": "pulito"
-  },
-  {
     "timestamp": 1790626468,
     "data": "2026-09-28",
     "titolo": "GTA 5 Mod Disaster: Windowed Chaos 😱",
@@ -3789,5 +3773,21 @@
     "veste": "arena",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/_0No2xmfmo0-A37uYa60ofbi4v1dpj9jUIgTR7RmBX.mp4",
     "didascalia_tiktok": "Zelda Ocarina of Time: il remake che spacca 🎮\n\nIl remake di Ocarina of Time su Switch 2 sta facendo impazzire i fan. Scopri perché è così speciale! Hai già giocato? Diccelo nei commenti.\n\nAltre notizie su davidedurazzi.it\n\n#thelegendofzeldaocarinaoftime #consigli #gamingita #perte"
+  },
+  {
+    "timestamp": 1794916981,
+    "data": "2026-11-17",
+    "titolo": "Stellar Blade: la Switch 2 salva la Terra 🌌",
+    "lingua": "it",
+    "slot": "20:00",
+    "uscita": 1794942000,
+    "formato": "short",
+    "estratto_script": "Scopri perché Stellar Blade Complete Edition su Nintendo Switch 2 sta facendo parlare tutt",
+    "stile": "MYTH_BUSTING_VIRAL",
+    "gioco": "Stellar Blade Complete Edition",
+    "query_video": "stellar blade gameplay",
+    "fonte": "Stellar Blade Complete Edition - Analisi della versione Nintendo Switch 2 (Nerdmovieproductions)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMipwFBVV95cUxNck9TTmFlOWhXS1pXRzNkN09nUVNuMVVRYjZrVTRKS2EySWVtaHp2R2FET201VFBuYVdzUGRLa3V4ZXRuQjJJcEkwN0pWU21kbWtpN0ZQVWh6alhreVltTUU5WnJVaERRMTNDMUU5bl9NT2E1QTZSRDRsRk9CaGI3YWU0clMtN1JyOGNqRlNZYmQ2MzJGLTQwdFhWZnVrcklzeXZqYW1sZw?oc=5",
+    "video_id": null
   }
 ]
