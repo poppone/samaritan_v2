@@ -1,21 +1,5 @@
 [
   {
-    "timestamp": 1790633509,
-    "data": "2026-09-28",
-    "titolo": "L.A. Noire: il leak misterioso riemerge 🎮",
-    "lingua": "it",
-    "slot": "18:00",
-    "formato": "short",
-    "estratto_script": "12 minuti di mistero e ora un vecchio leak su un possibile sequel di L.A. Noire riemerge g",
-    "stile": "EASTER_EGG_SECRET",
-    "gioco": "L.A. Noire",
-    "query_video": "la noir gameplay",
-    "fonte": "Un vecchio leak sul sequel di L.A. Noire riemerge grazie a GTA 6 (Multiplayer)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMinwFBVV95cUxPem5SWXdoUVJ0R0dHZkNIa2t2RFpjX1pGYlZzNmR1TEJqOTgtVGdzNTAyMVVMU1QyeXdFZ3g0V2RKZkZ6aE8yTGpMbjU1TkZzUUI4ekJrT01mU1o4dGpTWXFnN1pQaHFFbG8tLU5DY1VxcERRS2hpa1ZHRkM2YXJFRFVhdHpVN1RORnJ6ZHhKYmpjaVcyejE3WHRpRWhvVjQ?oc=5",
-    "video_id": "o9xNrVs7qNA",
-    "veste": "fuoco"
-  },
-  {
     "timestamp": 1790652807,
     "data": "2026-09-29",
     "titolo": "GTA VI: tutte le novità che ridefiniscono la serie 🚗",
@@ -3805,5 +3789,21 @@
     "veste": "pulito",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/5j1kxzq0TYY-qy6ScMRfD80QveTnrkUPFbmpNZyA3b.mp4",
     "didascalia_tiktok": "GTA 6: il caso social che spacca 🤯\n\nGTA 6 diventa il nuovo tema di discussione al di là dei videogiochi. Scopri perché è un caso sociale. Cosa ne pensi?\n\nAltre notizie su davidedurazzi.it\n\n#grandtheftautovi #tierlist #gamingita #perte"
+  },
+  {
+    "timestamp": 1795100602,
+    "data": "2026-11-19",
+    "titolo": "Elden Ring: 7 minuti di caos in un boss 😱",
+    "lingua": "it",
+    "slot": "20:00",
+    "uscita": 1795114800,
+    "formato": "short",
+    "estratto_script": "7 minuti di battaglia e già ti chiedi perché sei ancora vivo. Il nuovo boss di Elden Ring ",
+    "stile": "DOMANDA_AL_PUBBLICO",
+    "gioco": "Elden Ring",
+    "query_video": "elden ring boss fight gameplay",
+    "fonte": "",
+    "fonte_url": "",
+    "video_id": null
   }
 ]
