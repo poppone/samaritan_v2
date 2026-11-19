@@ -1,21 +1,5 @@
 [
   {
-    "timestamp": 1790632541,
-    "data": "2026-09-28",
-    "titolo": "Roblox: il lato oscuro della libertà 🌐",
-    "lingua": "it",
-    "slot": "14:00",
-    "formato": "short",
-    "estratto_script": "Hai mai pensato che il paradiso digitale nasconda trappole? Roblox è più di un gioco: è un",
-    "stile": "DONT_DO_THIS",
-    "gioco": "Roblox",
-    "query_video": "roblox gameplay",
-    "fonte": "Il mondo Roblox è molto più di un videogioco: come orientarsi (Giornale di Brescia)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMipwFBVV95cUxPNjl1ckg2VDhNME1zaWpXTlJxYWxkV21VWGlhM0FXUlU1VVJPa1g0bTNSZHJvaHVWSGpCVWNZeW1VbTZSc1hDZHZ4QVZDX3lVbWg2Y0RJdjJxT1lBYXNMVGRhVkZKZENrb0tzbG5wbVFvSFUzQXFYZ1FKZHNLaEtvcFRKb2IybzVBVTUwRFB0R1BYLTlOVDdaQi1PYm92bG94UWNjczVtdw?oc=5",
-    "video_id": "2jKKW3uQ3nk",
-    "veste": "ghiaccio"
-  },
-  {
     "timestamp": 1790633509,
     "data": "2026-09-28",
     "titolo": "L.A. Noire: il leak misterioso riemerge 🎮",
@@ -3801,5 +3785,21 @@
     "veste": "fuoco",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/MiY3A0Gq4NM-XChZZmGolvr3bLFFOcoOB7mbAzg4HB.mp4",
     "didascalia_tiktok": "Assassin's Creed Valhalla: l’update che riaccende il gioco 🎮\n\nL'ultimo update di Assassin's Creed Valhalla porta New Game Plus e PSSR 2. Scopri cosa cambia per la tua avventura! Hai già provato le nuove funzionalità?\n\nAltre notizie su davidedurazzi.it\n\n#assassinscreedvalhalla #curiosita #gamingita #perte"
+  },
+  {
+    "timestamp": 1795078280,
+    "data": "2026-11-19",
+    "titolo": "GTA 6: il caso social che spacca 🤯",
+    "lingua": "it",
+    "slot": "14:00",
+    "uscita": 1795093200,
+    "formato": "short",
+    "estratto_script": "GTA 6 è appena arrivato nelle mani dei giocatori e, già da subito, è diventato un vero cas",
+    "stile": "TIER_LIST_LAMPO",
+    "gioco": "Grand Theft Auto VI",
+    "query_video": "gta 6 gameplay",
+    "fonte": "GTA 6 e politica, dalle accuse ai genitori ai meme: il videogioco diventa un caso social (Italia Top Games)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMi1AFBVV95cUxPUkxwNGlpRS1HdkN0Q0hVcGEwSDJWM2NOV1VkU0lkQkJsaVlLUkE1Q2E1N2J1U0RFeW9Jem12YUdLaHAtSEtjQk9TOU9YYTRUYk15VHM3dHlValhWQXgxUG9kSkxrT21PYTZvUUZSYlc0MUxNVm0tbTFSMW90cG45OWU4UmdxX2JsS0daT01DNUw4aW42Z3JlUjBfcmlmcktYSXhobkxteDg0YXI3cXdnOTNPTGY5c0dHQmpWa1dNd2doWjM4NmsxRjlBN3ZIZUQ2WkVIVA?oc=5",
+    "video_id": null
   }
 ]
