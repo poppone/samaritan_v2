@@ -1,22 +1,5 @@
 [
   {
-    "timestamp": 1790655738,
-    "data": "2026-09-29",
-    "titolo": "Il prezzo dei giochi gratuiti: la verità dietro le app 🎮",
-    "lingua": "it",
-    "slot": "18:00",
-    "uscita": 1790697600,
-    "formato": "short",
-    "estratto_script": "Pensi che \"gratis\" significhi zero spese? Eppure ogni gioco free-to-play nasconde costi in",
-    "stile": "SEAMLESS_LOOP_FACTS",
-    "gioco": "",
-    "query_video": "free to play economics gameplay",
-    "fonte": "Il videogioco ha un prezzo, anche quando è gratis (Il Bo Live)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMiigFBVV95cUxQU1ZRWmlXWmI1dDl6VnRMeWx5WEJWbDhwcW5FOHhBWlpnYXlRcnB6NExiaFk1c3ExczFjblpfMk5OamFkSWRPOWJGWVRpRHV5a1N4S3lnTGd1dVluTndUeFQ2NWREd1pDQS01SU45b2RjOHNDN3MyZ29QaVZBamUzUnhZZ014RC1RNUE?oc=5",
-    "video_id": "EP0YKTcZ4Lg",
-    "veste": "arena"
-  },
-  {
     "timestamp": 1790672056,
     "data": "2026-09-29",
     "titolo": "Grand Theft Auto VI: Game Informer magazine timing 🎮",
@@ -3812,5 +3795,21 @@
     "veste": "notte",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/S-erHNaDmBU-zJ66r5oaFIwPuTVf4yR53WdLfXRxmN.mp4",
     "didascalia_tiktok": "GTA 6: Quando arriverà su PC? 🤔\n\nScopri la previsione di Michael Pachter sulla data di uscita di GTA 6 per PC. Ti sorprende?\n\nAltre notizie su davidedurazzi.it\n\n#grandtheftautovi #consigli #gamingita #perte"
+  },
+  {
+    "timestamp": 1795175537,
+    "data": "2026-11-20",
+    "titolo": "Mario Kart 8 Deluxe: la Switch perfetta per Natale 🎁",
+    "lingua": "it",
+    "slot": "20:00",
+    "uscita": 1795201200,
+    "formato": "short",
+    "estratto_script": "Mario, credi che la Switch costi una fortuna? In realtà, la Nintendo Switch con Mario Kart",
+    "stile": "MYTH_BUSTING_VIRAL",
+    "gioco": "Mario Kart 8 Deluxe",
+    "query_video": "mario kart 8 deluxe gameplay",
+    "fonte": "Nintendo Switch con Mario Kart 8 Deluxe: a questo prezzo è la console da regalare a Natale (HDblog.it)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMikgFBVV95cUxPM29lSEl3NDRHeUNxLXlmcVhsbGhZT19pQm9ZVnhKaTgyWjBBUEIwUy1maWhmWkJBaUVkbHhrdzlXR1U3bFhPZFZzN2xaeXlaQ2hMN2U1ZWhxaVdjNVdqR1Z4VTFqRlgxOXVVRG9EVUZvTV90Sms3MTVZY2xaV3YtYWNxV0N2bjFfLUZKVHVqb2lUQQ?oc=5",
+    "video_id": null
   }
 ]
