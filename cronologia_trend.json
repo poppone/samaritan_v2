@@ -1,22 +1,5 @@
 [
   {
-    "timestamp": 1790672056,
-    "data": "2026-09-29",
-    "titolo": "Grand Theft Auto VI: Game Informer magazine timing 🎮",
-    "lingua": "en",
-    "slot": "20:00",
-    "uscita": 1790704800,
-    "formato": "short",
-    "estratto_script": "Game Informer is finally printing a GTA 6 magazine—something no one expected. The release ",
-    "stile": "TIER_LIST_LAMPO",
-    "gioco": "Grand Theft Auto VI",
-    "query_video": "gta 6 gameplay",
-    "fonte": "When Does Game Informer’s GTA 6 Magazine Come Out? Release Times, Explained (Insider Gaming)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMigAFBVV95cUxNMVRoWExxUHR0Nkt4NmJWb2EyOEFSTkVjRTlDbDJzTGhiYVJSSUV4c3pFR2VpWHptdVRHQWxOTEhXMUVyWXhnZWZ6NTVtUmFMRExCY2YxSlZONnFoUGpaUGN4SGJRZG01Z1phZjR1bzY2VnR2Qm5PcmhYM1hJTkNqcQ?oc=5",
-    "video_id": "8p52QJPpCwE",
-    "veste": "notte"
-  },
-  {
     "timestamp": 1790673094,
     "data": "2026-09-29",
     "titolo": "Free: PS5 Free Game – Keep It Forever 🎁",
@@ -3815,5 +3798,21 @@
     "veste": "ghiaccio",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/FgYxy4WXbQk-IPw2JXUoUCC7bwhTOvw9WKRLmZulw9.mp4",
     "didascalia_tiktok": "Mario Kart 8 Deluxe: la Switch perfetta per Natale 🎁\n\nScopri perché la Switch con Mario Kart 8 Deluxe è il regalo top per le feste. È davvero così conveniente?\n\nAltre notizie su davidedurazzi.it\n\n#mariokart8deluxe #rumor #gamingita #perte"
+  },
+  {
+    "timestamp": 1795249145,
+    "data": "2026-11-21",
+    "titolo": "GTA VI: 99/100 su Metacritic al lancio 🚀",
+    "lingua": "it",
+    "slot": "14:00",
+    "uscita": 1795266000,
+    "formato": "short",
+    "estratto_script": "GTA VI ha raggiunto un punteggio di 99 su Metacritic al suo lancio. Questo è il record più",
+    "stile": "SEAMLESS_LOOP_FACTS",
+    "gioco": "GTA VI",
+    "query_video": "gta vi 99 metacritic gameplay",
+    "fonte": "GTA VI ha raggiunto un punteggio Metacritic di 99/100 il giorno della sua uscita, diventando il videogioco con il punteggio più alto nella storia. (Vietnam.vn)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMivgFBVV95cUxNRVN0MWxCazY4ZWc0NWJ5WTEwVWFuNl9CRUZ6Njd3MHgzX1BfOUlhUjhEM3Mzc0hWdF9hSkpBVGFZSkJnLTJMSkR4TlZRcy1hQkhsa2czMDFEcmUxN2lJelJwSDY3YlR6ektobFlob2JwWVZFYW9seXZzU195UEo5OWF5dkVJRDEtODZSbExDMzdnTzF6U19LdlAwUUItaHNycFZlbTF2OFNtdXUxNzlTcmlFQ3RuS2JrTXgwRzFB?oc=5",
+    "video_id": null
   }
 ]
