@@ -1,22 +1,5 @@
 [
   {
-    "timestamp": 1790673094,
-    "data": "2026-09-29",
-    "titolo": "Free: PS5 Free Game – Keep It Forever 🎁",
-    "lingua": "en",
-    "slot": "21:00",
-    "uscita": 1790708400,
-    "formato": "short",
-    "estratto_script": "Free! Sony just dropped a beautifully written free game on PS5 and you don’t need PS Plus.",
-    "stile": "DOMANDA_AL_PUBBLICO",
-    "gioco": "",
-    "query_video": "ps5 free game gameplay",
-    "fonte": "PS5 drops 'beautifully written' free game that's yours to keep, no PS Plus required (GAMINGbible)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMirgFBVV95cUxOc0NocUFJdEp5UlRSMmx1RHdWaGZ5am5CamtoRHZ3Z2tid3lpS29LejRMN3BxUTRIdFJFbjFMYjRWNjR0enhUVFFvMWlEWGpUa094eFJuc3pOYTlmZ1Z5NVYtelNLT1I2NGZfVkx5VzlhNVVqYUJrMDdNU2VyUmhWN3JtcVFXRlVKQ2RJTXB0TW54UUVNaXFQcjFUYTRBY2lQX3VvM1lKWGFIRllXblE?oc=5",
-    "video_id": "UfvdD62t85Q",
-    "veste": "ghiaccio"
-  },
-  {
     "timestamp": 1790754756,
     "data": "2026-09-30",
     "titolo": "Fortnite: la nonna che ha spaccato il record 🏆",
@@ -3818,5 +3801,21 @@
     "veste": "fuoco",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/i286NKhVY9I-zd3MHSPo4PeLeoKcUZz4FHUTiuYSut.mp4",
     "didascalia_tiktok": "GTA VI: 99/100 su Metacritic al lancio 🚀\n\nGTA VI ha raggiunto 99 su Metacritic al lancio.\n\nAltre notizie su davidedurazzi.it\n\n#gtavi #curiosita #gamingita #perte"
+  },
+  {
+    "timestamp": 1795259960,
+    "data": "2026-11-21",
+    "titolo": "Far Cry 3: l'update 60fps arriva ora 😲",
+    "lingua": "it",
+    "slot": "20:00",
+    "uscita": 1795287600,
+    "formato": "short",
+    "estratto_script": "Mai credi che un gioco del 2012 possa ancora stupire: Far Cry 3 sbarca con un update a 60f",
+    "stile": "VIRAL_HOOK_NEWS",
+    "gioco": "Far Cry 3",
+    "query_video": "far cry 3 gameplay",
+    "fonte": "Far Cry 3: quando esce l'update con i 60fps su PS5 e Xbox? Abbiamo la data (Everyeye.it)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMilwFBVV95cUxQQlljR0RTcG5oT3lIM3VWMjY5X3ZmeFFFWGQyQWZyUUg0ejNQUjdBNjU3cUE1cWpFd05CNV9SMm0xSFpfMGpGUDlnRnJVMlNodXFYWFZmQWhiSEpSSFhLT0hMRk51RTczMkV6cE1zSEZDekhXU0N5alotMEVqT0p2T2twODNCQzBLelZFcjF1bXR1OGNiOU9J?oc=5",
+    "video_id": null
   }
 ]
