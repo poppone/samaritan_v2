@@ -1,22 +1,5 @@
 [
   {
-    "timestamp": 1790755483,
-    "data": "2026-09-30",
-    "titolo": "L.A. Noire 2: il rumor che torna a far parlare 🎮",
-    "lingua": "it",
-    "slot": "18:00",
-    "uscita": 1790784000,
-    "formato": "short",
-    "estratto_script": "5 minuti fa è esploso un leak su L.A. Noire 2, ma è davvero vero? Grazie a GTA 6, il vecch",
-    "stile": "MYTH_BUSTING_VIRAL",
-    "gioco": "L.A. Noire",
-    "query_video": "l a noire gameplay",
-    "fonte": "L.A. Noire 2 “spoilerato” da GTA 6? Il leak che torna a far discutere (Skuola.net)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMijAFBVV95cUxQX2NFTmJYUkJDOFZwd3ZZNVotQWVtOUpSc0FLSFJzVURWSEZtVmRNQlpUNG45VWttcnZwSFV1SjBhNUNjbUVmdHBFQ1dycmpSejBuTVJ6RVFMX3BVQ2ljS0R5enBzUjhxZ0paNFJfbkZFeWJhbGh3OTY3M0FYWG1fMXRFUHRyY3AzZUtfSw?oc=5",
-    "video_id": "3GjIPZVmAj8",
-    "veste": "pulito"
-  },
-  {
     "timestamp": 1790756019,
     "data": "2026-09-30",
     "titolo": "GTA 6: three new gameplay details revealed 🚀",
@@ -3824,5 +3807,21 @@
     "veste": "arena",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/LAY6LTJRZ7I-R8d8I4ZGRjWKOLYAa8Lui3FVj4Gydl.mp4",
     "didascalia_tiktok": "GTA 6: codici gratis su Twitch? Scopri come 🚀\n\nScopri come ottenere GTA 6 gratis su Twitch e Kick prima di chiunque altro. Hai già provato a seguirci per non perderti questi codici? Commenta qui sotto!\n\nAltre notizie su davidedurazzi.it\n\n#gta6 #tierlist #gamingita #perte"
+  },
+  {
+    "timestamp": 1795347543,
+    "data": "2026-11-22",
+    "titolo": "Elden Ring: il trucco nascosto del 2014 🕹",
+    "lingua": "it",
+    "slot": "20:00",
+    "uscita": 1795374000,
+    "formato": "short",
+    "estratto_script": "Zero minuti per capire perché Elden Ring nasconde un trucco da 2014. La mappa di Stormveil",
+    "stile": "EASTER_EGG_SECRET",
+    "gioco": "Elden Ring",
+    "query_video": "elden ring gameplay",
+    "fonte": "",
+    "fonte_url": "",
+    "video_id": null
   }
 ]
