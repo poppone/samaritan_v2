@@ -1,22 +1,5 @@
 [
   {
-    "timestamp": 1790829679,
-    "data": "2026-10-01",
-    "titolo": "GTA 6: open world massiccio! 🚗",
-    "lingua": "it",
-    "slot": "14:00",
-    "uscita": 1790856000,
-    "formato": "short",
-    "estratto_script": "Temi tropicali? Rockstar lo conferma. GTA 6 porta tempeste, tornado e più di 170 specie an",
-    "stile": "VIRAL_HOOK_NEWS",
-    "gioco": "Grand Theft Auto VI",
-    "query_video": "GTA 6 gameplay",
-    "fonte": "GTA 6: un open world massiccio! Rockstar svela tempeste tropicali, i tornado e oltre 170 specie animali (everyeye.it)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMi2AFBVV95cUxONjRiekNyYnBMV3lIZmIzSEQwTHVGNlV4Ti0zMnYyMVZaMERmWUNGYnV5bDU1SFNKVGpXZVF2RkhDemprSGtILWEwekNCaTExQ3NHcHA0X2FldTRYTGRTbmdZSE9FV0tSbnlwRm5FWm4tQ01JQlRZVEF2bV9zemxqRTFKRHh3emExMlQ0Y05LS3FNQ3o0dDNFbGhLXy1xWldfd0VJUWRobEI3ZWxyQWZtNTZ3eFJHQkp0R3ZoRGIzd0pVSWRWT1BqcDhPaUxUQkhHZmdhMUFLZFE?oc=5",
-    "video_id": "6t8DS1UDAPY",
-    "veste": "ghiaccio"
-  },
-  {
     "timestamp": 1790830490,
     "data": "2026-10-01",
     "titolo": "Twin Peaks: il gioco misterioso confermato 🎮",
@@ -3833,5 +3816,21 @@
     "veste": "ghiaccio",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/kzfmrig-A0A-w0fHKmaB6z5AaCUfQZFk2X5Yfa3VtI.mp4",
     "didascalia_tiktok": "GTA 6: meteo dinamico, mappa segreta e vita reale 🌦\n\nIl nuovo meteo dinamico e la mappa segreta di GTA 6 cambiano il modo di giocare. Cosa ne pensi di una città che reagisce al tempo?\n\nAltre notizie su davidedurazzi.it\n\n#grandtheftautovi #consigli #gamingita #perte"
+  },
+  {
+    "timestamp": 1795439133,
+    "data": "2026-11-23",
+    "titolo": "Assassin's Creed Valhalla: l'update che sorprende 🎮",
+    "lingua": "it",
+    "slot": "20:00",
+    "uscita": 1795460400,
+    "formato": "short",
+    "estratto_script": "Un colpo di scena: tre anni dopo l'update considerato finale, Ubisoft annuncia a sorpresa ",
+    "stile": "VIRAL_HOOK_NEWS",
+    "gioco": "Assassins Creed Valhalla",
+    "query_video": "assassin's creed valhalla gameplay",
+    "fonte": "Assassin's Creed Valhalla riceverà un aggiornamento con New Game Plus tre anni dopo l'update \"finale\" (Multiplayer)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMizgFBVV95cUxQb2U4X2hYMVB4dHRYRnM0azVJREdXUllaY1JXLWRyUEhnVmlRTVpVWE9OczVvZzdlaGhPUExVQlhkaHNkcEF6UHR0QXdDOG5OaGJndVNXT2FPTWZ5b2t6RXp2aXhXUjlza1lsMkZmTGxMQ0Ruck5XR0FfdmlvWklvamNqSlN6WVh4clhUME9XX1N6eHhSYlI1cEdidFRieTVzVXhTaTd5Z0pOT1p6NkhZa3VMRFVvdENmbUczOFR6OURqVWZnZ2xQRExTdGpUQQ?oc=5",
+    "video_id": null
   }
 ]
