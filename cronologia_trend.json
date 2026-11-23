@@ -1,22 +1,5 @@
 [
   {
-    "timestamp": 1790756019,
-    "data": "2026-09-30",
-    "titolo": "GTA 6: three new gameplay details revealed 🚀",
-    "lingua": "en",
-    "slot": "20:00",
-    "uscita": 1790791200,
-    "formato": "short",
-    "estratto_script": "Did Rockstar just drop three game‑changing secrets? First, they confirmed wild new animal ",
-    "stile": "EASTER_EGG_SECRET",
-    "gioco": "Grand Theft Auto VI",
-    "query_video": "gta 6 gameplay",
-    "fonte": "Rockstar officially reveals 3 big new GTA 6 gameplay details (Polygon.com)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMijwFBVV95cUxORk9sUF9JRnB3NWhjSER5MXJnM3NrQUtuMkZoVnBibDFxWXZ5WWRmdGk4ZFpoOXJ2WmxZYkdkTGRVZ1Q3RVY1cmxJTmlNVGxsYXZiUmVLN0o0N1FoTnFaSTdYbzRISWxkZ1MtSnVBeVYwY0d0c1BDYndOOFNITXEzRW9rdDRSM0tna2xOaXJvRQ?oc=5",
-    "video_id": "oWE2LZWC-Dw",
-    "veste": "arena"
-  },
-  {
     "timestamp": 1790772180,
     "data": "2026-09-30",
     "titolo": "Deadlock smashes Steam record: 228k players! 🏆",
@@ -3827,5 +3810,21 @@
     "veste": "notte",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/0nbweDH5H6c-md3X5EK5atzvOpNGcSXRVvurM29Jnd.mp4",
     "didascalia_tiktok": "Elden Ring: il trucco nascosto del 2014 🕹\n\nScopri un segreto storico di Elden Ring che nessuno ti ha mai svelato. Hai già provato questi trucchi?\n\nAltre notizie su davidedurazzi.it\n\n#eldenring #easteregg #gamingita #perte"
+  },
+  {
+    "timestamp": 1795424645,
+    "data": "2026-11-23",
+    "titolo": "GTA 6: le vendite superano GTA 5? 🎮",
+    "lingua": "it",
+    "slot": "14:00",
+    "uscita": 1795438800,
+    "formato": "short",
+    "estratto_script": "Hai mai pensato che un nuovo titolo potesse spaccare ancora di più? GTA 6 ha venduto quasi",
+    "stile": "DOMANDA_AL_PUBBLICO",
+    "gioco": "GTA 6",
+    "query_video": "gta 6 sales gameplay",
+    "fonte": "GTA 6 è stato all'altezza delle (enormi) aspettative finanziarie di Take Two? Ecco quanto ha incassato al lancio (StartupItalia)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMifkFVX3lxTE5QWnF0b1U2MFFiSEFmRmpmQzFxcnVoTkMwWG1ZY0wtX1RfSy1nNFhqU3RqUzhSSTJ6N2s2SGtSLThZYTRCZ3lLb3ZoMFo2MnBEZkJHR0w4Wmp1Rl93MGZBLXJXSEhwb2ZadmlUQzdTSmlfb3d0em44QkM1Y3VZdw?oc=5",
+    "video_id": null
   }
 ]
