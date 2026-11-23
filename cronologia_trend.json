@@ -1,22 +1,5 @@
 [
   {
-    "timestamp": 1790772180,
-    "data": "2026-09-30",
-    "titolo": "Deadlock smashes Steam record: 228k players! 🏆",
-    "lingua": "en",
-    "slot": "21:00",
-    "uscita": 1790794800,
-    "formato": "short",
-    "estratto_script": "Deadlock just broke Steam’s record with 228k players in a single update. That means the ga",
-    "stile": "TIER_LIST_LAMPO",
-    "gioco": "Deadlock",
-    "query_video": "Deadlock gameplay",
-    "fonte": "Deadlock smashes Steam record following new update that brings in over 228,000 concurrent players, but Valve isn't done: \"There was still a good amount of work we wanted to do on the core game\" (gamesradar.com)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMi4AJBVV95cUxPejNFM20zWGNKdXM1My10SW9abENxNmZRSFNaV1VtWE1qRmROc1k2NVRqc09ocVJJYng0U3dqWGphOFQzTVB1dUpsN2hXZWFlVkp4RjFSVGdLalI1ZVFYYmZYQ1BXZnNJcnNhLVQ0eVpfTXJKX0lwbjA4VkQ1R1Q5LXo2MHc3SDFLaktzbW5XUmxkM0ZPODdhNG9INm12MGFjUnVoUGQ0WEdwRHZZN3Izb1ZXRFZXbnZpdlNJcHJQRE9WMnR5YTZIemRfYlNZQ21BWHM1a0ptQ2ppdE1ydWZpODN0Z2hGMExqNnlfZk5VVEY5UHJDS3NMSlFTRF9YS29rNGJiMTJTdDR0UzVGMFVua1VCZTVtaVl2MzJqVUJYOXpfdENRYlVtOTN0bnpuWDNYeVMzczYwYmtOaUpPVjExejViOFYwOVhGLXR5NXRnYjNVcGhmOXh3VXk1b01Ud01D?oc=5",
-    "video_id": "EZWBsnT4U3o",
-    "veste": "notte"
-  },
-  {
     "timestamp": 1790829679,
     "data": "2026-10-01",
     "titolo": "GTA 6: open world massiccio! 🚗",
@@ -3825,6 +3808,22 @@
     "query_video": "gta 6 sales gameplay",
     "fonte": "GTA 6 è stato all'altezza delle (enormi) aspettative finanziarie di Take Two? Ecco quanto ha incassato al lancio (StartupItalia)",
     "fonte_url": "https://news.google.com/rss/articles/CBMifkFVX3lxTE5QWnF0b1U2MFFiSEFmRmpmQzFxcnVoTkMwWG1ZY0wtX1RfSy1nNFhqU3RqUzhSSTJ6N2s2SGtSLThZYTRCZ3lLb3ZoMFo2MnBEZkJHR0w4Wmp1Rl93MGZBLXJXSEhwb2ZadmlUQzdTSmlfb3d0em44QkM1Y3VZdw?oc=5",
+    "video_id": null
+  },
+  {
+    "timestamp": 1795424693,
+    "data": "2026-11-23",
+    "titolo": "GTA 6: meteo dinamico, mappa segreta e vita reale 🌦",
+    "lingua": "it",
+    "slot": "14:00",
+    "uscita": 1795438800,
+    "formato": "short",
+    "estratto_script": "Il meteo di GTA 6 cambia mentre guidi, e ti sorprende! Scopri la mappa segreta che nemmeno",
+    "stile": "DONT_DO_THIS",
+    "gioco": "Grand Theft Auto VI",
+    "query_video": "gta 6 gameplay",
+    "fonte": "GTA 6: meteo dinamico, mappa segreta e vita reale in ogni angolo (Everyeye.it)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMilgFBVV95cUxPek4wYXA0Vmt1eU9aWlk3d1pYdTJFTXdVME5HLUU2b1p5dlQxeTdWTjc1Z1RNLTRPdWxERzZEUXNIZk94WUJ2WUppUlFtazZtNVpleTczZVN5YmNxb29PekM4TUdmcXllTXlDQzBZM3hRSHBkVzFLOFlKV1h3TGk5RTRPS2gwNkt2ckNiMWZodVJ0VE1xbWc?oc=5",
     "video_id": null
   }
 ]
