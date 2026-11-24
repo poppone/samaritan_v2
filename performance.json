@@ -114,14 +114,6 @@
       "comments": 0,
       "subscribersGained": 1
     },
-    "bQ87Vu5QzhI": {
-      "views": 1110,
-      "averageViewPercentage": 59.34,
-      "averageViewDuration": 13,
-      "likes": 19,
-      "comments": 0,
-      "subscribersGained": 3
-    },
     "VcWzJ4-efkY": {
       "views": 1110,
       "averageViewPercentage": 37.83,
@@ -129,6 +121,14 @@
       "likes": 9,
       "comments": 0,
       "subscribersGained": 1
+    },
+    "bQ87Vu5QzhI": {
+      "views": 1110,
+      "averageViewPercentage": 59.34,
+      "averageViewDuration": 13,
+      "likes": 19,
+      "comments": 0,
+      "subscribersGained": 3
     },
     "Xk7-56dSIFY": {
       "views": 1092,
@@ -1362,14 +1362,6 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "YvJBO6IoE_U": {
-      "views": 56,
-      "averageViewPercentage": 53.09,
-      "averageViewDuration": 18,
-      "likes": 1,
-      "comments": 0,
-      "subscribersGained": 0
-    },
     "lxSKR75FVoE": {
       "views": 56,
       "averageViewPercentage": 58.29,
@@ -1377,6 +1369,14 @@
       "likes": 1,
       "comments": 0,
       "subscribersGained": 1
+    },
+    "YvJBO6IoE_U": {
+      "views": 56,
+      "averageViewPercentage": 53.09,
+      "averageViewDuration": 18,
+      "likes": 1,
+      "comments": 0,
+      "subscribersGained": 0
     },
     "wUCvuzDs5kI": {
       "views": 52,
@@ -1586,14 +1586,6 @@
       "comments": 0,
       "subscribersGained": 0
     },
-    "kjSxYkGYahM": {
-      "views": 33,
-      "averageViewPercentage": 38.93,
-      "averageViewDuration": 8,
-      "likes": 3,
-      "comments": 0,
-      "subscribersGained": 0
-    },
     "c67mz-1PROg": {
       "views": 33,
       "averageViewPercentage": 58.02,
@@ -1601,6 +1593,14 @@
       "likes": 0,
       "comments": 0,
       "subscribersGained": 1
+    },
+    "kjSxYkGYahM": {
+      "views": 33,
+      "averageViewPercentage": 38.93,
+      "averageViewDuration": 8,
+      "likes": 3,
+      "comments": 0,
+      "subscribersGained": 0
     }
   },
   "ricerche": [
