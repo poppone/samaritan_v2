@@ -1,22 +1,5 @@
 [
   {
-    "timestamp": 1790841300,
-    "data": "2026-10-01",
-    "titolo": "GTA 6 updates: new map, hurricanes, and manatees 🤯",
-    "lingua": "en",
-    "slot": "20:00",
-    "uscita": 1790877600,
-    "formato": "short",
-    "estratto_script": "Think GTA 5 was huge? Think again. GTA 6’s map is twice the size, a hurricane system that ",
-    "stile": "MYTH_BUSTING_VIRAL",
-    "gioco": "Grand Theft Auto VI",
-    "query_video": "gta 6 new updates gameplay",
-    "fonte": "'GTA 6' updates: Everything new we learned this week (Mashable)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMihwFBVV95cUxQM2ZyRndDdVNBemNseU9jN1VjRlJ2VW12N2NoTnFMOFdwdzBHRWJPVjUtM241a2djT1hRajFHVDh1NU9RaWdKQWZUV3UxdGlGZm5tS1d1M3c3d25yc3dWX0VvaERSd3c5MkhrTzU2VjZPeUJyNVFTaDdQZEsyNUJ0eTNkMXhwREE?oc=5",
-    "video_id": "7tx7PCZaTWI",
-    "veste": "pulito"
-  },
-  {
     "timestamp": 1790844303,
     "data": "2026-10-01",
     "titolo": "Pokemon Legends: Z-A: New Switch 2 Edition & Mega Bundle? 🎮",
@@ -3839,5 +3822,21 @@
     "veste": "pulito",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/YD3SFH585_8-QrCiy2Z3mBtsDQ2wpUWXa4S4IWr49J.mp4",
     "didascalia_tiktok": "GTA 6: 39 milioni su PS5, record da capogiro 🚀\n\nGTA 6 rompe il record con 39 milioni di giocatori su PS5. Scopri perché è così irresistibile! Hai già provato l'esperienza di massa?\n\nAltre notizie su davidedurazzi.it\n\n#gta6 #tierlist #gamingita #perte"
+  },
+  {
+    "timestamp": 1795528455,
+    "data": "2026-11-24",
+    "titolo": "Nintendo Switch 2: grafica potenziata per alcuni titoli 🎮",
+    "lingua": "it",
+    "slot": "20:00",
+    "uscita": 1795546800,
+    "formato": "short",
+    "estratto_script": "Novità per la Switch 2: è arrivato un nuovo update che migliora la grafica di alcuni gioch",
+    "stile": "SEAMLESS_LOOP_FACTS",
+    "gioco": "",
+    "query_video": "nintendo switch 2 update gameplay",
+    "fonte": "Nintendo Switch 2, il nuovo update migliora la grafica per alcuni titoli (Tom's Hardware)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMikwFBVV95cUxNNGg5bHF3ZXlQSkViZXJ6OGUyVGYtc3QxYlRBRi1TYVh4Um1jMWpkQkFZbnZMeEVGaERaMmNRSURWNmpkalRBMFRybVRfb3lrWEtPdFVFZEM4OEFGM18ta05TNnhDQWZ3dFZxNVFKQno1SG1FeFNoS3l3MDk2RW1JX21XcmJEUWVSWGdSUmZxSkE0RG8?oc=5",
+    "video_id": null
   }
 ]
