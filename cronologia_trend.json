@@ -1,22 +1,5 @@
 [
   {
-    "timestamp": 1790830490,
-    "data": "2026-10-01",
-    "titolo": "Twin Peaks: il gioco misterioso confermato 🎮",
-    "lingua": "it",
-    "slot": "18:00",
-    "uscita": 1790870400,
-    "formato": "short",
-    "estratto_script": "Hai mai sentito parlare di un videogioco che non esiste… finché non appare su Steam? Un le",
-    "stile": "SEAMLESS_LOOP_FACTS",
-    "gioco": "Twin Peaks",
-    "query_video": "twin peaks game gameplay",
-    "fonte": "Il gioco di Twin Peaks trapelato da Steam sembra sia confermato dalla produttrice (Multiplayer)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMiuAFBVV95cUxPZDJXSFFhSFgzSkF3TkdacWJRVDRneXprWmVVaHRNZnhLV3BOOC15OXVpU242b0VEWUQzWndDaU5WRFl2eWV4SURWX2lxYUdyeHo3WHlUbE9GWjhnWmJ3NmVPSHVPd2lyOFVJOWdRMXBGWU1kR3Y1R0h4RHAzUV8zS2lJWk43RF9ucTlBeEFIc2prQWxiMEhidS1ROEFrMG9IVk4yZzRPMlM5d3ZQN1I1dUxaU3lSNElZ?oc=5",
-    "video_id": "0pwwuNXptbI",
-    "veste": "fuoco"
-  },
-  {
     "timestamp": 1790841300,
     "data": "2026-10-01",
     "titolo": "GTA 6 updates: new map, hurricanes, and manatees 🤯",
@@ -3836,5 +3819,21 @@
     "veste": "fuoco",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/vLj5HJ5h0Zg-bzfG0pojYwy7F1mXNbjeM2am12MJ5K.mp4",
     "didascalia_tiktok": "Assassin's Creed Valhalla: l'update che sorprende 🎮\n\nAssassin's Creed Valhalla riceve un aggiornamento New Game Plus tre anni dopo il finale. Scopri cosa cambia e perché vale la pena rigiocare. Ti aspettiamo nei commenti: quale nuova avventura ti piacerebbe vedere?\n\nAltre notizie su davidedurazzi.it\n\n#assassinscreedvalhalla #newsgaming #gamingita #perte"
+  },
+  {
+    "timestamp": 1795511024,
+    "data": "2026-11-24",
+    "titolo": "GTA 6: 39 milioni su PS5, record da capogiro 🚀",
+    "lingua": "it",
+    "slot": "14:00",
+    "uscita": 1795525200,
+    "formato": "short",
+    "estratto_script": "39 milioni di giocatori su una sola PS5? Incredibile, ma vero. GTA 6 ha appena superato og",
+    "stile": "TIER_LIST_LAMPO",
+    "gioco": "GTA 6",
+    "query_video": "gta6 gameplay",
+    "fonte": "GTA 6 supera i 39 milioni di giocatori su PS5, stabilendo un nuovo record (Vgmag.it)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMiowFBVV95cUxPUmJYakptY1FZS3NNaG5kTTVPT2U5bXpZdWVkekR4eUxtWUdrYlNDT1VVd1VVN3gySEdoV1pLM2x0VVV5M20wQnZKVmo1aUFVZHdSS194aUdLcE1VdnBjeXhpLVBlMk5ZbnhKZlVacER6QzZuVWVveUNJOW9XVGdJcTg1WWp0T2RoM24zdXMxTUkwZWJtalJ3NzJoOFpTalNQN2hn?oc=5",
+    "video_id": null
   }
 ]
