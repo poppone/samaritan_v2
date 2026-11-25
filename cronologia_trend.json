@@ -1,22 +1,5 @@
 [
   {
-    "timestamp": 1790913814,
-    "data": "2026-10-02",
-    "titolo": "GTA VI: immagini di gameplay svelate 🎮",
-    "lingua": "it",
-    "slot": "14:00",
-    "uscita": 1790942400,
-    "formato": "short",
-    "estratto_script": "Immagini nuove di GTA VI: rapine, caccia e meteo dinamico. Rockstar non ha ancora rilascia",
-    "stile": "EASTER_EGG_SECRET",
-    "gioco": "Grand Theft Auto VI",
-    "query_video": "gta vi gameplay",
-    "fonte": "GTA VI: rivelate dodici nuove immagini di gameplay tra rapine, caccia e meteo dinamico (IGN Italia)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMiygFBVV95cUxPR0ljc0tpbkdzZ1d2UXVhZ1BZQlZoTFNqVVd1cjdsa1JwaDBfVlptaWVKdHIyazFFUm5yOEQtclZJbHFrTVphbk9OVHdtWXdjXzhlNXFyZEFNVlFDeHEtQl9pMDlGelNYRi03SG15eUlOSzZSanNObGxPWkh5Rk9kQWp1aENHLTJoaDZqaXhPU2d0VWJYckg1LVZ3WWh6RU9idkEwWWZJRzY4ZnNvcF9KcTVYOFBWVWdvdUduODY5TjFrMXdxNnZWd1FR?oc=5",
-    "video_id": "sWWW15Pc2G0",
-    "veste": "notte"
-  },
-  {
     "timestamp": 1790915046,
     "data": "2026-10-02",
     "titolo": "Battlefield 6: Stagione 4 Tidal Strike sbarca adesso 🚀",
@@ -3845,5 +3828,21 @@
     "veste": "notte",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/4B1okNWlCJA-s5MoLx9centnJmylHpzJPghHz3qj04.mp4",
     "didascalia_tiktok": "Kanto Tactics: il nuovo Pokémon TFT gratis 🎮\n\nKanto Tactics unisce Pokémon e TFT direttamente nel browser, gratis. Provalo ora! Qual è la tua combinazione vincente?\n\nAltre notizie su davidedurazzi.it\n\n#kantotactics #gamingita #perte"
+  },
+  {
+    "timestamp": 1795612126,
+    "data": "2026-11-25",
+    "titolo": "GTA 6: il primo aggiornamento svela cosa? 🚀",
+    "lingua": "it",
+    "slot": "20:00",
+    "uscita": 1795633200,
+    "formato": "short",
+    "estratto_script": "Stai ancora credendo che GTA 6 sia perfetto? Rockstar ha annunciato il primo aggiornamento",
+    "stile": "EASTER_EGG_SECRET",
+    "gioco": "GTA 6",
+    "query_video": "gta 6 gameplay",
+    "fonte": "GTA 6, arriva il primo aggiornamento dall'uscita del videogioco: cosa sapere (Sky TG24)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMibkFVX3lxTE5IR1pVajdQbG5seXNtZGN4ZTFydmw3Z0JnSm5FMkNFVG5HS3BRUEg4WTBaX3hkTmFrQkZHYnVlRDgtalQ4TnVic1lRNjhmQWhmOGxmZUNUV2trMXNrSW9rRjZ4em5YTnVjSWdYRlR3?oc=5",
+    "video_id": null
   }
 ]
