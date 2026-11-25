@@ -1,22 +1,5 @@
 [
   {
-    "timestamp": 1790844303,
-    "data": "2026-10-01",
-    "titolo": "Pokemon Legends: Z-A: New Switch 2 Edition & Mega Bundle? 🎮",
-    "lingua": "en",
-    "slot": "21:00",
-    "uscita": 1790881200,
-    "formato": "short",
-    "estratto_script": "A brand‑new Switch 2 edition is about to drop. \nAlongside it, a Mega Dimension Bundle is o",
-    "stile": "DOMANDA_AL_PUBBLICO",
-    "gioco": "Pokemon Legends: Z-A",
-    "query_video": "pokemon legends z-a gameplay",
-    "fonte": "Pokémon Legends: Z-A – Nintendo Switch 2 Edition + Mega Dimension Bundle Coming Soon (Pokemon.com)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMisAFBVV95cUxPRURId1pCLUhGdEE4LUF3RlVmLTRReHpmdVV3S1B0MEwwTGpyTXpfV3BhXzNyWEx1TENnMW1pZ2JhOGZTaV9qTzV6dDZDYVdaN2JJVE92djZRcHl4cEN4anRsSUF1RFhrd2pXbU1SaXZyQ0R4Z0pLT0pDcS1PSUJqZXVxbzlSaWZrbl92SllLX1RMZHluSzE3NHBrV3NaMFpsVEl5RWV3RnZTN2xqUDdYdw?oc=5",
-    "video_id": "BTqPH-621S4",
-    "veste": "arena"
-  },
-  {
     "timestamp": 1790913814,
     "data": "2026-10-02",
     "titolo": "GTA VI: immagini di gameplay svelate 🎮",
@@ -3842,5 +3825,21 @@
     "veste": "arena",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/X0SFiHnWCss-mro7B2jrQQgmgro5Hm5GJEsIVJNw3w.mp4",
     "didascalia_tiktok": "Nintendo Switch 2: grafica potenziata per alcuni titoli 🎮\n\nL'ultimo update migliora la grafica su Nintendo Switch 2 per titoli top. Che ne pensi di vedere Zelda in HD? Lascia un commento!\n\nAltre notizie su davidedurazzi.it\n\n#curiosita #gamingita #perte"
+  },
+  {
+    "timestamp": 1795597386,
+    "data": "2026-11-25",
+    "titolo": "Kanto Tactics: il nuovo Pokémon TFT gratis 🎮",
+    "lingua": "it",
+    "slot": "14:00",
+    "uscita": 1795611600,
+    "formato": "short",
+    "estratto_script": "Impossibile credere che un gioco Pokémon sia nato su un browser. Eppure Kanto Tactics arri",
+    "stile": "DOMANDA_AL_PUBBLICO",
+    "gioco": "Kanto Tactics",
+    "query_video": "pokemon tft browser game gameplay",
+    "fonte": "Scopri Kanto Tactics: il nuovo gioco che unisce Pokémon e TFT, gratis sul tuo browser! (Everyeye.it)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMipwFBVV95cUxNNXJKZU5jbVh3RXltaG96bzc2ZXNHRkJGeEVvaWtTNmVVVm15Wnl6YzM2UUVZc2swa1lfbVF5REcwMVZLdjZENW9iOTk1Y21iOEhidzdpZm54aTlPZGdEYzR3R19lNXFTdDBfS04ySl80bGxVckJSRzE5Z1lCVWozWlU3NUhBdmY4ejFSd0ZKOXZza0FNbzJ4cVdzWTNISHhyUW0tenRycw?oc=5",
+    "video_id": null
   }
 ]
