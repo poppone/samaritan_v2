@@ -1,22 +1,5 @@
 [
   {
-    "timestamp": 1790916197,
-    "data": "2026-10-02",
-    "titolo": "GTA 6: $400 Collector’s Box vs. Creator Bundle 🤔",
-    "lingua": "en",
-    "slot": "20:00",
-    "uscita": 1790964000,
-    "formato": "short",
-    "estratto_script": "Think the $400 box is the best? Think again. Rockstar sent a bundle to content creators. F",
-    "stile": "TIER_LIST_LAMPO",
-    "gioco": "Grand Theft Auto VI",
-    "query_video": "gta 6 bundle gameplay",
-    "fonte": "GTA 6 bundle sent to content creators, and fans think it looks better than the $400 Collector's Edition box (PC Guide)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMizwFBVV95cUxNX2ltdjRxb0s5UzdBZG5DdVBWOHE3amxDa2xFUXRVRVFTRHpTT2x0eG1fSWFTXzZwRjFDNWtaaEhGS3hWOFZjSEtVYWN5eThzdXRWVVd3NDFvQjFKbVpsekZCeVVSUF9pMk5rRmxhUTJ2TGJHaTFiejRYeHNGQkh3RXJKOHlNMmtsRlp0TVlCMFI0Z1lHT0lsVWtNZ0lNNTJNbDU0SG90aUlVemFScmVoX2ZkNWUzX0s5WHhzUTVkVkFINE1QYTNwV2JtcEdJbTQ?oc=5",
-    "video_id": "yS_BswYbHS0",
-    "veste": "fuoco"
-  },
-  {
     "timestamp": 1790917460,
     "data": "2026-10-02",
     "titolo": "Gears of War: E-Day: Early Access drops Metallica surprise 🎸",
@@ -3851,5 +3834,21 @@
     "veste": "fuoco",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/EN7OhZQWu04-ALbCJMrNuhsdj9jCY0txsbhbXDNCwU.mp4",
     "didascalia_tiktok": "Pokemon Vento e Onda: la data è ancora un mistero ⏳\n\nLa data di uscita di Pokemon Vento e Onda è ancora avvolta nel mistero. Cosa ne pensi, potrebbe essere rinviata? Commenta sotto!\n\nAltre notizie su davidedurazzi.it\n\n#pokemonventoeonda #consigli #gamingita #perte"
+  },
+  {
+    "timestamp": 1795697290,
+    "data": "2026-11-26",
+    "titolo": "GTA 6: il nuovo standard per i videogiochi 😲",
+    "lingua": "it",
+    "slot": "20:00",
+    "uscita": 1795719600,
+    "formato": "short",
+    "estratto_script": "Dopo 13 anni di attesa, finalmente possiamo parlare di Grand Theft Auto VI, il nuovo capit",
+    "stile": "TIER_LIST_LAMPO",
+    "gioco": "Grand Theft Auto VI",
+    "query_video": "gta 6 gameplay",
+    "fonte": "Recensione GTA 6, un nuovo standard per i videogiochi (Tom's Hardware)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMijgFBVV95cUxQOE1ZTHB1Uy1FQTAtQ1JvWklDUU91bVBSVjZlWVItdTRsZ21UMXM2R3ExV01KZm52WkJ3aWNla1p5d2t1azV6MXM2NGk4QUJSRng4N2ROMkdWSnBvNmFQRmRMck1HRVZpM1dReHRWUVhrOFVOc1hjZy0yMkJRMkFKNXdTVVVuWGZ3c2R6VnRB?oc=5",
+    "video_id": null
   }
 ]
