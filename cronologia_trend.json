@@ -1,22 +1,5 @@
 [
   {
-    "timestamp": 1790917460,
-    "data": "2026-10-02",
-    "titolo": "Gears of War: E-Day: Early Access drops Metallica surprise 🎸",
-    "lingua": "en",
-    "slot": "21:00",
-    "uscita": 1790967600,
-    "formato": "short",
-    "estratto_script": "Metallica just crashed Gears of War’s launch—yes, really. Early Access for Gears of War: E",
-    "stile": "MYTH_BUSTING_VIRAL",
-    "gioco": "Gears of War: E-Day",
-    "query_video": "gears of war e day gameplay",
-    "fonte": "Gears of War: E-Day is Available in Early Access Today, Watch the Launch Gameplay Trailer (news.xbox.com)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMilgFBVV95cUxNYmczTDRVMEtiaFdqdVh6QjIzdmsxWkhtYUxsN0UyLS00eUF1WFkzQVNJMlZsVjJOd0NQRU5DcUQtQ2Z0UDBhWWJDN3ZHN3ZIQ1pEeWxOMUd6Q3NFb2Q4QmwwQ1VWUE1yeEctLVo5Sm82cGNmZHdBazdHaG80cU84ZDNKUnI4VllWVlcweHBNc2d2TEUxS1HSAZsBQVVfeXFMT1ZjSHlUbExybnFwM0t4SVR0MF92T3Z1cUxKeVFSZDhqYjc3WEJWY0hvdTVEZG40THNJQVZWd2t0ZzNfdWxESEUzMjEwa2wxcXU4eVduNHhwenNmRVBrbW9vMTZIOUNrUzkzQ2FURl9GcGRPUVkzX3N5Y09rTzM5dHppVFoybEJYMFp1V1FJaV82NlA5anNhdlQzb0U?oc=5",
-    "video_id": "gE-li_Lfotk",
-    "veste": "pulito"
-  },
-  {
     "timestamp": 1791000189,
     "data": "2026-10-03",
     "titolo": "Leggende Pokémon: Z‑A: il bundle che sorprende 🧩",
@@ -3854,5 +3837,21 @@
     "veste": "pulito",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/BtVTHbGG-Mw-ObJknmS1CYwAhLWGDAwCFFvTA3Z4ZN.mp4",
     "didascalia_tiktok": "GTA 6: il nuovo standard per i videogiochi 😲\n\nScopri perché la recensione di GTA 6 è considerata un nuovo standard per i videogiochi. È davvero rivoluzionario o solo hype? Lascia la tua opinione nei commenti!\n\nAltre notizie su davidedurazzi.it\n\n#grandtheftautovi #tierlist #gamingita #perte"
+  },
+  {
+    "timestamp": 1795770262,
+    "data": "2026-11-27",
+    "titolo": "Zelda Breath of the Wild: segreti nascosti 🌟",
+    "lingua": "it",
+    "slot": "14:00",
+    "uscita": 1795784400,
+    "formato": "short",
+    "estratto_script": "Mai pensare che Hyrule sia solo un grande prato. In realtà, il gioco nasconde 120 statue d",
+    "stile": "SEAMLESS_LOOP_FACTS",
+    "gioco": "The Legend of Zelda: Breath of the Wild",
+    "query_video": "breath of the wild gameplay",
+    "fonte": "",
+    "fonte_url": "",
+    "video_id": null
   }
 ]
