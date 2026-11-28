@@ -1,22 +1,5 @@
 [
   {
-    "timestamp": 1791001391,
-    "data": "2026-10-03",
-    "titolo": "GTA 6: la speranza di prezzi più alti 🤔",
-    "lingua": "it",
-    "slot": "18:00",
-    "uscita": 1791043200,
-    "formato": "short",
-    "estratto_script": "Scommetti che il prossimo GTA cambierà il mercato? Il co‑fondatore di Warhorse ha affidato",
-    "stile": "DOMANDA_AL_PUBBLICO",
-    "gioco": "Grand Theft Auto VI",
-    "query_video": "gta 6 gameplay",
-    "fonte": "GTA 6, gli autori di Kingdom Come gli affidano una “speranza” (SpazioGames)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMikAFBVV95cUxQS2d1WE5pbXlybk1aeG1sVV9XeGZURFZSYjNsa2VFNWZJZnNJVGs2YUxPenhmRUdIQjJKSGFBZngzUGRKckM4WmQ5Z256SnVJWC1Oel85UUdLMnZhNlZuWnY5Wk1JU3N2M0N3LS1CWFNDVVpDcUZVRVFFSHJ2SnRZeTFfS2RacHlURk5HU2FMMTQ?oc=5",
-    "video_id": "3vfYmhUmpss",
-    "veste": "notte"
-  },
-  {
     "timestamp": 1791014227,
     "data": "2026-10-03",
     "titolo": "The Wolf Among Us: PS5 release date revealed 🎮",
@@ -3860,5 +3843,21 @@
     "veste": "notte",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/7aha5-UvgF4-lU5CEZ0ibLlR2TwGf1BSmUf1nyNBn2.mp4",
     "didascalia_tiktok": "GTA 6: meteo bloccato? Scopri il trucco 🌧\n\nIl meteo di GTA 6 sparisce su PS5? Scopri la soluzione rapida. Hai già provato a riavviare?\n\nAltre notizie su davidedurazzi.it\n\n#grandtheftautovi #newsgaming #gamingita #perte"
+  },
+  {
+    "timestamp": 1795856190,
+    "data": "2026-11-28",
+    "titolo": "Pokémon: premi Mega Rayquaza svelati 🐉",
+    "lingua": "it",
+    "slot": "14:00",
+    "uscita": 1795870800,
+    "formato": "short",
+    "estratto_script": "Le carte non sono solo una collezione. Dal 1° dicembre i tornei Play! Pokémon Store regala",
+    "stile": "MYTH_BUSTING_VIRAL",
+    "gioco": "Pokémon",
+    "query_video": "pokemon card shop gameplay",
+    "fonte": "Scopri come ottenere i premi esclusivi di Mega Rayquaza nelle Carte Pokemon! (Everyeye.it)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMirAFBVV95cUxNX0lrR3pCbGR4Z01sdzVqRDROelJIdXBjdXUwamhqajltNkk3ZjgyVncxMVdfUzhTWjFTc1lVN2MtVTk2aTF6T2ZZbGdIazFmOHZnWlhXd0Y1RDhoaEdVQ3luNmVCT2FKRmxwRjRRTVRYVWozd1lNMU9YdUJLd0RRamxsY1RraDRydVBYWFZZTFlXN3VDM29pZ0VGeHItSzZRWDN6RzhCRFhNU2sw?oc=5",
+    "video_id": null
   }
 ]
