@@ -1,22 +1,5 @@
 [
   {
-    "timestamp": 1791014897,
-    "data": "2026-10-03",
-    "titolo": "Grand Theft Auto VI: Unexpected GOTY obstacle 🤔",
-    "lingua": "en",
-    "slot": "21:00",
-    "uscita": 1791054000,
-    "formato": "short",
-    "estratto_script": "Forbes says the title is already a frontrunner for the 2026 Game Awards. Yet a hidden snag",
-    "stile": "EASTER_EGG_SECRET",
-    "gioco": "Grand Theft Auto VI",
-    "query_video": "grand theft auto vi gameplay",
-    "fonte": "‘GTA 6’ May Have An Unforeseen Problem Winning GOTY 2026 (Forbes)",
-    "fonte_url": "https://news.google.com/rss/articles/CBMiqAFBVV95cUxQZEYxbG5saVJxWEpueWxfSUdESHRjbnY5Z2IyUFBMbTJEcDVtZ2tHbGw1RW5VdVoyaUw2Yl9SYTlJeHNLWEo2bnkwUG5rc1pVelVzWVJ5dUJ3YmRlUHdTSS1uMERmU3VNZHhDTE1vdzN4VXQ1TWdyWVY4b3VWQzNRMTBxT3V2ZFl6YXQxeUlXOWZmOV9rWHd5Z0JHVzFJclBOblltanVKZ1g?oc=5",
-    "video_id": "e6BVxeKj-r0",
-    "veste": "fuoco"
-  },
-  {
     "timestamp": 1791086623,
     "data": "2026-10-04",
     "titolo": "Gears of War: E-Day: la saga che sfida le stelle 🌟",
@@ -3866,5 +3849,21 @@
     "veste": "ghiaccio",
     "video_file_url": "https://8ggiyctagekoppcx.public.blob.vercel-storage.com/samaritan/8OkbBsm4hV4-EEP9Y7Qwu8Nf20mwkDATaT1qnvLFNe.mp4",
     "didascalia_tiktok": "GTA 6: 7 motivi per attendere il PC 🖥\n\nScopri le ultime notizie su GTA 6 per PC e i requisiti richiesti. Sei pronto a far girare il prossimo capolavoro? Commenta la tua attesa!\n\nAltre notizie su davidedurazzi.it\n\n#grandtheftautovi #easteregg #gamingita #perte"
+  },
+  {
+    "timestamp": 1795867106,
+    "data": "2026-11-28",
+    "titolo": "Assassin’s Creed: la serie Netflix rispetta la lore 🕵",
+    "lingua": "it",
+    "slot": "20:00",
+    "uscita": 1795892400,
+    "formato": "short",
+    "estratto_script": "Pensavi che Netflix tradisse la saga? Scopri perché la nuova serie è fedele alla lore dei ",
+    "stile": "DONT_DO_THIS",
+    "gioco": "Assassin’s Creed",
+    "query_video": "assassins creed netflix trailer gameplay",
+    "fonte": "Assassin’s Creed, la serie Netflix sarà fedele alla lore dei videogiochi (Console-Tribe)",
+    "fonte_url": "https://news.google.com/rss/articles/CBMirgFBVV95cUxNWlJzY2x0YXprQWtoTk1aU1BuRnB6UzhTZmltZUNaNDNkRHdrVXpkTVNBSDF4Q2FoVV9kcV8zaFMxNmwxQk4xd21KWG1lbmMtX2R1R0tyVEtrRS05bG5oVThkN1VpTWJpSXg5QThHQ3YzbjhBV1o3czRQbmI4Y0hGWkJ5aXRHMEQwclozRmU4WnZiclEwdEYyS1k3enpJd0VjTWI4Mkp2OXF3eFVwQWc?oc=5",
+    "video_id": null
   }
 ]
